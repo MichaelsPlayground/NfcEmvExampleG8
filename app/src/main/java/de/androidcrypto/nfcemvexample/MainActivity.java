@@ -352,7 +352,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
     }
 
     /**
-     * reads all files on card using afl data
+     * reads all files on card using track2 or afl data
      *
      * @param getProcessingOptions
      * @return a String with PAN and Expiration date if found
@@ -462,6 +462,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
         }
         return pan + "_" + expirationDate;
     }
+
 
     /**
      * gets the byte value of a tag from tranceive response
