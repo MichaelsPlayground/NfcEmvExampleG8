@@ -21,7 +21,7 @@ public class TagValues {
     private final EmvTag t5a = setTag(new byte[]{(byte) 0x5a}, "Application Primary Account Number (PAN)", true);
     private final EmvTag t5f24 = setTag(new byte[]{(byte) 0x5f24}, "Application Expiration Date", true);
 
-    //Application File Locator (AFL)
+    // see complete list here: https://www.eftlab.com/knowledge-base/complete-list-of-emv-nfc-tags
 
     public TagValues() {
         // empty constructor to fill the emvTagList

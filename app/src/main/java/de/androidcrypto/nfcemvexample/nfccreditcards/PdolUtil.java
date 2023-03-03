@@ -16,8 +16,9 @@ public class PdolUtil {
     private final List<String> pdolList = new ArrayList<>();
     private final int maximumPdolEntries = 20;
     private boolean settingResult = setPdolEntries(maximumPdolEntries);
-    private final String pdolWithCountryCode =  "80A80000238321A0000000000000000001000000000000084000000000000840070203008017337000";
-    private final String pdolWithCountryCodeNew =     "80A800002383B620C00000000000000001000000000000084000000000000840070203008017337000";
+    private final String pdolWithCountryCode =   "80A80000238321A0000000000000000001000000000000084000000000000840070203008017337000";
+    private final String pdolWithCountryCodeNew ="80A800002383B620C00000000000000001000000000000084000000000000840070203008017337000";
+    String c                                    ="80A80000158313C080000000000000100001240124823DDE7A0100";
     private final String pdolWithCountryCode2 = "80A8000012831B7604000000000010000000038393031000";
     private final String pdolWithCountryCode3 = "80a800001283100000000000000000000000000000000000";
 /*
@@ -27,6 +28,27 @@ Tag 9F 02: Transaction Amount :              00 00 00 01 00 00
 Tag 5F 2A: Transaction Currency Code :       03 56
 Tag 9F 37: Unpredictable Number :            38 39 30 31
  */
+
+/*
+Commd Visa 9f66049f02069f03069f1a0295055f2a029a039c019f3704
+  9f66 04 Terminal Transaction Qualifiers : B6 60 40 00
+  9f02 06 Transaction Amount :              00 00 00 01 00 00
+  9f03 06 Amount, Other (Numeric) always:   00 00 00 00 00 00
+  9f1a 02 Terminal Country Code :           08 26              UK
+  95   05 Terminal Verificat.Results alway: 00 00 00 00 00
+  5f2a 02 Transaction Currency Code :       08 26
+  9a   03 Transaction Date :                23 03 03
+  9c   01 Transaction Type :                00
+  9f37 04 Unpredictable Number :            38 39 30 31
+  Totl 33 (0x21)
+ */
+    private final String pdolVisaComdirect = "80A80000238321B6604000000000010000000000000000082600000000000826230303003839303100";
+    //private final String pdolVisaComdire = "80A80000238321A0000000000000000001000000000000084000000000000840070203008017337000";
+
+/*
+Lloyd Visa 9f66049f02069f03069f1a0295055f2a029a039c019f3704
+ */
+
     public PdolUtil(IsoDep nfc) {
         this.nfc = nfc;
     }
@@ -86,6 +108,9 @@ Tag 9F 37: Unpredictable Number :            38 39 30 31
 
     public String getPdolWithCountryCode() {
         return pdolWithCountryCode;
+    }
+    public String getPdolVisaComdirect() {
+        return pdolVisaComdirect;
     }
     public String getPdolWithCountryCode2() {
         return pdolWithCountryCode2;

@@ -237,6 +237,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                                 // we are using a generalized selectGpo command
                                 byte[] commandGpoRequest = hexToBytes(pu.getPdolWithCountryCode());
                                 //byte[] commandGpoRequest = hexToBytes(pu.getPdolWithCountryCode2());
+                                //byte[] commandGpoRequest = hexToBytes(pu.getPdolVisaComdirect());
                                 writeToUiAppend(etLog, "");
                                 writeToUiAppend(etLog, "05 get the processing options command length: " + commandGpoRequest.length + " data: " + bytesToHex(commandGpoRequest));
                                 byte[] responseGpoRequest = nfc.transceive(commandGpoRequest);
