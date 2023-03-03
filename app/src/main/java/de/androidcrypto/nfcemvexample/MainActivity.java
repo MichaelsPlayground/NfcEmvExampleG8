@@ -236,9 +236,11 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                                 // code will run for VISA and NOT for MasterCard
                                 // we are using a generalized selectGpo command
                                 byte[] commandGpoRequest = hexToBytes(pu.getPdolWithCountryCode());
+                                //byte[] commandGpoRequest = hexToBytes(pu.getPdolWithCountryCode2());
                                 writeToUiAppend(etLog, "");
                                 writeToUiAppend(etLog, "05 get the processing options command length: " + commandGpoRequest.length + " data: " + bytesToHex(commandGpoRequest));
                                 byte[] responseGpoRequest = nfc.transceive(commandGpoRequest);
+                                System.out.println("*** responseGpoRequest: " + bytesToHex(responseGpoRequest));
                                 if (!responseSendWithPdolFailure(responseGpoRequest)) {
                                     System.out.println("** responseGpoRequest: " + bytesToHex(responseGpoRequest));
                                     byte[] responseGpoRequestOk = checkResponse(responseGpoRequest);

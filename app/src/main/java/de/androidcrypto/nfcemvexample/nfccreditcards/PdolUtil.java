@@ -16,8 +16,17 @@ public class PdolUtil {
     private final List<String> pdolList = new ArrayList<>();
     private final int maximumPdolEntries = 20;
     private boolean settingResult = setPdolEntries(maximumPdolEntries);
-    private final String pdolWithCountryCode = "80A80000238321A0000000000000000001000000000000084000000000000840070203008017337000";
-
+    private final String pdolWithCountryCode =  "80A80000238321A0000000000000000001000000000000084000000000000840070203008017337000";
+    private final String pdolWithCountryCodeNew =     "80A800002383B620C00000000000000001000000000000084000000000000840070203008017337000";
+    private final String pdolWithCountryCode2 = "80A8000012831B7604000000000010000000038393031000";
+    private final String pdolWithCountryCode3 = "80a800001283100000000000000000000000000000000000";
+/*
+Request :80 A8 00 00 12 83 10 B6 60 40 00 00 00 00 01 00 00 00 00 38 39 30 31 00
+Tag 9F 66: Terminal Transaction Qualifiers : B6 60 40 00
+Tag 9F 02: Transaction Amount :              00 00 00 01 00 00
+Tag 5F 2A: Transaction Currency Code :       03 56
+Tag 9F 37: Unpredictable Number :            38 39 30 31
+ */
     public PdolUtil(IsoDep nfc) {
         this.nfc = nfc;
     }
@@ -78,7 +87,9 @@ public class PdolUtil {
     public String getPdolWithCountryCode() {
         return pdolWithCountryCode;
     }
-
+    public String getPdolWithCountryCode2() {
+        return pdolWithCountryCode2;
+    }
     private byte[] checkResponse(byte[] data) {
         if (data.length < 5) return null; // not ok
         int status = ((0xff & data[data.length - 2]) << 8) | (0xff & data[data.length - 1]);
