@@ -1,0 +1,33 @@
+<!-- sample_menu.xml -->
+<menu
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <!-- https://fonts.google.com/icons?selected=Material+Icons -->
+
+    <item
+        android:id="@+id/action_open_file"
+        android:title="open file"
+        app:showAsAction="never"/>
+
+    <item
+        android:id="@+id/action_plus_text_size"
+        android:title="+ text size"
+        app:showAsAction="never"/>
+
+    <item
+        android:id="@+id/action_minus_text_size"
+        android:title="- text size"
+        app:showAsAction="never"/>
+
+    <item
+        android:id="@+id/action_export_dump_file"
+        android:title="export dump file"
+        app:showAsAction="never"/>
+
+    <item
+        android:id="@+id/action_mail_dump_file"
+        android:title="mail dump file"
+        app:showAsAction="never"/>
+
+</menu>
