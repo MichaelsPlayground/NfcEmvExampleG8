@@ -217,6 +217,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                         }
 
                         // manual break - read complete file content
+                        /*
                         completeFileReading(nfc);
                         try {
                             nfc.close();
@@ -224,7 +225,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                             throw new RuntimeException(e);
                         }
                         if (!responseSelectAidNotAllowed) return;
-
+                        */
 
                         byte[] responseSelectedAidOk = checkResponse(responseSelectedAid);
                         if (responseSelectedAidOk != null) {
