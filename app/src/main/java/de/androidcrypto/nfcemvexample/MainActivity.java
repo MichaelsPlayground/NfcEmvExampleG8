@@ -215,6 +215,17 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                             }
                             return;
                         }
+
+                        // manual break - read complete file content
+                        completeFileReading(nfc);
+                        try {
+                            nfc.close();
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                        if (!responseSelectAidNotAllowed) return;
+
+
                         byte[] responseSelectedAidOk = checkResponse(responseSelectedAid);
                         if (responseSelectedAidOk != null) {
                             writeToUiAppend(etLog, "03 select AID response length " + responseSelectedAidOk.length + " data: " + bytesToHex(responseSelectedAidOk));
@@ -353,6 +364,59 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
             v.vibrate(200);
         }
     }
+
+    /**
+     * section for brute force reading of afl
+     */
+
+    private void completeFileReading(IsoDep nfc) {
+        writeToUiAppend(etLog, "");
+        writeToUiAppend(etLog, "complete reading of files in EMV card");
+
+        String resultString = "";
+        StringBuilder sb = new StringBuilder();
+        for (int sfi = 1; sfi < 10; ++sfi ) {
+            for (int record = 1; record < 10; ++record) {
+                byte[] readResult = readFile(nfc, sfi, record);
+                sb.append("SFI: ").append(String.valueOf(sfi)).append("\n");
+                sb.append("Record: ").append(String.valueOf(record)).append("\n");
+                if (readResult != null) {
+                    sb.append(bytesToHex(readResult)).append("\n");
+                } else {
+                    sb.append("NULL").append("\n");
+                }
+                sb.append("-----------------------").append("\n");
+            }
+        }
+        resultString = sb.toString();
+        writeToUiAppend(etData, resultString);
+        writeToUiAppend(etLog, "reading complete");
+    }
+
+    private byte[] readFile(IsoDep nfc, int sfi, int record) {
+        byte[] cmd = new byte[]{(byte) 0x00, (byte) 0xB2, (byte) 0x00, (byte) 0x04, (byte) 0x00};
+        cmd[2] = (byte)(record & 0x0FF);
+        cmd[3] |= (byte)((sfi << 3) & 0x0F8);
+        byte[] result = new byte[0];
+        try {
+            result = nfc.transceive(cmd);
+        } catch (IOException e) {
+            System.out.println("* readFile sfi " + sfi + " record " + record +
+                    " result length: " + 0 + " data: NULL");
+            return null;
+        }
+        byte[] resultOk = checkResponse(result);
+        if (resultOk != null) {
+            System.out.println("* readFile sfi " + sfi + " record " + record +
+                    " result length: " + resultOk.length + " data: " + bytesToHex(resultOk));
+        } else {
+            System.out.println("* readFile sfi " + sfi + " record " + record +
+                    " result length: " + 0 + " data: NULL");
+        }
+        return resultOk;
+    }
+
+
 
     /**
      * reads all files on card using track2 or afl data
