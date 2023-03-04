@@ -394,6 +394,15 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
         writeToUiAppend(etLog, "reading complete");
     }
 
+    /**
+     * reads a single file (sector) of an EMV card
+     * source: https://stackoverflow.com/a/38999989/8166854 answered Aug 17, 2016
+     * by Michael Roland
+     * @param nfc
+     * @param sfi
+     * @param record
+     * @return
+     */
     private byte[] readFile(IsoDep nfc, int sfi, int record) {
         byte[] cmd = new byte[]{(byte) 0x00, (byte) 0xB2, (byte) 0x00, (byte) 0x04, (byte) 0x00};
         cmd[2] = (byte)(record & 0x0FF);
