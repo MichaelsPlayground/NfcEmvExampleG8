@@ -14,6 +14,8 @@ This is a collection of my examples for Android (Java) in these categories:
 
 Soundfiles: https://mobcup.net/ringtone/ping-euf272ye/download/mp3
 
+For prettyPrint: include implementation 'com.github.devnied.emvnfccard:library:3.0.1'
+
 ## Permission handling
 
 For some categories we do need permissions (declared in AndroidManifest.xml) and sometimes a 
@@ -45,6 +47,7 @@ Girocard Voba M : SFI 1 REC 3 Track2 data
 
 ```
 
+Examples for brute force reading of all files (SFI between 1 to 9 and Record between 1 to 9): 
 
 ```plaintext
 MC complete Lloyds
