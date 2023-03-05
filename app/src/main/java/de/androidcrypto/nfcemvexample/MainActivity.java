@@ -16,6 +16,7 @@ import android.os.Vibrator;
 import android.provider.Settings;
 import android.text.TextUtils;
 import android.util.Log;
+import android.widget.CompoundButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -23,6 +24,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
 import com.github.devnied.emvnfccard.utils.TlvUtil;
+import com.google.android.material.switchmaterial.SwitchMaterial;
 import com.payneteasy.tlv.BerTag;
 import com.payneteasy.tlv.BerTlv;
 import com.payneteasy.tlv.BerTlvParser;
@@ -44,6 +46,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
 
     TextView tv1;
     com.google.android.material.textfield.TextInputEditText etData, etLog;
+    SwitchMaterial prettyPrintResponse;
 
     private NfcAdapter mNfcAdapter;
     private byte[] tagId;
@@ -51,6 +54,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
     final String TechIsoDep = "android.nfc.tech.IsoDep";
 
     boolean debugPrint = true; // if set to true the writeToUi method will print to console
+    boolean isPrettyPrintResponse = false; // default
     String aidSelectedForAnalyze = "";
     String aidSelectedForAnalyzeName = "";
 
@@ -65,8 +69,16 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
         tv1 = findViewById(R.id.tv1);
         etData = findViewById(R.id.etData);
         etLog = findViewById(R.id.etLog);
+        prettyPrintResponse = findViewById(R.id.swPrettyPrint);
 
         mNfcAdapter = NfcAdapter.getDefaultAdapter(this);
+
+        prettyPrintResponse.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
+                isPrettyPrintResponse = prettyPrintResponse.isChecked();
+            }
+        });
     }
 
     /**
@@ -193,10 +205,12 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                     }
 
                     // pretty print of response
-                    writeToUiAppend(etLog, "------------------------------------");
-                    String responsePpseString = TlvUtil.prettyPrintAPDUResponse(responsePpseOk);
-                    writeToUiAppend(etLog, responsePpseString);
-                    writeToUiAppend(etLog, "------------------------------------");
+                    if (isPrettyPrintResponse) {
+                        writeToUiAppend(etLog, "------------------------------------");
+                        String responsePpseString = TlvUtil.prettyPrintAPDUResponse(responsePpseOk);
+                        writeToUiAppend(etLog, responsePpseString);
+                        writeToUiAppend(etLog, "------------------------------------");
+                    }
 
                     // step 03: iterating through aidList by selecting AID
                     for (int aidNumber = 0; aidNumber < tag4fList.size(); aidNumber++) {
@@ -240,10 +254,12 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                             writeToUiAppend(etLog, "03 select AID response length " + responseSelectedAidOk.length + " data: " + bytesToHex(responseSelectedAidOk));
 
                             // pretty print of response
-                            writeToUiAppend(etLog, "------------------------------------");
-                            String responseSelectedAidString = TlvUtil.prettyPrintAPDUResponse(responseSelectedAidOk);
-                            writeToUiAppend(etLog, responseSelectedAidString);
-                            writeToUiAppend(etLog, "------------------------------------");
+                            if (isPrettyPrintResponse) {
+                                writeToUiAppend(etLog, "------------------------------------");
+                                String responseSelectedAidString = TlvUtil.prettyPrintAPDUResponse(responseSelectedAidOk);
+                                writeToUiAppend(etLog, responseSelectedAidString);
+                                writeToUiAppend(etLog, "------------------------------------");
+                            }
 
                             // intermediate step - get single data from card
                             writeToUiAppend(etLog, "");
@@ -304,10 +320,12 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                                         writeToUiAppend(etLog, "05 select GPO response length: " + responseGpoRequestOk.length + " data: " + bytesToHex(responseGpoRequestOk));
 
                                         // pretty print of response
-                                        writeToUiAppend(etLog, "------------------------------------");
-                                        String responseGpoRequestString = TlvUtil.prettyPrintAPDUResponse(responseGpoRequestOk);
-                                        writeToUiAppend(etLog, responseGpoRequestString);
-                                        writeToUiAppend(etLog, "------------------------------------");
+                                        if (isPrettyPrintResponse) {
+                                            writeToUiAppend(etLog, "------------------------------------");
+                                            String responseGpoRequestString = TlvUtil.prettyPrintAPDUResponse(responseGpoRequestOk);
+                                            writeToUiAppend(etLog, responseGpoRequestString);
+                                            writeToUiAppend(etLog, "------------------------------------");
+                                        }
 
                                         writeToUiAppend(etLog, "");
                                         writeToUiAppend(etLog, "06 read the files from card and search for tag 0x57 in each file");
@@ -350,10 +368,12 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                                     if (guessedPdolResult != null) {
 
                                         // pretty print of response
-                                        writeToUiAppend(etLog, "------------------------------------");
-                                        String guessedPdolResultString = TlvUtil.prettyPrintAPDUResponse(guessedPdolResult);
-                                        writeToUiAppend(etLog, guessedPdolResultString);
-                                        writeToUiAppend(etLog, "------------------------------------");
+                                        if (isPrettyPrintResponse) {
+                                            writeToUiAppend(etLog, "------------------------------------");
+                                            String guessedPdolResultString = TlvUtil.prettyPrintAPDUResponse(guessedPdolResult);
+                                            writeToUiAppend(etLog, guessedPdolResultString);
+                                            writeToUiAppend(etLog, "------------------------------------");
+                                        }
 
                                         System.out.println("guessedPdolResult: " + bytesToHex(guessedPdolResult));
                                         // read the PAN & Expiration date
@@ -384,10 +404,12 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                                     writeToUiAppend(etLog, "05 select GPO response length: " + responseGpoRequestOk.length + " data: " + bytesToHex(responseGpoRequestOk));
 
                                     // pretty print of response
-                                    writeToUiAppend(etLog, "------------------------------------");
-                                    String responseGpoRequestString = TlvUtil.prettyPrintAPDUResponse(responseGpoRequestOk);
-                                    writeToUiAppend(etLog, responseGpoRequestString);
-                                    writeToUiAppend(etLog, "------------------------------------");
+                                    if (isPrettyPrintResponse) {
+                                        writeToUiAppend(etLog, "------------------------------------");
+                                        String responseGpoRequestString = TlvUtil.prettyPrintAPDUResponse(responseGpoRequestOk);
+                                        writeToUiAppend(etLog, responseGpoRequestString);
+                                        writeToUiAppend(etLog, "------------------------------------");
+                                    }
 
                                     writeToUiAppend(etLog, "");
                                     writeToUiAppend(etLog, "06 read the files from card and search for tag 0x57 in each file");
@@ -402,16 +424,6 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                                     writeToUiAppend(etData, "data for AID " + aidSelectedForAnalyze + " (" + aidSelectedForAnalyzeName + ")");
                                     writeToUiAppend(etData, "PAN: " + parts[0]);
                                     writeToUiAppend(etData, "Expiration date (YYMMDD): " + parts[1]);
-
-                                    // intermediate step - get single data from card
-                                    writeToUiAppend(etLog, "");
-                                    writeToUiAppend(etLog, "= single data from card after GPO =");
-                                    byte[] applicationTransactionCounter2 = getApplicationTransactionCounter(nfc);
-                                    if (applicationTransactionCounter2 != null) {
-                                        writeToUiAppend(etLog, "applicationTransactionCounter: " + bytesToHex(applicationTransactionCounter2));
-                                    } else {
-                                        writeToUiAppend(etLog, "applicationTransactionCounter: NULL");
-                                    }
                                 }
                             }
                         }
@@ -448,7 +460,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
 
         String resultString = "";
         StringBuilder sb = new StringBuilder();
-        for (int sfi = 1; sfi < 10; ++sfi ) {
+        for (int sfi = 1; sfi < 10; ++sfi) {
             for (int record = 1; record < 10; ++record) {
                 byte[] readResult = readFile(nfc, sfi, record);
                 sb.append("SFI: ").append(String.valueOf(sfi)).append("\n");
@@ -470,6 +482,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
      * reads a single file (sector) of an EMV card
      * source: https://stackoverflow.com/a/38999989/8166854 answered Aug 17, 2016
      * by Michael Roland
+     *
      * @param nfc
      * @param sfi
      * @param record
@@ -477,8 +490,8 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
      */
     private byte[] readFile(IsoDep nfc, int sfi, int record) {
         byte[] cmd = new byte[]{(byte) 0x00, (byte) 0xB2, (byte) 0x00, (byte) 0x04, (byte) 0x00};
-        cmd[2] = (byte)(record & 0x0FF);
-        cmd[3] |= (byte)((sfi << 3) & 0x0F8);
+        cmd[2] = (byte) (record & 0x0FF);
+        cmd[3] |= (byte) ((sfi << 3) & 0x0F8);
         byte[] result = new byte[0];
         try {
             result = nfc.transceive(cmd);
@@ -560,11 +573,13 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                         if (resultReadRecordOk != null) {
 
                             // pretty print of response
-                            writeToUiAppend(etLog, "------------------------------------");
-                            writeToUiAppend(etLog, "data from file SFI " + sfiOrg + " record " + iRecords);
-                            String resultReadRecordString = TlvUtil.prettyPrintAPDUResponse(resultReadRecordOk);
-                            writeToUiAppend(etLog, resultReadRecordString);
-                            writeToUiAppend(etLog, "------------------------------------");
+                            if (isPrettyPrintResponse) {
+                                writeToUiAppend(etLog, "------------------------------------");
+                                writeToUiAppend(etLog, "data from file SFI " + sfiOrg + " record " + iRecords);
+                                String resultReadRecordString = TlvUtil.prettyPrintAPDUResponse(resultReadRecordOk);
+                                writeToUiAppend(etLog, resultReadRecordString);
+                                writeToUiAppend(etLog, "------------------------------------");
+                            }
 
 
                             //if ((resultReadRecord[resultReadRecord.length - 2] == (byte) 0x90) && (resultReadRecord[resultReadRecord.length - 1] == (byte) 0x00)) {
@@ -664,7 +679,8 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
         //if (data.length < 5) return null; // not ok
         if (data.length < 5) {
             System.out.println("checkResponse: data length " + data.length);
-            return null;} // not ok
+            return null;
+        } // not ok
         int status = ((0xff & data[data.length - 2]) << 8) | (0xff & data[data.length - 1]);
         if (status != 0x9000) {
             System.out.println("status: " + status);
@@ -827,6 +843,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
             return getTagValueFromResult(resultOk, (byte) 0x9f, (byte) 0x36);
         }
     }
+
     /**
      * section for activity workflow - important is the disabling of the ReaderMode when activity is pausing
      */

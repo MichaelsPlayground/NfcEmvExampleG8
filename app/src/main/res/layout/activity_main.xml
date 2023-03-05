@@ -55,6 +55,16 @@
                 app:dividerInsetEnd="16dp"
                 app:dividerInsetStart="16dp" />
 
+            <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/swPrettyPrint"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:checked="false"
+            android:clickable="true"
+            android:text="pretty print the response data"
+            android:textSize="18sp" />
+
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/etDataLayout"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
