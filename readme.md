@@ -23,14 +23,29 @@ runtime granting by the user:
 
 AndroidManifest.xml:
 ```plaintext
-...
     <!-- needed for NFC -->
     <uses-permission android:name="android.permission.NFC" />
     <uses-permission android:name="android.permission.VIBRATE" />
     
-...    
-    
 ```
+
+old Card emulator project: https://web.archive.org/web/20160415031900/http://developer.android.com/samples/CardEmulation/index.html
+
+https://github.com/championswimmer/NFC-host-card-emulation-Android
+
+https://web.archive.org/web/20150906014951/https://developer.android.com/samples/CardReader/index.html
+
+https://github.com/googlearchive/android-CardReader
+
+https://github.com/googlearchive/android-CardEmulation
+
+https://medium.com/the-almanac/how-to-build-a-simple-smart-card-emulator-reader-for-android-7975fae4040f  (Kotlin)
+
+https://github.com/Mohamdaoui/HostCardEmulator (Kotlin)
+
+https://github.com/Mohamdaoui/SmartCardReader (Kotlin)
+
+https://developer.visa.com/identity/user/register
 
 Overview of complete readings and found PAN + Expiration Date
 ...

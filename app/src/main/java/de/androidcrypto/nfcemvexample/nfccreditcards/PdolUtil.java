@@ -16,7 +16,7 @@ public class PdolUtil {
     private final List<String> pdolList = new ArrayList<>();
     private final int maximumPdolEntries = 20;
     private boolean settingResult = setPdolEntries(maximumPdolEntries);
-    private final String pdolWithCountryCode =   "80A80000238321A0000000000000000001000000000000084000000000000840070203008017337000";
+    private final String pdolWithCountryCode =   "80A80000238321A0000000000000000001000000000008400000000000084007020300801733700000";
     private final String pdolWithCountryCodeNew ="80A800002383B620C00000000000000001000000000000084000000000000840070203008017337000";
     String c                                    ="80A80000158313C080000000000000100001240124823DDE7A0100";
     private final String pdolWithCountryCode2 = "80A8000012831B7604000000000010000000038393031000";
