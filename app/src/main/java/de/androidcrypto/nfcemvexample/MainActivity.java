@@ -411,6 +411,102 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                                         writeToUiAppend(etLog, "------------------------------------");
                                     }
 
+/*
+https://stackoverflow.com/questions/63547124/unable-to-generate-application-cryptogram
+Basis CDOL1:
+TAG  LENGTH
+9F02 06
+9F03 06
+9F1A 02
+95   05
+5F2A 02
+9A   03
+9C   01
+9F37 04
+9F35 01
+9F45 02
+9F4C 08
+9F34 03
+9F1D 08
+9F15 02
+9F4E 14
+
+byte_t get_app_crypto[] = {
+    0x80, 0xAE, // CLA INS
+    0x80, 0x00, // P1 P2
+    0x43, // length
+    0x00, 0x00, 0x00, 0x00, 0x01, 0x00, // amount
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // other amount
+    0x06, 0x42, // terminal country
+    0x00, 0x00, 0x00, 0x00, 0x00, // tvr terminal
+    0x09, 0x46, // currency code
+    0x20, 0x08, 0x23, // transaction date
+    0x00, // transaction type
+    0x11, 0x22, 0x33, 0x44, // UN
+    0x22, // terminal type
+    0x00, 0x00,// data auth code
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // icc dynamic
+    0x00, 0x00, 0x00, // cvm results
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // 8
+    0x54, 0x11, // 2 merchant category
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // 14 merchant name or location
+    0x00, // LE
+    };
+
+AAB Mastercard needs:
+I/System.out:          8C 27 -- Card Risk Management Data Object List 1 (CDOL1)
+I/System.out:                9F 02 06 -- Amount, Authorised (Numeric)
+I/System.out:                9F 03 06 -- Amount, Other (Numeric)
+I/System.out:                9F 1A 02 -- Terminal Country Code
+I/System.out:                95 05 -- Terminal Verification Results (TVR)
+I/System.out:                5F 2A 02 -- Transaction Currency Code
+I/System.out:                9A 03 -- Transaction Date
+I/System.out:                9C 01 -- Transaction Type
+I/System.out:                9F 37 04 -- Unpredictable Number
+I/System.out:                9F 35 01 -- Terminal Type
+I/System.out:                9F 45 02 -- Data Authentication Code
+I/System.out:                9F 4C 08 -- ICC Dynamic Number
+I/System.out:                9F 34 03 -- Cardholder Verification (CVM) Results
+I/System.out:                9F 21 03 -- Transaction Time (HHMMSS)
+I/System.out:                9F 7C 14 -- Merchant Custom Data
+              total: 66
+ */
+
+                                    byte[] get_app_crypto = new byte[]{
+                                            (byte) 0x80, (byte) 0xAE, // CLA INS
+                                            (byte) 0x80, 0x00, // P1 P2
+                                            0x42, // length // todo fix to 66 decimal = 42 hex
+                                            0x00, 0x00, 0x00, 0x00, 0x01, 0x00, // amount ok
+                                            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // other amount ok
+                                            0x06, 0x42, // terminal country ok
+                                            0x00, 0x00, 0x00, 0x00, 0x00, // tvr terminal ok
+                                            0x09, 0x46, // currency code ok
+                                            0x20, 0x08, 0x23, // transaction date ok, todo fix date ?
+                                            0x00, // transaction type ok
+                                            0x11, 0x22, 0x33, 0x44, // UN ok
+                                            0x22, // terminal type ok
+                                            0x00, 0x00,// data auth code ok
+                                            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // icc dynamic ok
+                                            0x00, 0x00, 0x00, // cvm results ok
+                                            0x11, 0x10, 0x09, // Transaction Time (HHMMSS) added
+                                            //0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // 8 cut
+                                            //0x54, 0x11, // 2 merchant category cut
+                                            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,// 14 merchant name or location now 20 bytes
+                                            0x00, // LE
+                                    };
+                                    byte[] responseGetAppCrypto = nfc.transceive(get_app_crypto);
+                                    writeToUiAppend(etLog, "get AC command  length: " + get_app_crypto.length + " data: " + bytesToHex(get_app_crypto));
+                                    writeToUiAppend(etLog, "get AC response length: " + responseGetAppCrypto.length + " data: " + bytesToHex(responseGetAppCrypto));
+                                    // pretty print of response
+                                    if (isPrettyPrintResponse) {
+                                        writeToUiAppend(etLog, "------------------------------------");
+                                        String responseGetAppCryptoString = TlvUtil.prettyPrintAPDUResponse(responseGetAppCrypto);
+                                        writeToUiAppend(etLog, responseGetAppCryptoString);
+                                        writeToUiAppend(etLog, "------------------------------------");
+                                    }
+                                    // the template contains the tag 0x9F36 = Application Transaction Counter (ATC) !
+                                    // todo get the ATC from response
+
                                     writeToUiAppend(etLog, "");
                                     writeToUiAppend(etLog, "06 read the files from card and search for tag 0x57 in each file");
                                     String pan_expirationDate = readPanFromFilesFromGpo(nfc, responseGpoRequestOk);
@@ -529,7 +625,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
             int posSeparator = track2DataString.toUpperCase().indexOf("D");
             pan = track2DataString.substring(0, posSeparator);
             expirationDate = track2DataString.substring((posSeparator + 1), (posSeparator + 5));
-            return pan + "_" + expirationDate;
+ //           return pan + "_" + expirationDate;
         } else {
             writeToUiAppend(etLog, "tag 0x57 not found, try to find in tag 0x94 = AFL");
         }
