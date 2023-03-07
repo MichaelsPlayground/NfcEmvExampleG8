@@ -247,7 +247,6 @@ public class FileReaderActivity extends AppCompatActivity implements NfcAdapter.
                         return;
                     }
 
-
                     byte[] responseSelectedAidOk = checkResponse(responseSelectedAid);
                     if (responseSelectedAidOk != null) {
                         writeToUiAppend(etLog, "03 select AID response length " + responseSelectedAidOk.length + " data: " + bytesToHex(responseSelectedAidOk));
@@ -263,88 +262,6 @@ public class FileReaderActivity extends AppCompatActivity implements NfcAdapter.
                         byte[] applicationTransactionCounterAfterReading = getApplicationTransactionCounter(nfc);
                         writeToUiAppendNoExport(etLog, "application transaction counter (ATC) after reading");
                         printSingleData(etLog, applicationTransactionCounterAfterReading);
-
-
-/*
-https://stackoverflow.com/questions/63547124/unable-to-generate-application-cryptogram
-Basis CDOL1:
-TAG  LENGTH
-9F02 06
-9F03 06
-9F1A 02
-95   05
-5F2A 02
-9A   03
-9C   01
-9F37 04
-9F35 01
-9F45 02
-9F4C 08
-9F34 03
-9F1D 08
-9F15 02
-9F4E 14
-
-byte_t get_app_crypto[] = {
-    0x80, 0xAE, // CLA INS
-    0x80, 0x00, // P1 P2
-    0x43, // length
-    0x00, 0x00, 0x00, 0x00, 0x01, 0x00, // amount
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // other amount
-    0x06, 0x42, // terminal country
-    0x00, 0x00, 0x00, 0x00, 0x00, // tvr terminal
-    0x09, 0x46, // currency code
-    0x20, 0x08, 0x23, // transaction date
-    0x00, // transaction type
-    0x11, 0x22, 0x33, 0x44, // UN
-    0x22, // terminal type
-    0x00, 0x00,// data auth code
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // icc dynamic
-    0x00, 0x00, 0x00, // cvm results
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // 8
-    0x54, 0x11, // 2 merchant category
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // 14 merchant name or location
-    0x00, // LE
-    };
-
-AAB Mastercard needs:
-I/System.out:          8C 27 -- Card Risk Management Data Object List 1 (CDOL1)
-I/System.out:                9F 02 06 -- Amount, Authorised (Numeric)
-I/System.out:                9F 03 06 -- Amount, Other (Numeric)
-I/System.out:                9F 1A 02 -- Terminal Country Code
-I/System.out:                95 05 -- Terminal Verification Results (TVR)
-I/System.out:                5F 2A 02 -- Transaction Currency Code
-I/System.out:                9A 03 -- Transaction Date
-I/System.out:                9C 01 -- Transaction Type
-I/System.out:                9F 37 04 -- Unpredictable Number
-I/System.out:                9F 35 01 -- Terminal Type
-I/System.out:                9F 45 02 -- Data Authentication Code
-I/System.out:                9F 4C 08 -- ICC Dynamic Number
-I/System.out:                9F 34 03 -- Cardholder Verification (CVM) Results
-I/System.out:                9F 21 03 -- Transaction Time (HHMMSS)
-I/System.out:                9F 7C 14 -- Merchant Custom Data
-              total: 66
- */
-
-
-
-/*
-I/System.out: get AC command  length: 72 data: 80ae80004200000000010000000000000006420000000000094620082300112233442200000000000000000000000000111009000000000000000000000000000000000000000000
-I/System.out: get AC response length: 45 data: 77299f2701809f3602050c9f26084aad83bb1506f1389f10120110a00003240000000000000000000000ff9000
-I/System.out: ------------------------------------
-I/System.out:
-I/System.out: 77 29 -- Response Message Template Format 2
-I/System.out:       9F 27 01 -- Cryptogram Information Data
-I/System.out:                80 (BINARY)
-I/System.out:       9F 36 02 -- Application Transaction Counter (ATC)
-I/System.out:                05 0C (BINARY)
-I/System.out:       9F 26 08 -- Application Cryptogram
-I/System.out:                4A AD 83 BB 15 06 F1 38 (BINARY)
-I/System.out:       9F 10 12 -- Issuer Application Data
-I/System.out:                01 10 A0 00 03 24 00 00 00 00 00 00 00 00 00 00
-I/System.out:                00 FF (BINARY)
-I/System.out: 90 00 -- Command successfully executed (OK)
- */
                     }
                 }
             } catch (IOException e) {
@@ -356,7 +273,6 @@ I/System.out: 90 00 -- Command successfully executed (OK)
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
-
         }
         playDoublePing();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -630,28 +546,6 @@ I/System.out: 90 00 -- Command successfully executed (OK)
         });
     }
 
-    private void writeToUiAppendOrg(TextView textView, String message) {
-        runOnUiThread(() -> {
-            if (TextUtils.isEmpty(textView.getText().toString())) {
-                textView.setText(message);
-            } else {
-                String newString = textView.getText().toString() + "\n" + message;
-                textView.setText(newString);
-            }
-        });
-    }
-
-    private void writeToUiAppendReverse(TextView textView, String message) {
-        runOnUiThread(() -> {
-            if (TextUtils.isEmpty(textView.getText().toString())) {
-                textView.setText(message);
-            } else {
-                String newString = message + "\n" + textView.getText().toString();
-                textView.setText(newString);
-            }
-        });
-    }
-
     private void writeToUiToast(String message) {
         runOnUiThread(() -> {
             Toast.makeText(getApplicationContext(),
@@ -802,5 +696,4 @@ I/System.out: 90 00 -- Command successfully executed (OK)
 
         return super.onCreateOptionsMenu(menu);
     }
-
 }
