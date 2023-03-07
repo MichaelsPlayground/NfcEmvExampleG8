@@ -857,26 +857,7 @@ I/System.out: 90 00 -- Command successfully executed (OK)
         }
     }
 
-    private byte[] getLog(IsoDep nfc) {
-        // 9F4D	Log Entry	Provides the SFI of the Transaction Log file and its number of records
-        // see https://stackoverflow.com/q/59588295/8166854
-        // how to get LogEntry: https://stackoverflow.com/a/39936081/8166854
-        // https://github.com/sasc999/javaemvreader/blob/f0d5920a94a0dc4be505fbb5dd03a7f1992f82bc/src/main/java/sasc/emv/EMVSession.java#L1411
-        byte[] cmd = new byte[]{(byte) 0x00, (byte) 0xB2, (byte) 0x01, (byte) 0x5C, (byte) 0x00};
-        byte[] result = new byte[0];
-        try {
-            result = nfc.transceive(cmd);
-        } catch (IOException e) {
-            System.out.println("* getLastOnlineATCRegister failed");
-            return null;
-        }
-        byte[] resultOk = checkResponse(result);
-        if (resultOk == null) {
-            return null;
-        } else {
-            return getTagValueFromResult(resultOk, (byte) 0x9f, (byte) 0x4F);
-        }
-    }
+
 
     private byte[] getCommandGetAppCryptoMastercard() {
         // https://stackoverflow.com/questions/63547124/unable-to-generate-application-cryptogram
@@ -975,10 +956,10 @@ I/System.out: 90 00 -- Command successfully executed (OK)
     }
 
     private void prettyPrintData(TextView textView, byte[] responseData) {
-            writeToUiAppend(etLog, "------------------------------------");
+            writeToUiAppend(textView, "------------------------------------");
             String responseGetAppCryptoString = TlvUtil.prettyPrintAPDUResponse(responseData);
-            writeToUiAppend(etLog, trimLeadingLineFeeds(responseGetAppCryptoString));
-            writeToUiAppend(etLog, "------------------------------------");
+            writeToUiAppend(textView, trimLeadingLineFeeds(responseGetAppCryptoString));
+            writeToUiAppend(textView, "------------------------------------");
     }
 
     public static String trimLeadingLineFeeds (String input) {

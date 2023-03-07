@@ -55,7 +55,7 @@
                 android:textSize="18sp"
                 android:background="@drawable/round_rect_shape_red"
                 android:textStyle="bold"
-                android:text="Warning: this activity tries to read 50 sectors of the card - that will increase the internal counter of the card with 50. The internal counter is limited to 65535 readings at all.\n\nWhen the limit is reached the card is irrevocable damaged." />
+                android:text="Warning: this activity tries to read 40 sectors of the card - that will increase the internal counter of the card with 40. The internal counter is limited to 65535 readings at all.\n\nWhen the limit is reached the card is irrevocable damaged." />
 
             <com.google.android.material.divider.MaterialDivider
                 android:layout_width="match_parent"
@@ -97,6 +97,8 @@
                     android:text=""
                     android:textSize="14sp"
                     android:visibility="visible"
+                    android:focusable="false"
+                    android:fontFamily="monospace"
                     tools:ignore="KeyboardInaccessibleWidget" />
             </com.google.android.material.textfield.TextInputLayout>
 
@@ -122,6 +124,7 @@
                     android:text=""
                     android:textSize="14sp"
                     android:visibility="visible"
+                    android:fontFamily="monospace"
                     android:focusable="false"
                     tools:ignore="KeyboardInaccessibleWidget" />
             </com.google.android.material.textfield.TextInputLayout>
