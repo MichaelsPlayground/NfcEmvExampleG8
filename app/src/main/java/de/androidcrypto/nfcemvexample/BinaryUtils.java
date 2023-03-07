@@ -2,6 +2,8 @@ package de.androidcrypto.nfcemvexample;
 
 import android.util.Base64;
 
+import java.math.BigInteger;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 
 public class BinaryUtils {
@@ -163,4 +165,49 @@ public class BinaryUtils {
     public static String base64ToHex(String base64String) {
         return bytesToHex(base64Decoding(base64String));
     }
+
+    // int <-> byte array
+    // https://stackoverflow.com/a/7619315/8166854
+    public static byte[] intToByteArray(int value) {
+        return  ByteBuffer.allocate(4).putInt(value).array();
+    }
+
+    public static byte[] intToByteArrayV2(int value) {
+        return new byte[] {
+                (byte)(value >> 24),
+                (byte)(value >> 16),
+                (byte)(value >> 8),
+                (byte)value };
+    }
+
+    public static int intFromByteArray(byte[] bytes) {
+        return ByteBuffer.wrap(bytes).getInt();
+    }
+
+    // packing an array of 4 bytes to an int, big endian, minimal parentheses
+    // operator precedence: <<, &, |
+    // when operators of equal precedence (here bitwise OR) appear in the same expression, they are evaluated from left to right
+    public static int intFromByteArrayV2(byte[] bytes) {
+        return bytes[0] << 24 | (bytes[1] & 0xFF) << 16 | (bytes[2] & 0xFF) << 8 | (bytes[3] & 0xFF);
+    }
+
+    // packing an array of 4 bytes to an int, big endian, clean code
+    public static int intFromByteArrayV3(byte[] bytes) {
+        return ((bytes[0] & 0xFF) << 24) |
+                ((bytes[1] & 0xFF) << 16) |
+                ((bytes[2] & 0xFF) << 8 ) |
+                ((bytes[3] & 0xFF) << 0 );
+    }
+
+    // be careful when running in loops, calculation is costful
+    // https://stackoverflow.com/a/17981098/8166854
+    // this works for byte arrays of length 2
+    public static int intFromByteArrayV4(byte[] bytes) {
+        return new BigInteger(bytes).intValue();
+    }
+
+    public static byte[] intToByteArrayV4(byte[] bytes) {
+        return new BigInteger(bytes).toByteArray();
+    }
+
 }
