@@ -31,4 +31,12 @@
 
     </application>
 
+    <!-- for sending an email intent -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.SENDTO" />
+            <data android:scheme="*" />
+        </intent>
+    </queries>
+
 </manifest>

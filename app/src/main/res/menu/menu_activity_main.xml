@@ -6,28 +6,13 @@
     <!-- https://fonts.google.com/icons?selected=Material+Icons -->
 
     <item
-        android:id="@+id/action_open_file"
-        android:title="open file"
+        android:id="@+id/action_export_mail"
+        android:title="Export Mail"
         app:showAsAction="never"/>
 
     <item
-        android:id="@+id/action_plus_text_size"
-        android:title="+ text size"
-        app:showAsAction="never"/>
-
-    <item
-        android:id="@+id/action_minus_text_size"
-        android:title="- text size"
-        app:showAsAction="never"/>
-
-    <item
-        android:id="@+id/action_export_dump_file"
-        android:title="export dump file"
-        app:showAsAction="never"/>
-
-    <item
-        android:id="@+id/action_mail_dump_file"
-        android:title="mail dump file"
+        android:id="@+id/action_export_text_file"
+        android:title="Export text File"
         app:showAsAction="never"/>
 
 </menu>

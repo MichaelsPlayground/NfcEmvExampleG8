@@ -3,9 +3,13 @@ package de.androidcrypto.nfcemvexample;
 import static de.androidcrypto.nfcemvexample.BinaryUtils.bytesToHex;
 import static de.androidcrypto.nfcemvexample.BinaryUtils.hexToBytes;
 
+import android.app.Activity;
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
+import android.database.Cursor;
 import android.media.MediaPlayer;
+import android.net.Uri;
 import android.nfc.NfcAdapter;
 import android.nfc.Tag;
 import android.nfc.tech.IsoDep;
@@ -13,13 +17,20 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
+import android.provider.OpenableColumns;
 import android.provider.Settings;
 import android.text.TextUtils;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.widget.CompoundButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResult;
+import androidx.activity.result.ActivityResultCallback;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
@@ -30,11 +41,18 @@ import com.payneteasy.tlv.BerTlv;
 import com.payneteasy.tlv.BerTlvParser;
 import com.payneteasy.tlv.BerTlvs;
 
+import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
 import de.androidcrypto.nfcemvexample.nfccreditcards.AidValues;
 import de.androidcrypto.nfcemvexample.nfccreditcards.PdolUtil;
@@ -57,6 +75,10 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
     boolean isPrettyPrintResponse = false; // default
     String aidSelectedForAnalyze = "";
     String aidSelectedForAnalyzeName = "";
+
+    // exporting the data
+    String exportString = "";
+    String exportStringFileName = "emv.html";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -97,6 +119,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
         runOnUiThread(() -> {
             etLog.setText("");
             etData.setText("");
+            exportString = "";
             aidSelectedForAnalyze = "";
             aidSelectedForAnalyzeName = "";
         });
@@ -298,10 +321,10 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                                         writeToUiAppend(etLog, "data for AID " + aidSelectedForAnalyze + " (" + aidSelectedForAnalyzeName + ")");
                                         writeToUiAppend(etLog, "PAN: " + parts[0]);
                                         writeToUiAppend(etLog, "Expiration date (YYMM): " + parts[1]);
-                                        writeToUiAppend(etData, "");
-                                        writeToUiAppend(etData, "data for AID " + aidSelectedForAnalyze + " (" + aidSelectedForAnalyzeName + ")");
-                                        writeToUiAppend(etData, "PAN: " + parts[0]);
-                                        writeToUiAppend(etData, "Expiration date (YYMM): " + parts[1]);
+                                        writeToUiAppendNoExport(etData, "");
+                                        writeToUiAppendNoExport(etData, "data for AID " + aidSelectedForAnalyze + " (" + aidSelectedForAnalyzeName + ")");
+                                        writeToUiAppendNoExport(etData, "PAN: " + parts[0]);
+                                        writeToUiAppendNoExport(etData, "Expiration date (YYMM): " + parts[1]);
 
                                         // print single data
                                         printSingleData(etLog, applicationTransactionCounter, pinTryCounter, lastOnlineATCRegister, logFormat);
@@ -344,16 +367,17 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                                         writeToUiAppend(etLog, "data for AID " + aidSelectedForAnalyze + " (" + aidSelectedForAnalyzeName + ")");
                                         writeToUiAppend(etLog, "PAN: " + parts[0]);
                                         writeToUiAppend(etLog, "Expiration date (YYMMDD): " + parts[1]);
-                                        writeToUiAppend(etData, "");
-                                        writeToUiAppend(etData, "data for AID " + aidSelectedForAnalyze + " (" + aidSelectedForAnalyzeName + ")");
-                                        writeToUiAppend(etData, "PAN: " + parts[0]);
-                                        writeToUiAppend(etData, "Expiration date (YYMMDD): " + parts[1]);
+                                        writeToUiAppendNoExport(etData, "");
+                                        writeToUiAppendNoExport(etData, "data for AID " + aidSelectedForAnalyze + " (" + aidSelectedForAnalyzeName + ")");
+                                        writeToUiAppendNoExport(etData, "PAN: " + parts[0]);
+                                        writeToUiAppendNoExport(etData, "Expiration date (YYMMDD): " + parts[1]);
                                     } else {
                                         System.out.println("guessedPdolResult is NULL");
                                     }
 
                                     // print single data
                                     printSingleData(etLog, applicationTransactionCounter, pinTryCounter, lastOnlineATCRegister, logFormat);
+
                                 }
                             } else { // could not find a tag 0x9f38 in the selectAid response means there is no PDOL request available
                                 // instead we use an empty PDOL of length 0
@@ -461,10 +485,10 @@ I/System.out: 90 00 -- Command successfully executed (OK)
                                     writeToUiAppend(etLog, "data for AID " + aidSelectedForAnalyze + " (" + aidSelectedForAnalyzeName + ")");
                                     writeToUiAppend(etLog, "PAN: " + parts[0]);
                                     writeToUiAppend(etLog, "Expiration date (YYMM): " + parts[1]);
-                                    writeToUiAppend(etData, "");
-                                    writeToUiAppend(etData, "data for AID " + aidSelectedForAnalyze + " (" + aidSelectedForAnalyzeName + ")");
-                                    writeToUiAppend(etData, "PAN: " + parts[0]);
-                                    writeToUiAppend(etData, "Expiration date (YYMMDD): " + parts[1]);
+                                    writeToUiAppendNoExport(etData, "");
+                                    writeToUiAppendNoExport(etData, "data for AID " + aidSelectedForAnalyze + " (" + aidSelectedForAnalyzeName + ")");
+                                    writeToUiAppendNoExport(etData, "PAN: " + parts[0]);
+                                    writeToUiAppendNoExport(etData, "Expiration date (YYMMDD): " + parts[1]);
                                 }
                                 // print single data
                                 printSingleData(etLog, applicationTransactionCounter, pinTryCounter, lastOnlineATCRegister, logFormat);
@@ -529,7 +553,7 @@ I/System.out: 90 00 -- Command successfully executed (OK)
             }
         }
         resultString = sb.toString();
-        writeToUiAppend(etData, resultString);
+        writeToUiAppendNoExport(etData, resultString);
         writeToUiAppend(etLog, "reading complete");
     }
 
@@ -943,6 +967,12 @@ I/System.out: 90 00 -- Command successfully executed (OK)
      * section for UI
      */
 
+    private void provideTextViewDataForExport(TextView textView) {
+        System.out.println("*# get Data:" + textView.getText().toString());
+        exportString = textView.getText().toString();
+        System.out.println("*# get Data:" + exportString);
+    }
+
     private void prettyPrintData(TextView textView, byte[] responseData) {
             writeToUiAppend(etLog, "------------------------------------");
             String responseGetAppCryptoString = TlvUtil.prettyPrintAPDUResponse(responseData);
@@ -983,7 +1013,24 @@ I/System.out: 90 00 -- Command successfully executed (OK)
 
     // special version, needs a boolean variable in class header: boolean debugPrint = true;
     // if true this method will print the output additionally to the console
+    // a second variable is need for export of a log file exportString
     private void writeToUiAppend(TextView textView, String message) {
+        exportString += message + "\n";
+        runOnUiThread(() -> {
+            if (TextUtils.isEmpty(textView.getText().toString())) {
+                textView.setText(message);
+            } else {
+                String newString = textView.getText().toString() + "\n" + message;
+                textView.setText(newString);
+            }
+            if (debugPrint) System.out.println(message);
+        });
+    }
+
+    // special version, needs a boolean variable in class header: boolean debugPrint = true;
+    // if true this method will print the output additionally to the console
+    // this version does not append the string to the exportString
+    private void writeToUiAppendNoExport(TextView textView, String message) {
         runOnUiThread(() -> {
             if (TextUtils.isEmpty(textView.getText().toString())) {
                 textView.setText(message);
@@ -1023,6 +1070,129 @@ I/System.out: 90 00 -- Command successfully executed (OK)
                     message,
                     Toast.LENGTH_SHORT).show();
         });
+    }
+
+    /**
+     * section OptionsMenu mail data methods
+     */
+
+    private void exportMail() {
+        if (exportString.isEmpty()) {
+            writeToUiToast("Scan a tag first before sending emails :-)");
+            return;
+        }
+        String subject = "Dump data";
+        String body = exportString;
+        Intent intent = new Intent(Intent.ACTION_SEND);
+        intent.setType("text/plain");
+        intent.putExtra(Intent.EXTRA_SUBJECT, subject);
+        intent.putExtra(Intent.EXTRA_TEXT, body);
+        if (intent.resolveActivity(getPackageManager()) != null) {
+            startActivity(intent);
+        }
+    }
+
+    /**
+     * section OptionsMenu export text file methods
+     */
+
+    private void exportTextFile() {
+        if (exportString.isEmpty()) {
+            writeToUiToast("Scan a tag first before writing files :-)");
+            return;
+        }
+        writeStringToExternalSharedStorage();
+    }
+
+    private void writeStringToExternalSharedStorage() {
+        Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("*/*");
+        // Optionally, specify a URI for the file that should appear in the
+        // system file picker when it loads.
+        //boolean pickerInitialUri = false;
+        //intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI, pickerInitialUri);
+        // get filename from edittext
+        String filename = exportStringFileName;
+        // sanity check
+        if (filename.equals("")) {
+            writeToUiToast("scan a tag before writing the content to a file :-)");
+            return;
+        }
+        intent.putExtra(Intent.EXTRA_TITLE, filename);
+        selectTextFileActivityResultLauncher.launch(intent);
+    }
+
+    ActivityResultLauncher<Intent> selectTextFileActivityResultLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            new ActivityResultCallback<ActivityResult>() {
+                @Override
+                public void onActivityResult(ActivityResult result) {
+                    if (result.getResultCode() == Activity.RESULT_OK) {
+                        // There are no request codes
+                        Intent resultData = result.getData();
+                        // The result data contains a URI for the document or directory that
+                        // the user selected.
+                        Uri uri = null;
+                        if (resultData != null) {
+                            uri = resultData.getData();
+                            // Perform operations on the document using its URI.
+                            try {
+                                // get file content from edittext
+                                String fileContent = exportString;
+                                System.out.println("## data to write: " + exportString);
+                                writeTextToUri(uri, fileContent);
+                                writeToUiToast("file written to external shared storage: " + uri.toString());
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                                writeToUiToast("ERROR: " + e.toString());
+                                return;
+                            }
+                        }
+                    }
+                }
+            });
+
+    private void writeTextToUri(Uri uri, String data) throws IOException {
+        try {
+            System.out.println("** data to write: " + data);
+            OutputStreamWriter outputStreamWriter = new OutputStreamWriter(getApplicationContext().getContentResolver().openOutputStream(uri));
+            outputStreamWriter.write(data);
+            outputStreamWriter.close();
+        } catch (IOException e) {
+            System.out.println("Exception File write failed: " + e.toString());
+        }
+    }
+
+    /**
+     * section for OptionsMenu
+     */
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.menu_activity_main, menu);
+
+        MenuItem mExportMail = menu.findItem(R.id.action_export_mail);
+        mExportMail.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
+            @Override
+            public boolean onMenuItemClick(MenuItem item) {
+                Log.i(TAG, "mExportMail");
+                exportMail();
+                return false;
+            }
+        });
+
+        MenuItem mExportTextFile = menu.findItem(R.id.action_export_text_file);
+        mExportTextFile.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
+            @Override
+            public boolean onMenuItemClick(MenuItem item) {
+                Log.i(TAG, "mExportTextFile");
+                exportTextFile();
+                return false;
+            }
+        });
+
+        return super.onCreateOptionsMenu(menu);
     }
 
 }
