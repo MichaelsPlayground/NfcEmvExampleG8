@@ -1,0 +1,381 @@
+NFC tag discovered
+TagId: 08d8be18
+TechList found with these entries:
+android.nfc.tech.IsoDep
+android.nfc.tech.NfcA
+
+*** Tech ***
+Technology IsoDep
+try to read a payment card with PPSE
+
+01 select PPSE
+01 select PPSE command length 20 data: 00a404000e325041592e5359532e444446303100
+01 select PPSE response length 107 data: 6f67840e325041592e5359532e4444463031a555bf0c5261194f09a000000059454301008701019f0a080001050100000000611a4f0aa00000035910100280018701019f0a08000105010000000061194f09d276000025474101008701019f0a0800010501000000009000
+------------------------------------
+6F 67 -- File Control Information (FCI) Template
+      84 0E -- Dedicated File (DF) Name
+            32 50 41 59 2E 53 59 53 2E 44 44 46 30 31 (BINARY)
+      A5 55 -- File Control Information (FCI) Proprietary Template
+            BF 0C 52 -- File Control Information (FCI) Issuer Discretionary Data
+                     61 19 -- Application Template
+                           4F 09 -- Application Identifier (AID) - card
+                                 A0 00 00 00 59 45 43 01 00 (BINARY)
+                           87 01 -- Application Priority Indicator
+                                 01 (BINARY)
+                           9F 0A 08 -- [UNKNOWN TAG]
+                                    00 01 05 01 00 00 00 00 (BINARY)
+                     61 1A -- Application Template
+                           4F 0A -- Application Identifier (AID) - card
+                                 A0 00 00 03 59 10 10 02 80 01 (BINARY)
+                           87 01 -- Application Priority Indicator
+                                 01 (BINARY)
+                           9F 0A 08 -- [UNKNOWN TAG]
+                                    00 01 05 01 00 00 00 00 (BINARY)
+                     61 19 -- Application Template
+                           4F 09 -- Application Identifier (AID) - card
+                                 D2 76 00 00 25 47 41 01 00 (BINARY)
+                           87 01 -- Application Priority Indicator
+                                 01 (BINARY)
+                           9F 0A 08 -- [UNKNOWN TAG]
+                                    00 01 05 01 00 00 00 00 (BINARY)
+------------------------------------
+
+02 analyze select PPSE response and search for tag 0x4F (applications on card)
+Found tag 0x4F 3 time(s):
+application Id (AID): a00000005945430100
+application Id (AID): a0000003591010028001
+application Id (AID): d27600002547410100
+
+************************************
+03 select application by AID a00000005945430100 (number 1)
+card is a Zentraler Kreditausschuss (ZKA) Girocard Electronic Cash
+
+03 select AID command length 15 data: 00a4040009a0000000594543010000
+03 select AID response length 73 data: 6f478409a00000005945430100a53a50086769726f636172648701019f38069f02069f1d025f2d046465656ebf0c1a9f4d02190a9f6e07028000003030009f0a080001050100000000
+------------------------------------
+6F 47 -- File Control Information (FCI) Template
+      84 09 -- Dedicated File (DF) Name
+            A0 00 00 00 59 45 43 01 00 (BINARY)
+      A5 3A -- File Control Information (FCI) Proprietary Template
+            50 08 -- Application Label
+                  67 69 72 6F 63 61 72 64 (=girocard)
+            87 01 -- Application Priority Indicator
+                  01 (BINARY)
+            9F 38 06 -- Processing Options Data Object List (PDOL)
+                     9F 02 06 -- Amount, Authorised (Numeric)
+                     9F 1D 02 -- Terminal Risk Management Data
+            5F 2D 04 -- Language Preference
+                     64 65 65 6E (=deen)
+            BF 0C 1A -- File Control Information (FCI) Issuer Discretionary Data
+                     9F 4D 02 -- Log Entry
+                              19 0A (BINARY)
+                     9F 6E 07 -- Visa Low-Value Payment (VLP) Issuer Authorisation Code
+                              02 80 00 00 30 30 00 (BINARY)
+                     9F 0A 08 -- [UNKNOWN TAG]
+                              00 01 05 01 00 00 00 00 (BINARY)
+------------------------------------
+
+applicationTransactionCounter: 0205 (hex), 517 (dec)
+
+04 read the files for sector 1-4 and records 1-10 for each sector
+
+complete reading of files in EMV card
+SFI: 1
+Record: 1
+70059f08020002
+------------------------------------
+70 05 -- Record Template (EMV Proprietary)
+      9F 08 02 -- Application Version Number - card
+               00 02 (BINARY)
+------------------------------------
+
+-----------------------
+SFI: 1
+Record: 2
+70059f08020002
+------------------------------------
+70 05 -- Record Template (EMV Proprietary)
+      9F 08 02 -- Application Version Number - card
+               00 02 (BINARY)
+------------------------------------
+
+-----------------------
+SFI: 1
+Record: 3
+703d8c1b9f02069f03069f1a0295055f2a029a039c019f37049f35019f34038d0991108a0295059f370457136726428902046846007d21122010254828156f
+------------------------------------
+70 3D -- Record Template (EMV Proprietary)
+      8C 1B -- Card Risk Management Data Object List 1 (CDOL1)
+            9F 02 06 -- Amount, Authorised (Numeric)
+            9F 03 06 -- Amount, Other (Numeric)
+            9F 1A 02 -- Terminal Country Code
+            95 05 -- Terminal Verification Results (TVR)
+            5F 2A 02 -- Transaction Currency Code
+            9A 03 -- Transaction Date
+            9C 01 -- Transaction Type
+            9F 37 04 -- Unpredictable Number
+            9F 35 01 -- Terminal Type
+            9F 34 03 -- Cardholder Verification (CVM) Results
+      8D 09 -- Card Risk Management Data Object List 2 (CDOL2)
+            91 10 -- Issuer Authentication Data
+            8A 02 -- Authorisation Response Code
+            95 05 -- Terminal Verification Results (TVR)
+            9F 37 04 -- Unpredictable Number
+      57 13 -- Track 2 Equivalent Data
+            67 26 42 89 02 04 68 46 00 7D 21 12 20 10 25 48
+            28 15 6F (BINARY)
+------------------------------------
+
+-----------------------
+SFI: 1
+Record: 4
+700c8e0a00000000000000000203
+------------------------------------
+70 0C -- Record Template (EMV Proprietary)
+      8E 0A -- Cardholder Verification Method (CVM) List
+            00 00 00 00 00 00 00 00 02 03 (BINARY)
+------------------------------------
+
+-----------------------
+SFI: 1
+Record: 5
+70385f24032112315a0a6726428902046846007f5f3401025f280202809f0702ffc09f0d05fc40a480009f0e0500101800009f0f05fc40a49800
+------------------------------------
+70 38 -- Record Template (EMV Proprietary)
+      5F 24 03 -- Application Expiration Date
+               21 12 31 (NUMERIC)
+      5A 0A -- Application Primary Account Number (PAN)
+            67 26 42 89 02 04 68 46 00 7F (NUMERIC)
+      5F 34 01 -- Application Primary Account Number (PAN) Sequence Number
+               02 (NUMERIC)
+      5F 28 02 -- Issuer Country Code
+               02 80 (NUMERIC)
+      9F 07 02 -- Application Usage Control
+               FF C0 (BINARY)
+      9F 0D 05 -- Issuer Action Code - Default
+               FC 40 A4 80 00 (BINARY)
+      9F 0E 05 -- Issuer Action Code - Denial
+               00 10 18 00 00 (BINARY)
+      9F 0F 05 -- Issuer Action Code - Online
+               FC 40 A4 98 00 (BINARY)
+------------------------------------
+
+-----------------------
+SFI: 1
+Record: 6
+70188e0c0000000000000000440302039f4a01829f49039f3704
+------------------------------------
+70 18 -- Record Template (EMV Proprietary)
+      8E 0C -- Cardholder Verification Method (CVM) List
+            00 00 00 00 00 00 00 00 44 03 02 03 (BINARY)
+      9F 4A 01 -- Static Data Authentication Tag List
+               82 (BINARY)
+      9F 49 03 -- Dynamic Data Authentication Data Object List (DDOL)
+               9F 37 04 -- Unpredictable Number
+------------------------------------
+
+-----------------------
+SFI: 1
+Record: 7
+701c8e0c00000000000000001f0302039f080200029f6c02ffff9f4a0182
+------------------------------------
+70 1C -- Record Template (EMV Proprietary)
+      8E 0C -- Cardholder Verification Method (CVM) List
+            00 00 00 00 00 00 00 00 1F 03 02 03 (BINARY)
+      9F 08 02 -- Application Version Number - card
+               00 02 (BINARY)
+      9F 6C 02 -- Mag Stripe Application Version Number (Card)
+               FF FF (BINARY)
+      9F 4A 01 -- Static Data Authentication Tag List
+               82 (BINARY)
+------------------------------------
+
+-----------------------
+SFI: 1
+Record: 8
+701a8e0a000000000000000002039f080200029f6c02ffff9f4a0182
+------------------------------------
+70 1A -- Record Template (EMV Proprietary)
+      8E 0A -- Cardholder Verification Method (CVM) List
+            00 00 00 00 00 00 00 00 02 03 (BINARY)
+      9F 08 02 -- Application Version Number - card
+               00 02 (BINARY)
+      9F 6C 02 -- Mag Stripe Application Version Number (Card)
+               FF FF (BINARY)
+      9F 4A 01 -- Static Data Authentication Tag List
+               82 (BINARY)
+------------------------------------
+
+-----------------------
+SFI: 1
+Record: 9
+NULL
+-----------------------
+SFI: 2
+Record: 1
+NULL
+-----------------------
+SFI: 2
+Record: 2
+NULL
+-----------------------
+SFI: 2
+Record: 3
+NULL
+-----------------------
+SFI: 2
+Record: 4
+NULL
+-----------------------
+SFI: 2
+Record: 5
+NULL
+-----------------------
+SFI: 2
+Record: 6
+NULL
+-----------------------
+SFI: 2
+Record: 7
+NULL
+-----------------------
+SFI: 2
+Record: 8
+NULL
+-----------------------
+SFI: 2
+Record: 9
+NULL
+-----------------------
+SFI: 3
+Record: 1
+7081e28f01059081b078cdb2c84b435325ec4478fd6f0f9f0dd61210a78c791adcb22c85fb0095db3a540658569a1c0d35a48d1fd9c2dba83ed941fcb3f2cfe56c943bfa0f8d25f0896284006cbdc10821cf0f0f6ec033332f8eb52c1acad9c52221a27dd23aba70c27c547aece994c7dc5c4d5f1b28529a803340cc249caf6bcb3614d071de141f89a1f4a545c5598395864474514e42c7f1edbeedef27b9a50eeb81ed5762a0af36505ee084703dfd168ec6f02245077d8b9f3201039224b0568adf146b092492be46e5d57d920b026be8e734264cf34710483a0af52d46790f01ab0000
+------------------------------------
+70 81 E2 -- Record Template (EMV Proprietary)
+------------------------------------
+
+-----------------------
+SFI: 3
+Record: 2
+NULL
+-----------------------
+SFI: 3
+Record: 3
+NULL
+-----------------------
+SFI: 3
+Record: 4
+NULL
+-----------------------
+SFI: 3
+Record: 5
+NULL
+-----------------------
+SFI: 3
+Record: 6
+NULL
+-----------------------
+SFI: 3
+Record: 7
+NULL
+-----------------------
+SFI: 3
+Record: 8
+NULL
+-----------------------
+SFI: 3
+Record: 9
+NULL
+-----------------------
+SFI: 4
+Record: 1
+70339f47030100019f480a757271487e0b220c81cb0000000000000000000000000000000000000000000000000000000000000000
+------------------------------------
+70 33 -- Record Template (EMV Proprietary)
+------------------------------------
+
+-----------------------
+SFI: 4
+Record: 2
+7081b49f4681b06658bded357473566956e7d4e9d7220e906b0c7efd1c342040890d24a8ba157ee3da3822f6649cc30f5df0566f453b43f3966655701c2b1df35c93fbba27ca0a1b9261f8e9454d9f51f58ef4f0ebaa7271f5b1d282a2ce46761c7d4c30849945c872b9857066cc7a35d6e488c14fcf574b337156ba666a4bd4acec84b4388d0a7618cee7a896959a012645ae9f7bc2a918d3e4141bca42983a002d394f2b710afb7dcf9c0d7f50b92524534dc1993d06
+------------------------------------
+70 81 B4 -- Record Template (EMV Proprietary)
+         9F 46 81 B0 -- ICC Public Key Certificate
+                     66 58 BD ED 35 74 73 56 69 56 E7 D4 E9 D7 22 0E
+                     90 6B 0C 7E FD 1C 34 20 40 89 0D 24 A8 BA 15 7E
+                     E3 DA 38 22 F6 64 9C C3 0F 5D F0 56 6F 45 3B 43
+                     F3 96 66 55 70 1C 2B 1D F3 5C 93 FB BA 27 CA 0A
+                     1B 92 61 F8 E9 45 4D 9F 51 F5 8E F4 F0 EB AA 72
+                     71 F5 B1 D2 82 A2 CE 46 76 1C 7D 4C 30 84 99 45
+                     C8 72 B9 85 70 66 CC 7A 35 D6 E4 88 C1 4F CF 57
+                     4B 33 71 56 BA 66 6A 4B D4 AC EC 84 B4 38 8D 0A
+                     76 18 CE E7 A8 96 95 9A 01 26 45 AE 9F 7B C2 A9
+                     18 D3 E4 14 1B CA 42 98 3A 00 2D 39 4F 2B 71 0A
+                     FB 7D CF 9C 0D 7F 50 B9 25 24 53 4D C1 99 3D 06 (BINARY)
+------------------------------------
+
+-----------------------
+SFI: 4
+Record: 3
+7081b49f4681b02e9419171b0065fc462339ec45cfbe2b8358167ba3a73fd8e1290ea31ead5617652724d8bc308c0348d1ddaaea25d337668ba0b5db2bdc398027c067d30adcdd089b200cd4f930d34f406bcc43bb029d30c775e40a96e4639d66e2c22f368986d65639c5e3699ca21ad99b130b23c321f8184a18fca59ae3a0c5629cfea8ef89cc9438d59adc7ebf6dba32b6f538058f359ef1a5ccb4af7a850ab7bae2eb878d2a2156e94776d96dd16a5c19713279c5
+------------------------------------
+70 81 B4 -- Record Template (EMV Proprietary)
+         9F 46 81 B0 -- ICC Public Key Certificate
+                     2E 94 19 17 1B 00 65 FC 46 23 39 EC 45 CF BE 2B
+                     83 58 16 7B A3 A7 3F D8 E1 29 0E A3 1E AD 56 17
+                     65 27 24 D8 BC 30 8C 03 48 D1 DD AA EA 25 D3 37
+                     66 8B A0 B5 DB 2B DC 39 80 27 C0 67 D3 0A DC DD
+                     08 9B 20 0C D4 F9 30 D3 4F 40 6B CC 43 BB 02 9D
+                     30 C7 75 E4 0A 96 E4 63 9D 66 E2 C2 2F 36 89 86
+                     D6 56 39 C5 E3 69 9C A2 1A D9 9B 13 0B 23 C3 21
+                     F8 18 4A 18 FC A5 9A E3 A0 C5 62 9C FE A8 EF 89
+                     CC 94 38 D5 9A DC 7E BF 6D BA 32 B6 F5 38 05 8F
+                     35 9E F1 A5 CC B4 AF 7A 85 0A B7 BA E2 EB 87 8D
+                     2A 21 56 E9 47 76 D9 6D D1 6A 5C 19 71 32 79 C5 (BINARY)
+------------------------------------
+
+-----------------------
+SFI: 4
+Record: 4
+7081b49f4681b087df5942ee89317aea2e53d477ab272794375e9025b0447b304f52e07f54494bea054076a0fd22faf4ee85cfd06ae61c44e0bf1c0156b1c0f287312e1c9460c0b93fac7bdd88a6cf286daeeab5d81310ff49b9d80f4b905261429b44a2c0e3b876ee8825fbb6ff3aef14a645983e886a61a7acde252698868b74033bbecee902050196579b2df75bfe070a14a45ce710c5e782da9ecd20d21db77352461b031ad83d9137615b8a63aca55900619a7a9c
+------------------------------------
+70 81 B4 -- Record Template (EMV Proprietary)
+         9F 46 81 B0 -- ICC Public Key Certificate
+                     87 DF 59 42 EE 89 31 7A EA 2E 53 D4 77 AB 27 27
+                     94 37 5E 90 25 B0 44 7B 30 4F 52 E0 7F 54 49 4B
+                     EA 05 40 76 A0 FD 22 FA F4 EE 85 CF D0 6A E6 1C
+                     44 E0 BF 1C 01 56 B1 C0 F2 87 31 2E 1C 94 60 C0
+                     B9 3F AC 7B DD 88 A6 CF 28 6D AE EA B5 D8 13 10
+                     FF 49 B9 D8 0F 4B 90 52 61 42 9B 44 A2 C0 E3 B8
+                     76 EE 88 25 FB B6 FF 3A EF 14 A6 45 98 3E 88 6A
+                     61 A7 AC DE 25 26 98 86 8B 74 03 3B BE CE E9 02
+                     05 01 96 57 9B 2D F7 5B FE 07 0A 14 A4 5C E7 10
+                     C5 E7 82 DA 9E CD 20 D2 1D B7 73 52 46 1B 03 1A
+                     D8 3D 91 37 61 5B 8A 63 AC A5 59 00 61 9A 7A 9C (BINARY)
+------------------------------------
+
+-----------------------
+SFI: 4
+Record: 5
+NULL
+-----------------------
+SFI: 4
+Record: 6
+NULL
+-----------------------
+SFI: 4
+Record: 7
+NULL
+-----------------------
+SFI: 4
+Record: 8
+NULL
+-----------------------
+SFI: 4
+Record: 9
+NULL
+-----------------------
+
+
+applicationTransactionCounter: 0205 (hex), 517 (dec)
+

@@ -1,0 +1,423 @@
+NFC tag discovered
+TagId: 08394293
+TechList found with these entries:
+android.nfc.tech.IsoDep
+android.nfc.tech.NfcA
+
+*** Tech ***
+Technology IsoDep
+try to read a payment card with PPSE
+
+01 select PPSE
+01 select PPSE command length 20 data: 00a404000e325041592e5359532e444446303100
+01 select PPSE response length 107 data: 6f67840e325041592e5359532e4444463031a555bf0c5261194f09a000000059454301008701019f0a080001050100000000611a4f0aa00000035910100280018701019f0a08000105010000000061194f09d276000025474101008701019f0a0800010501000000009000
+------------------------------------
+6F 67 -- File Control Information (FCI) Template
+      84 0E -- Dedicated File (DF) Name
+            32 50 41 59 2E 53 59 53 2E 44 44 46 30 31 (BINARY)
+      A5 55 -- File Control Information (FCI) Proprietary Template
+            BF 0C 52 -- File Control Information (FCI) Issuer Discretionary Data
+                     61 19 -- Application Template
+                           4F 09 -- Application Identifier (AID) - card
+                                 A0 00 00 00 59 45 43 01 00 (BINARY)
+                           87 01 -- Application Priority Indicator
+                                 01 (BINARY)
+                           9F 0A 08 -- [UNKNOWN TAG]
+                                    00 01 05 01 00 00 00 00 (BINARY)
+                     61 1A -- Application Template
+                           4F 0A -- Application Identifier (AID) - card
+                                 A0 00 00 03 59 10 10 02 80 01 (BINARY)
+                           87 01 -- Application Priority Indicator
+                                 01 (BINARY)
+                           9F 0A 08 -- [UNKNOWN TAG]
+                                    00 01 05 01 00 00 00 00 (BINARY)
+                     61 19 -- Application Template
+                           4F 09 -- Application Identifier (AID) - card
+                                 D2 76 00 00 25 47 41 01 00 (BINARY)
+                           87 01 -- Application Priority Indicator
+                                 01 (BINARY)
+                           9F 0A 08 -- [UNKNOWN TAG]
+                                    00 01 05 01 00 00 00 00 (BINARY)
+------------------------------------
+
+02 analyze select PPSE response and search for tag 0x4F (applications on card)
+Found tag 0x4F 3 time(s):
+application Id (AID): a00000005945430100
+application Id (AID): a0000003591010028001
+application Id (AID): d27600002547410100
+
+************************************
+03 select application by AID a00000005945430100 (number 1)
+card is a Zentraler Kreditausschuss (ZKA) Girocard Electronic Cash
+
+03 select AID command length 15 data: 00a4040009a0000000594543010000
+03 select AID response length 73 data: 6f478409a00000005945430100a53a50086769726f636172648701019f38069f02069f1d025f2d046465656ebf0c1a9f4d02190a9f6e07028000003030009f0a080001050100000000
+------------------------------------
+6F 47 -- File Control Information (FCI) Template
+      84 09 -- Dedicated File (DF) Name
+            A0 00 00 00 59 45 43 01 00 (BINARY)
+      A5 3A -- File Control Information (FCI) Proprietary Template
+            50 08 -- Application Label
+                  67 69 72 6F 63 61 72 64 (=girocard)
+            87 01 -- Application Priority Indicator
+                  01 (BINARY)
+            9F 38 06 -- Processing Options Data Object List (PDOL)
+                     9F 02 06 -- Amount, Authorised (Numeric)
+                     9F 1D 02 -- Terminal Risk Management Data
+            5F 2D 04 -- Language Preference
+                     64 65 65 6E (=deen)
+            BF 0C 1A -- File Control Information (FCI) Issuer Discretionary Data
+                     9F 4D 02 -- Log Entry
+                              19 0A (BINARY)
+                     9F 6E 07 -- Visa Low-Value Payment (VLP) Issuer Authorisation Code
+                              02 80 00 00 30 30 00 (BINARY)
+                     9F 0A 08 -- [UNKNOWN TAG]
+                              00 01 05 01 00 00 00 00 (BINARY)
+------------------------------------
+
+04 search for tag 0x9F38 in the selectAid response
+found tag 0x9F38 in the selectAid with this length: 6 data: 9f02069f1d02
+
+05 get the processing options command length: 41 data: 80a80000238321a0000000000000000001000000000008400000000000084007020300801733700000
+------------------------------------
+77 1E -- Response Message Template Format 2
+      82 02 -- Application Interchange Profile
+            19 80 (BINARY)
+      94 18 -- Application File Locator (AFL)
+            18 01 01 00 20 01 01 00 20 04 04 00 08 05 05 01
+            08 07 07 01 08 03 03 01 (BINARY)
+------------------------------------
+tag 0x57 not found, try to find in tag 0x94 = AFL
+data from file SFI 24 record 1
+------------------------------------
+70 81 E2 -- Record Template (EMV Proprietary)
+------------------------------------
+data from file SFI 32 record 1
+------------------------------------
+70 33 -- Record Template (EMV Proprietary)
+------------------------------------
+data from file SFI 32 record 4
+------------------------------------
+70 81 B4 -- Record Template (EMV Proprietary)
+         9F 46 81 B0 -- ICC Public Key Certificate
+                     87 DF 59 42 EE 89 31 7A EA 2E 53 D4 77 AB 27 27
+                     94 37 5E 90 25 B0 44 7B 30 4F 52 E0 7F 54 49 4B
+                     EA 05 40 76 A0 FD 22 FA F4 EE 85 CF D0 6A E6 1C
+                     44 E0 BF 1C 01 56 B1 C0 F2 87 31 2E 1C 94 60 C0
+                     B9 3F AC 7B DD 88 A6 CF 28 6D AE EA B5 D8 13 10
+                     FF 49 B9 D8 0F 4B 90 52 61 42 9B 44 A2 C0 E3 B8
+                     76 EE 88 25 FB B6 FF 3A EF 14 A6 45 98 3E 88 6A
+                     61 A7 AC DE 25 26 98 86 8B 74 03 3B BE CE E9 02
+                     05 01 96 57 9B 2D F7 5B FE 07 0A 14 A4 5C E7 10
+                     C5 E7 82 DA 9E CD 20 D2 1D B7 73 52 46 1B 03 1A
+                     D8 3D 91 37 61 5B 8A 63 AC A5 59 00 61 9A 7A 9C (BINARY)
+------------------------------------
+data from file SFI 8 record 5
+------------------------------------
+70 38 -- Record Template (EMV Proprietary)
+      5F 24 03 -- Application Expiration Date
+               21 12 31 (NUMERIC)
+      5A 0A -- Application Primary Account Number (PAN)
+            67 26 42 89 02 04 68 46 00 7F (NUMERIC)
+      5F 34 01 -- Application Primary Account Number (PAN) Sequence Number
+               02 (NUMERIC)
+      5F 28 02 -- Issuer Country Code
+               02 80 (NUMERIC)
+      9F 07 02 -- Application Usage Control
+               FF C0 (BINARY)
+      9F 0D 05 -- Issuer Action Code - Default
+               FC 40 A4 80 00 (BINARY)
+      9F 0E 05 -- Issuer Action Code - Denial
+               00 10 18 00 00 (BINARY)
+      9F 0F 05 -- Issuer Action Code - Online
+               FC 40 A4 98 00 (BINARY)
+------------------------------------
+data from file SFI 8 record 7
+------------------------------------
+70 1C -- Record Template (EMV Proprietary)
+      8E 0C -- Cardholder Verification Method (CVM) List
+            00 00 00 00 00 00 00 00 1F 03 02 03 (BINARY)
+      9F 08 02 -- Application Version Number - card
+               00 02 (BINARY)
+      9F 6C 02 -- Mag Stripe Application Version Number (Card)
+               FF FF (BINARY)
+      9F 4A 01 -- Static Data Authentication Tag List
+               82 (BINARY)
+------------------------------------
+data from file SFI 8 record 3
+------------------------------------
+70 3D -- Record Template (EMV Proprietary)
+      8C 1B -- Card Risk Management Data Object List 1 (CDOL1)
+            9F 02 06 -- Amount, Authorised (Numeric)
+            9F 03 06 -- Amount, Other (Numeric)
+            9F 1A 02 -- Terminal Country Code
+            95 05 -- Terminal Verification Results (TVR)
+            5F 2A 02 -- Transaction Currency Code
+            9A 03 -- Transaction Date
+            9C 01 -- Transaction Type
+            9F 37 04 -- Unpredictable Number
+            9F 35 01 -- Terminal Type
+            9F 34 03 -- Cardholder Verification (CVM) Results
+      8D 09 -- Card Risk Management Data Object List 2 (CDOL2)
+            91 10 -- Issuer Authentication Data
+            8A 02 -- Authorisation Response Code
+            95 05 -- Terminal Verification Results (TVR)
+            9F 37 04 -- Unpredictable Number
+      57 13 -- Track 2 Equivalent Data
+            67 26 42 89 02 04 68 46 00 7D 21 12 20 10 25 48
+            28 15 6F (BINARY)
+------------------------------------
+
+07 get PAN and Expiration date from tag 0x57 (Track 2 Equivalent Data)
+data for AID a00000005945430100 (Zentraler Kreditausschuss (ZKA) Girocard Electronic Cash)
+PAN: 6726428902046846007f
+Expiration date (YYMMDD): 211231
+
+single data retrieved from card
+applicationTransactionCounter: 0205 (hex), 517 (dec)
+pinTryCounter: 03
+lastOnlineATCRegister: NULL
+logFormat: 9f02065f2a029a039f52059f36029f2701ca019505
+
+************************************
+03 select application by AID a0000003591010028001 (number 2)
+card is a Euro Alliance of Payment Schemes s.c.r.l. – EAPS Girocard EAPS
+
+03 select AID command length 16 data: 00a404000aa000000359101002800100
+03 select AID response length 74 data: 6f48840aa0000003591010028001a53a50086769726f636172648701019f38069f02069f1d025f2d046465656ebf0c1a9f4d02190a9f6e07028000003030009f0a080001050100000000
+------------------------------------
+6F 48 -- File Control Information (FCI) Template
+      84 0A -- Dedicated File (DF) Name
+            A0 00 00 03 59 10 10 02 80 01 (BINARY)
+      A5 3A -- File Control Information (FCI) Proprietary Template
+            50 08 -- Application Label
+                  67 69 72 6F 63 61 72 64 (=girocard)
+            87 01 -- Application Priority Indicator
+                  01 (BINARY)
+            9F 38 06 -- Processing Options Data Object List (PDOL)
+                     9F 02 06 -- Amount, Authorised (Numeric)
+                     9F 1D 02 -- Terminal Risk Management Data
+            5F 2D 04 -- Language Preference
+                     64 65 65 6E (=deen)
+            BF 0C 1A -- File Control Information (FCI) Issuer Discretionary Data
+                     9F 4D 02 -- Log Entry
+                              19 0A (BINARY)
+                     9F 6E 07 -- Visa Low-Value Payment (VLP) Issuer Authorisation Code
+                              02 80 00 00 30 30 00 (BINARY)
+                     9F 0A 08 -- [UNKNOWN TAG]
+                              00 01 05 01 00 00 00 00 (BINARY)
+------------------------------------
+
+04 search for tag 0x9F38 in the selectAid response
+found tag 0x9F38 in the selectAid with this length: 6 data: 9f02069f1d02
+
+05 get the processing options command length: 41 data: 80a80000238321a0000000000000000001000000000008400000000000084007020300801733700000
+------------------------------------
+77 1E -- Response Message Template Format 2
+      82 02 -- Application Interchange Profile
+            19 80 (BINARY)
+      94 18 -- Application File Locator (AFL)
+            18 01 01 00 20 01 01 00 20 04 04 00 08 05 05 01
+            08 07 07 01 08 03 03 01 (BINARY)
+------------------------------------
+tag 0x57 not found, try to find in tag 0x94 = AFL
+data from file SFI 24 record 1
+------------------------------------
+70 81 E2 -- Record Template (EMV Proprietary)
+------------------------------------
+data from file SFI 32 record 1
+------------------------------------
+70 33 -- Record Template (EMV Proprietary)
+------------------------------------
+data from file SFI 32 record 4
+------------------------------------
+70 81 B4 -- Record Template (EMV Proprietary)
+         9F 46 81 B0 -- ICC Public Key Certificate
+                     87 DF 59 42 EE 89 31 7A EA 2E 53 D4 77 AB 27 27
+                     94 37 5E 90 25 B0 44 7B 30 4F 52 E0 7F 54 49 4B
+                     EA 05 40 76 A0 FD 22 FA F4 EE 85 CF D0 6A E6 1C
+                     44 E0 BF 1C 01 56 B1 C0 F2 87 31 2E 1C 94 60 C0
+                     B9 3F AC 7B DD 88 A6 CF 28 6D AE EA B5 D8 13 10
+                     FF 49 B9 D8 0F 4B 90 52 61 42 9B 44 A2 C0 E3 B8
+                     76 EE 88 25 FB B6 FF 3A EF 14 A6 45 98 3E 88 6A
+                     61 A7 AC DE 25 26 98 86 8B 74 03 3B BE CE E9 02
+                     05 01 96 57 9B 2D F7 5B FE 07 0A 14 A4 5C E7 10
+                     C5 E7 82 DA 9E CD 20 D2 1D B7 73 52 46 1B 03 1A
+                     D8 3D 91 37 61 5B 8A 63 AC A5 59 00 61 9A 7A 9C (BINARY)
+------------------------------------
+data from file SFI 8 record 5
+------------------------------------
+70 38 -- Record Template (EMV Proprietary)
+      5F 24 03 -- Application Expiration Date
+               21 12 31 (NUMERIC)
+      5A 0A -- Application Primary Account Number (PAN)
+            67 26 42 89 02 04 68 46 00 7F (NUMERIC)
+      5F 34 01 -- Application Primary Account Number (PAN) Sequence Number
+               02 (NUMERIC)
+      5F 28 02 -- Issuer Country Code
+               02 80 (NUMERIC)
+      9F 07 02 -- Application Usage Control
+               FF C0 (BINARY)
+      9F 0D 05 -- Issuer Action Code - Default
+               FC 40 A4 80 00 (BINARY)
+      9F 0E 05 -- Issuer Action Code - Denial
+               00 10 18 00 00 (BINARY)
+      9F 0F 05 -- Issuer Action Code - Online
+               FC 40 A4 98 00 (BINARY)
+------------------------------------
+data from file SFI 8 record 7
+------------------------------------
+70 1C -- Record Template (EMV Proprietary)
+      8E 0C -- Cardholder Verification Method (CVM) List
+            00 00 00 00 00 00 00 00 1F 03 02 03 (BINARY)
+      9F 08 02 -- Application Version Number - card
+               00 02 (BINARY)
+      9F 6C 02 -- Mag Stripe Application Version Number (Card)
+               FF FF (BINARY)
+      9F 4A 01 -- Static Data Authentication Tag List
+               82 (BINARY)
+------------------------------------
+data from file SFI 8 record 3
+------------------------------------
+70 3D -- Record Template (EMV Proprietary)
+      8C 1B -- Card Risk Management Data Object List 1 (CDOL1)
+            9F 02 06 -- Amount, Authorised (Numeric)
+            9F 03 06 -- Amount, Other (Numeric)
+            9F 1A 02 -- Terminal Country Code
+            95 05 -- Terminal Verification Results (TVR)
+            5F 2A 02 -- Transaction Currency Code
+            9A 03 -- Transaction Date
+            9C 01 -- Transaction Type
+            9F 37 04 -- Unpredictable Number
+            9F 35 01 -- Terminal Type
+            9F 34 03 -- Cardholder Verification (CVM) Results
+      8D 09 -- Card Risk Management Data Object List 2 (CDOL2)
+            91 10 -- Issuer Authentication Data
+            8A 02 -- Authorisation Response Code
+            95 05 -- Terminal Verification Results (TVR)
+            9F 37 04 -- Unpredictable Number
+      57 13 -- Track 2 Equivalent Data
+            67 26 42 89 02 04 68 46 00 7D 21 12 20 10 25 48
+            28 15 6F (BINARY)
+------------------------------------
+
+07 get PAN and Expiration date from tag 0x57 (Track 2 Equivalent Data)
+data for AID a0000003591010028001 (Euro Alliance of Payment Schemes s.c.r.l. – EAPS Girocard EAPS)
+PAN: 6726428902046846007f
+Expiration date (YYMMDD): 211231
+
+single data retrieved from card
+applicationTransactionCounter: 0206 (hex), 518 (dec)
+pinTryCounter: 03
+lastOnlineATCRegister: NULL
+logFormat: 9f02065f2a029a039f52059f36029f2701ca019505
+
+************************************
+03 select application by AID d27600002547410100 (number 3)
+card is a ZKA Girocard ATM
+
+03 select AID command length 15 data: 00a4040009d2760000254741010000
+03 select AID response length 76 data: 6f4a8409d27600002547410100a53d50086769726f636172648701019f38099f33029f35019f40015f2d046465656ebf0c1a9f4d02190a9f6e07028000003030009f0a080001050100000000
+------------------------------------
+6F 4A -- File Control Information (FCI) Template
+      84 09 -- Dedicated File (DF) Name
+            D2 76 00 00 25 47 41 01 00 (BINARY)
+      A5 3D -- File Control Information (FCI) Proprietary Template
+            50 08 -- Application Label
+                  67 69 72 6F 63 61 72 64 (=girocard)
+            87 01 -- Application Priority Indicator
+                  01 (BINARY)
+            9F 38 09 -- Processing Options Data Object List (PDOL)
+                     9F 33 02 -- Terminal Capabilities
+                     9F 35 01 -- Terminal Type
+                     9F 40 01 -- Additional Terminal Capabilities
+            5F 2D 04 -- Language Preference
+                     64 65 65 6E (=deen)
+            BF 0C 1A -- File Control Information (FCI) Issuer Discretionary Data
+                     9F 4D 02 -- Log Entry
+                              19 0A (BINARY)
+                     9F 6E 07 -- Visa Low-Value Payment (VLP) Issuer Authorisation Code
+                              02 80 00 00 30 30 00 (BINARY)
+                     9F 0A 08 -- [UNKNOWN TAG]
+                              00 01 05 01 00 00 00 00 (BINARY)
+------------------------------------
+
+04 search for tag 0x9F38 in the selectAid response
+found tag 0x9F38 in the selectAid with this length: 9 data: 9f33029f35019f4001
+
+05 get the processing options command length: 41 data: 80a80000238321a0000000000000000001000000000008400000000000084007020300801733700000
+------------------------------------
+77 0A -- Response Message Template Format 2
+      82 02 -- Application Interchange Profile
+            18 00 (BINARY)
+      94 04 -- Application File Locator (AFL)
+            08 02 05 00 (BINARY)
+------------------------------------
+tag 0x57 not found, try to find in tag 0x94 = AFL
+data from file SFI 8 record 2
+------------------------------------
+70 05 -- Record Template (EMV Proprietary)
+      9F 08 02 -- Application Version Number - card
+               00 02 (BINARY)
+------------------------------------
+data from file SFI 8 record 3
+------------------------------------
+70 3D -- Record Template (EMV Proprietary)
+      8C 1B -- Card Risk Management Data Object List 1 (CDOL1)
+            9F 02 06 -- Amount, Authorised (Numeric)
+            9F 03 06 -- Amount, Other (Numeric)
+            9F 1A 02 -- Terminal Country Code
+            95 05 -- Terminal Verification Results (TVR)
+            5F 2A 02 -- Transaction Currency Code
+            9A 03 -- Transaction Date
+            9C 01 -- Transaction Type
+            9F 37 04 -- Unpredictable Number
+            9F 35 01 -- Terminal Type
+            9F 34 03 -- Cardholder Verification (CVM) Results
+      8D 09 -- Card Risk Management Data Object List 2 (CDOL2)
+            91 10 -- Issuer Authentication Data
+            8A 02 -- Authorisation Response Code
+            95 05 -- Terminal Verification Results (TVR)
+            9F 37 04 -- Unpredictable Number
+      57 13 -- Track 2 Equivalent Data
+            67 26 42 89 02 04 68 46 00 7D 21 12 20 10 25 48
+            28 15 6F (BINARY)
+------------------------------------
+data from file SFI 8 record 4
+------------------------------------
+70 0C -- Record Template (EMV Proprietary)
+      8E 0A -- Cardholder Verification Method (CVM) List
+            00 00 00 00 00 00 00 00 02 03 (BINARY)
+------------------------------------
+data from file SFI 8 record 5
+------------------------------------
+70 38 -- Record Template (EMV Proprietary)
+      5F 24 03 -- Application Expiration Date
+               21 12 31 (NUMERIC)
+      5A 0A -- Application Primary Account Number (PAN)
+            67 26 42 89 02 04 68 46 00 7F (NUMERIC)
+      5F 34 01 -- Application Primary Account Number (PAN) Sequence Number
+               02 (NUMERIC)
+      5F 28 02 -- Issuer Country Code
+               02 80 (NUMERIC)
+      9F 07 02 -- Application Usage Control
+               FF C0 (BINARY)
+      9F 0D 05 -- Issuer Action Code - Default
+               FC 40 A4 80 00 (BINARY)
+      9F 0E 05 -- Issuer Action Code - Denial
+               00 10 18 00 00 (BINARY)
+      9F 0F 05 -- Issuer Action Code - Online
+               FC 40 A4 98 00 (BINARY)
+------------------------------------
+
+07 get PAN and Expiration date from tag 0x57 (Track 2 Equivalent Data)
+data for AID d27600002547410100 (ZKA Girocard ATM)
+PAN: 6726428902046846007f
+Expiration date (YYMMDD): 211231
+
+single data retrieved from card
+applicationTransactionCounter: 0207 (hex), 519 (dec)
+pinTryCounter: 03
+lastOnlineATCRegister: NULL
+logFormat: 9f02065f2a029a039f52059f36029f2701ca019505
+

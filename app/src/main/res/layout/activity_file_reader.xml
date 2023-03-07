@@ -21,7 +21,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:padding="10dp"
-        android:text="NFC CreditCard menu"
+        android:text="NFC read files from Credit Card"
         android:textAlignment="center"
         android:textSize="20sp"
         android:textStyle="bold" />
