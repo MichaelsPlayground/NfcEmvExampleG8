@@ -6,6 +6,16 @@
     <!-- https://fonts.google.com/icons?selected=Material+Icons -->
 
     <item
+        android:id="@+id/action_activity_main"
+        android:title="Main activity"
+        app:showAsAction="never"/>
+
+    <item
+        android:id="@+id/action_activity_file_reader"
+        android:title="File reader activity"
+        app:showAsAction="never"/>
+
+    <item
         android:id="@+id/action_export_mail"
         android:title="Export Mail"
         app:showAsAction="never"/>
