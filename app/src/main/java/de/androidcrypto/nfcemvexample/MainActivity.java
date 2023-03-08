@@ -505,6 +505,13 @@ I/System.out: 90 00 -- Command successfully executed (OK)
                                 } else {
                                     writeToUiAppend(etLog, "get AC failed");
                                 }
+
+                                String CDOL1 = "";
+                                byte[] cdol1Byte = hexToBytes(CDOL1);
+                                // try to examine CDOL1 for length of fields
+                                String parsed = TlvUtil.parseTagAndLength(data);
+
+
                             }
                         }
                     }
@@ -862,6 +869,7 @@ I/System.out: 90 00 -- Command successfully executed (OK)
     private byte[] getCommandGetAppCryptoMastercard() {
         // https://stackoverflow.com/questions/63547124/unable-to-generate-application-cryptogram
         // generate AC https://stackoverflow.com/questions/66419082/emv-issuer-authenticate-in-second-generate-ac
+        // runs with MC AAB
         return new byte[]{
                 (byte) 0x80, (byte) 0xAE, // CLA INS
                 (byte) 0x80, 0x00, // P1 P2
@@ -886,12 +894,38 @@ I/System.out: 90 00 -- Command successfully executed (OK)
         };
     }
 
+
+    private byte[] getCommandGetAppCryptoMastercard2() {
+        // runs with MC Lloyds old
+        // https://stackoverflow.com/questions/63547124/unable-to-generate-application-cryptogram
+        // generate AC https://stackoverflow.com/questions/66419082/emv-issuer-authenticate-in-second-generate-ac
+        return new byte[]{
+                (byte) 0x80, (byte) 0xAE, // CLA INS
+                (byte) 0x80, 0x00, // P1 P2
+                0x2B, // length // hex 43 decimal = 2B hex
+                0x00, 0x00, 0x00, 0x00, 0x01, 0x00, // 6 amount ok
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // 6 other amount ok
+                0x06, 0x42, // 2 terminal country ok
+                0x00, 0x00, 0x00, 0x00, 0x00, // 5 tvr terminal ok
+                0x09, 0x46, // 2 currency code ok
+                0x20, 0x08, 0x23, // 3 transaction date ok
+                0x00, // 1 transaction type ok
+                0x11, 0x22, 0x33, 0x44, // 4 UN ok
+                0x22, // 1 terminal type ok (30 up to here)
+                0x00, 0x00,// 2 data auth code ok
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // 8 icc dynamic ok
+                0x00, 0x00, 0x00, // 3 cvm results ok
+                0x00, // LE
+        };
+    }
+
     private byte[] getAcMasterCard(IsoDep nfc) {
         // https://stackoverflow.com/questions/63547124/unable-to-generate-application-cryptogram
         // generate AC https://stackoverflow.com/questions/66419082/emv-issuer-authenticate-in-second-generate-ac
         byte[] result = new byte[0];
         try {
-            result = nfc.transceive(getCommandGetAppCryptoMastercard());
+            //result = nfc.transceive(getCommandGetAppCryptoMastercard());
+            result = nfc.transceive(getCommandGetAppCryptoMastercard2());
         } catch (IOException e) {
             System.out.println("* getAC failed");
             return null;

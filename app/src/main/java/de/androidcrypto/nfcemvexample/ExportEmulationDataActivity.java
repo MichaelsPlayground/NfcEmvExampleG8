@@ -1089,28 +1089,53 @@ I/System.out: 90 00 -- Command successfully executed (OK)
 
 
     private byte[] getCommandGetAppCryptoMastercard() {
+        // runs with MC AAB
         // https://stackoverflow.com/questions/63547124/unable-to-generate-application-cryptogram
         // generate AC https://stackoverflow.com/questions/66419082/emv-issuer-authenticate-in-second-generate-ac
         return new byte[]{
                 (byte) 0x80, (byte) 0xAE, // CLA INS
                 (byte) 0x80, 0x00, // P1 P2
                 0x42, // length // hex 66 decimal = 42 hex
-                0x00, 0x00, 0x00, 0x00, 0x01, 0x00, // amount ok
-                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // other amount ok
-                0x06, 0x42, // terminal country ok
-                0x00, 0x00, 0x00, 0x00, 0x00, // tvr terminal ok
-                0x09, 0x46, // currency code ok
-                0x20, 0x08, 0x23, // transaction date ok, todo fix date ?
-                0x00, // transaction type ok
-                0x11, 0x22, 0x33, 0x44, // UN ok
-                0x22, // terminal type ok
-                0x00, 0x00,// data auth code ok
-                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // icc dynamic ok
-                0x00, 0x00, 0x00, // cvm results ok
-                0x11, 0x10, 0x09, // Transaction Time (HHMMSS) added
+                0x00, 0x00, 0x00, 0x00, 0x01, 0x00, // 6 amount ok
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // 6 other amount ok
+                0x06, 0x42, // 2 terminal country ok
+                0x00, 0x00, 0x00, 0x00, 0x00, // 5 tvr terminal ok
+                0x09, 0x46, // 2 currency code ok
+                0x20, 0x08, 0x23, // 3 transaction date ok, todo fix date ?
+                0x00, // 1 transaction type ok
+                0x11, 0x22, 0x33, 0x44, // 4 UN ok
+                0x22, // 1 terminal type ok
+                0x00, 0x00,// 2 data auth code ok
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // 8 icc dynamic ok
+                0x00, 0x00, 0x00, // 3 cvm results ok
+                0x11, 0x10, 0x09, // 3 Transaction Time (HHMMSS) added
                 //0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // 8 cut
                 //0x54, 0x11, // 2 merchant category cut
-                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,// 14 merchant name or location now 20 bytes
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,// 20 merchant name or location now 20 bytes
+                0x00, // LE
+        };
+    }
+
+    private byte[] getCommandGetAppCryptoMastercard2() {
+        // runs with ??
+        // https://stackoverflow.com/questions/63547124/unable-to-generate-application-cryptogram
+        // generate AC https://stackoverflow.com/questions/66419082/emv-issuer-authenticate-in-second-generate-ac
+        return new byte[]{
+                (byte) 0x80, (byte) 0xAE, // CLA INS
+                (byte) 0x80, 0x00, // P1 P2
+                0x2B, // length // hex 43 decimal = 2B hex
+                0x00, 0x00, 0x00, 0x00, 0x01, 0x00, // 6 amount ok
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // 6 other amount ok
+                0x06, 0x42, // 2 terminal country ok
+                0x00, 0x00, 0x00, 0x00, 0x00, // 5 tvr terminal ok
+                0x09, 0x46, // 2 currency code ok
+                0x20, 0x08, 0x23, // 3 transaction date ok
+                0x00, // 1 transaction type ok
+                0x11, 0x22, 0x33, 0x44, // 4 UN ok
+                0x22, // 1 terminal type ok (30 up to here)
+                0x00, 0x00,// 2 data auth code ok
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // 8 icc dynamic ok
+                0x00, 0x00, 0x00, // 3 cvm results ok
                 0x00, // LE
         };
     }
@@ -1121,6 +1146,8 @@ I/System.out: 90 00 -- Command successfully executed (OK)
         byte[] result = new byte[0];
         try {
             result = nfc.transceive(getCommandGetAppCryptoMastercard());
+            //result = nfc.transceive(getCommandGetAppCryptoMastercard2());
+            System.out.println("*** getAcMasterCard result: " + bytesToHex(result));
         } catch (IOException e) {
             System.out.println("* getAC failed");
             return null;
