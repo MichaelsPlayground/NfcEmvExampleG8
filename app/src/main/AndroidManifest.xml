@@ -28,6 +28,10 @@
             android:name=".FileReaderActivity"
             android:exported="false">
         </activity>
+        <activity
+            android:name=".ExportEmulationDataActivity"
+            android:exported="false">
+        </activity>
 
     </application>
 

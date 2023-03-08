@@ -16,6 +16,11 @@
         app:showAsAction="never"/>
 
     <item
+        android:id="@+id/action_activity_export_emulation_data"
+        android:title="Export emulation data activity"
+        app:showAsAction="never"/>
+
+    <item
         android:id="@+id/action_export_mail"
         android:title="Export Mail"
         app:showAsAction="never"/>

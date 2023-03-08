@@ -6,19 +6,30 @@ public class Aids {
 
     private String cardType; // MasterCard, VisaCard, GiroCard
     private String cardName; // individual name given by user
-    private String selectAidCommand;
-    private String selectAidResponse;
+    private String selectPpseCommand;
+    private String selectPpseResponse;
     private int numberOfAid;
     private Aid[] aid;
 
-    public Aids(@NonNull String cardType, @NonNull String cardName, @NonNull String selectAidCommand, @NonNull String selectAidResponse, @NonNull int numberOfAid, @NonNull Aid[] aid) {
+    public Aids(@NonNull String cardType, @NonNull String cardName, @NonNull String selectPpseCommand, @NonNull String selectPpseResponse, @NonNull int numberOfAid, @NonNull Aid[] aid) {
         this.cardType = cardType;
         this.cardName = cardName;
-        this.selectAidCommand = selectAidCommand;
-        this.selectAidResponse = selectAidResponse;
+        this.selectPpseCommand = selectPpseCommand;
+        this.selectPpseResponse = selectPpseResponse;
         this.numberOfAid = numberOfAid;
         this.aid = aid;
     }
+
+    // don't forget to add the aids manually
+    public Aids(@NonNull String cardType, @NonNull String cardName, @NonNull String selectPpseCommand, @NonNull String selectPpseResponse, @NonNull int numberOfAid) {
+        this.cardType = cardType;
+        this.cardName = cardName;
+        this.selectPpseCommand = selectPpseCommand;
+        this.selectPpseResponse = selectPpseResponse;
+        this.numberOfAid = numberOfAid;
+        this.aid = new Aid[numberOfAid];
+    }
+
 
     public String getCardType() {
         return cardType;
@@ -36,20 +47,20 @@ public class Aids {
         this.cardName = cardName;
     }
 
-    public String getSelectAidCommand() {
-        return selectAidCommand;
+    public String getSelectPpseCommand() {
+        return selectPpseCommand;
     }
 
-    public void setSelectAidCommand(@NonNull String selectAidCommand) {
-        this.selectAidCommand = selectAidCommand;
+    public void setSelectPpseCommand(@NonNull String selectAidCommand) {
+        this.selectPpseCommand = selectAidCommand;
     }
 
-    public String getSelectAidResponse() {
-        return selectAidResponse;
+    public String getSelectPpseResponse() {
+        return selectPpseResponse;
     }
 
-    public void setSelectAidResponse(@NonNull String selectAidResponse) {
-        this.selectAidResponse = selectAidResponse;
+    public void setSelectPpseResponse(@NonNull String selectAidResponse) {
+        this.selectPpseResponse = selectAidResponse;
     }
 
     public int getNumberOfAid() {
@@ -66,5 +77,9 @@ public class Aids {
 
     public void setAid(@NonNull Aid[] aid) {
         this.aid = aid;
+    }
+
+    public void setAidEntry(@NonNull Aid aid, @NonNull int numberOfEntry) {
+        this.aid[numberOfEntry] = aid;
     }
 }
