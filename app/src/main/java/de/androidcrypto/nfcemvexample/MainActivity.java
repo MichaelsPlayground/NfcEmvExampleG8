@@ -57,6 +57,7 @@ import de.androidcrypto.nfcemvexample.nfccreditcards.TagValues;
 import de.androidcrypto.nfcemvexample.sasc.ApplicationInterchangeProfile;
 import de.androidcrypto.nfcemvexample.sasc.ApplicationUsageControl;
 import de.androidcrypto.nfcemvexample.sasc.CVMList;
+import de.androidcrypto.nfcemvexample.sasc.DOL;
 
 public class MainActivity extends AppCompatActivity implements NfcAdapter.ReaderCallback {
 
@@ -341,8 +342,6 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                                             writeToUiAppend(etLog, "get AC failed");
                                         }
 
-
-
                                         // check for aip + cvm
                                         // see: https://github.com/sasc999/javaemvreader/tree/master/src/main/java/sasc/emv
                                         // todo get real card data from tag 0x82
@@ -359,6 +358,70 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                                         byte[] cvmByte = hexBlankToBytes("00 00 00 00 00 00 00 00 42 03 44 03 41 03 1E 03 1F 03");
                                         CVMList cvmList = new CVMList(cvmByte);
                                         writeToUiAppend(etLog, cvmList.toString());
+
+                                        // PDOL
+                                        // todo get real card data
+                                        byte[] pdolData = hexToBytes("9f66049f02069f03069f1a0295055f2a029a039c019f3704");
+                                        DOL dol = new DOL(DOL.Type.PDOL, pdolData);
+                                        writeToUiAppend(etLog, dol.toString());
+
+                                        /*
+                                        be careful before uncommenting this part - it could BLOCK your card
+
+                                        // try to verify pin of card
+                                        // https://stackoverflow.com/a/21045743/8166854
+                                        writeToUiAppend(etLog, "");
+                                        writeToUiAppend(etLog, "********************************");
+                                        writeToUiAppend(etLog, "** verify offline PIN session **");
+                                        // select MC
+                                        byte[] selectMastercardCommand = hexToBytes("00A4040007a000000003101000");
+                                        byte[] selectMastercardResponse = nfc.transceive(selectMastercardCommand);
+                                        writeToUiAppend(etLog, "1 select VisaCard");
+                                        if (selectMastercardResponse != null) {
+                                            writeToUiAppend(etLog, "result: " + bytesToHex(selectMastercardResponse));
+                                        } else {
+                                            writeToUiAppend(etLog, "result is NULL");
+                                        }
+                                        // Get Processing Options
+                                        writeToUiAppend(etLog, "2 get processing options");
+                                        byte[] getProcessingOptionsCommand = hexToBytes(pu.getPdolWithCountryCode());
+                                        byte[] getProcessingOptionsResult = nfc.transceive(getProcessingOptionsCommand);
+                                        if (getProcessingOptionsResult != null) {
+                                            writeToUiAppend(etLog, "result: " + bytesToHex(getProcessingOptionsResult));
+                                        } else {
+                                            writeToUiAppend(etLog, "result is NULL");
+                                        }
+                                        // check the current PIN try counter
+                                        writeToUiAppend(etLog, "3 get left pin try counter");
+                                        byte[] leftPinTryCounterCommand = hexToBytes("80CA9F1700");
+                                        byte[] leftPinTryCounterResponse = nfc.transceive(leftPinTryCounterCommand);
+                                        if (leftPinTryCounterResponse != null) {
+                                            writeToUiAppend(etLog, "result: " + bytesToHex(leftPinTryCounterResponse));
+                                        } else {
+                                            writeToUiAppend(etLog, "result is NULL");
+                                        }
+                                        // verify the pin
+                                        writeToUiAppend(etLog, "4 verify plaintext pin offline");
+                                        byte[] verifyPinCommand = hexToBytes("002000800824xxxxFFFFFFFFFF");
+                                        byte[] verifyPinResponse = nfc.transceive(verifyPinCommand);
+                                        if (verifyPinResponse != null) {
+                                            writeToUiAppend(etLog, "result: " + bytesToHex(verifyPinResponse));
+                                        } else {
+                                            writeToUiAppend(etLog, "result is NULL");
+                                        }
+                                        // check the current PIN try counter
+                                        writeToUiAppend(etLog, "5 get left pin try counter again");
+                                        leftPinTryCounterCommand = hexToBytes("80CA9F1700");
+                                        leftPinTryCounterResponse = nfc.transceive(leftPinTryCounterCommand);
+                                        if (leftPinTryCounterResponse != null) {
+                                            writeToUiAppend(etLog, "result: " + bytesToHex(leftPinTryCounterResponse));
+                                        } else {
+                                            writeToUiAppend(etLog, "result is NULL");
+                                        }
+                                        writeToUiAppend(etLog, "** verify offline PIN session **");
+                                        writeToUiAppend(etLog, "********************************");
+                                        writeToUiAppend(etLog, "");
+                                         */
 
 /*
 comd visa
@@ -555,6 +618,96 @@ I/System.out: 90 00 -- Command successfully executed (OK)
                                 // print single data
                                 printSingleData(etLog, applicationTransactionCounter, pinTryCounter, lastOnlineATCRegister, logFormat);
 
+/*
+https://stackoverflow.com/a/21045743/8166854
+The correct sequence for using the verify command would be the following
+
+Select Payment application
+00A4040007A000000003101000
+(or 00A4040007A000000004101000, or whatever application you want to use)
+
+Get Processing Options
+80A8000002830000
+(possibly with adapted data objects according to PDOL)
+
+(optionally) check the current PIN try counter
+80CA9F1700
+
+Verify the PIN (if card supports VERIFY with plain text PIN)
+002000800824xxxxFFFFFFFFFF
+(where xxxx is a 4 digit PIN)
+As found out, only one PIN VERIFY command will be accepted.
+
+Share
+Edit
+Follow
+Flag
+answered Jan 10, 2014 at 13:36
+Michael Roland's user avatar
+Michael Roland
+ */
+
+                                /*
+                                    be careful before uncommenting this part - it could BLOCK your card
+                                // try to verify pin of card
+                                // https://stackoverflow.com/a/21045743/8166854
+                                writeToUiAppend(etLog, "");
+                                writeToUiAppend(etLog, "********************************");
+                                writeToUiAppend(etLog, "** verify offline PIN session **");
+                                // select MC
+                                byte[] selectMastercardCommand = hexToBytes("00A4040007A000000004101000");
+                                byte[] selectMastercardResponse = nfc.transceive(selectMastercardCommand);
+                                writeToUiAppend(etLog, "1 select MC");
+                                if (selectMastercardResponse != null) {
+                                    writeToUiAppend(etLog, "result: " + bytesToHex(selectMastercardResponse));
+                                } else {
+                                    writeToUiAppend(etLog, "result is NULL");
+                                }
+                                // Get Processing Options
+                                writeToUiAppend(etLog, "2 get processing options");
+                                byte[] getProcessingOptionsCommand = hexToBytes("80A8000002830000");
+                                byte[] getProcessingOptionsResult = nfc.transceive(getProcessingOptionsCommand);
+                                if (getProcessingOptionsResult != null) {
+                                    writeToUiAppend(etLog, "result: " + bytesToHex(getProcessingOptionsResult));
+                                } else {
+                                    writeToUiAppend(etLog, "result is NULL");
+                                }
+                                // check the current PIN try counter
+                                writeToUiAppend(etLog, "3 get left pin try counter");
+                                byte[] leftPinTryCounterCommand = hexToBytes("80CA9F1700");
+                                byte[] leftPinTryCounterResponse = nfc.transceive(leftPinTryCounterCommand);
+                                if (leftPinTryCounterResponse != null) {
+                                    writeToUiAppend(etLog, "result: " + bytesToHex(leftPinTryCounterResponse));
+                                } else {
+                                    writeToUiAppend(etLog, "result is NULL");
+                                }
+                                // verify the pin
+                                writeToUiAppend(etLog, "4 verify plaintext pin offline");
+                                byte[] verifyPinCommand = hexToBytes("0020008008242731FFFFFFFFFF");
+                                byte[] verifyPinResponse = nfc.transceive(verifyPinCommand);
+                                if (verifyPinResponse != null) {
+                                    writeToUiAppend(etLog, "result: " + bytesToHex(verifyPinResponse));
+                                } else {
+                                    writeToUiAppend(etLog, "result is NULL");
+                                }
+                                writeToUiAppend(etLog, "** verify offline PIN session **");
+                                writeToUiAppend(etLog, "********************************");
+                                writeToUiAppend(etLog, "");
+                                 */
+/*
+                                //byte[] verifyPinCommand = hexToBytes("002000800824xxxxFFFFFFFFFF");
+                                byte[] verifyPinCommand = hexToBytes("0020008008242731FFFFFFFFFF");
+                                byte[] verifyPinResponse = nfc.transceive(verifyPinCommand);
+                                writeToUiAppend(etLog, "verify plaintext verify pin");
+                                if (verifyPinResponse != null) {
+                                    writeToUiAppend(etLog, "result: " + bytesToHex(verifyPinResponse));
+                                } else {
+                                    writeToUiAppend(etLog, "result is NULL");
+                                }
+                                // print single data
+                                pinTryCounter = getPinTryCounter(nfc);
+                                printSingleData(etLog, applicationTransactionCounter, pinTryCounter, lastOnlineATCRegister, logFormat);
+*/
                                 // get application crypto
                                 writeToUiAppend(etLog, "");
                                 byte[] responseGetAppCrypto = getAcMasterCard(nfc);
