@@ -294,8 +294,8 @@ public class FileReaderActivity extends AppCompatActivity implements NfcAdapter.
         String resultString = "";
         StringBuilder sb = new StringBuilder();
         // limit the loop to 1-4, could be 31
-        //for (int sfi = 1; sfi < 5; ++sfi) {
-        for (int sfi = 1; sfi < 32; ++sfi) {
+        for (int sfi = 1; sfi < 5; ++sfi) {
+        //for (int sfi = 1; sfi < 32; ++sfi) {
             for (int record = 1; record < 10; ++record) {
                 byte[] readResult = readFile(nfc, sfi, record);
                 sb.append("SFI: ").append(String.valueOf(sfi)).append("\n");
