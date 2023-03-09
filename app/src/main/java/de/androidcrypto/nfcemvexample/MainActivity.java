@@ -56,6 +56,7 @@ import de.androidcrypto.nfcemvexample.nfccreditcards.PdolUtil;
 import de.androidcrypto.nfcemvexample.nfccreditcards.TagValues;
 import de.androidcrypto.nfcemvexample.sasc.ApplicationInterchangeProfile;
 import de.androidcrypto.nfcemvexample.sasc.ApplicationUsageControl;
+import de.androidcrypto.nfcemvexample.sasc.CVMList;
 
 public class MainActivity extends AppCompatActivity implements NfcAdapter.ReaderCallback {
 
@@ -353,7 +354,11 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                                         //ApplicationUsageControl auc = new ApplicationUsageControl((byte)0xab, (byte)0x80);
                                         writeToUiAppend(etLog, auc.toString());
 
-
+                                        // cvm list
+                                        // todo get real card data from tag 0x9f07, data below is from AAB MC: 70 81 90 -- Record Template (EMV Proprietary)
+                                        byte[] cvmByte = hexBlankToBytes("00 00 00 00 00 00 00 00 42 03 44 03 41 03 1E 03 1F 03");
+                                        CVMList cvmList = new CVMList(cvmByte);
+                                        writeToUiAppend(etLog, cvmList.toString());
 
 /*
 comd visa

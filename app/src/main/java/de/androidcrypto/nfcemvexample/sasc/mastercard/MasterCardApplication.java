@@ -18,5 +18,6 @@ package de.androidcrypto.nfcemvexample.sasc.mastercard;/*
  *
  * @author sasc
  */
-public class MasterCardApplication extends sasc.emv.EMVApplication {
+//public class MasterCardApplication extends sasc.emv.EMVApplication {
+public class MasterCardApplication {
 }

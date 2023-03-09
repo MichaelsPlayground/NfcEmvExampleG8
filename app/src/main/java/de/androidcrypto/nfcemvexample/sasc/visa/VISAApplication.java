@@ -15,13 +15,13 @@ package de.androidcrypto.nfcemvexample.sasc.visa;/*
  */
 
 import de.androidcrypto.nfcemvexample.sasc.AID;
-import sasc.emv.EMVApplication;
 
 /**
  *
  * @author sasc
  */
-public class VISAApplication extends EMVApplication {
+//public class VISAApplication extends EMVApplication {
+public class VISAApplication {
 
     public VISAApplication(AID aid){
 		//if(df60) in ADF then...
