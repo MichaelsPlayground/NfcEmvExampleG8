@@ -1,6 +1,7 @@
 package de.androidcrypto.nfcemvexample;
 
 import static de.androidcrypto.nfcemvexample.BinaryUtils.bytesToHex;
+import static de.androidcrypto.nfcemvexample.BinaryUtils.hexBlankToBytes;
 import static de.androidcrypto.nfcemvexample.BinaryUtils.hexToBytes;
 import static de.androidcrypto.nfcemvexample.BinaryUtils.intFromByteArrayV4;
 
@@ -323,6 +324,52 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
 
                                         // print single data
                                         printSingleData(etLog, applicationTransactionCounter, pinTryCounter, lastOnlineATCRegister, logFormat);
+
+                                        // get application crypto with an empty command
+                                        writeToUiAppend(etLog, "");
+                                        byte[] responseGetAppCrypto = getApplicationCrypto(nfc, getCommandGetAppCryptoVisacard());
+                                        writeToUiAppend(etLog, "get AC command  length: " + getCommandGetAppCryptoVisacard().length + " data: " + bytesToHex(getCommandGetAppCryptoVisacard()));
+                                        if (responseGetAppCrypto != null) {
+                                            writeToUiAppend(etLog, "get AC response length: " + responseGetAppCrypto.length + " data: " + bytesToHex(responseGetAppCrypto));
+                                            // pretty print of response
+                                            if (isPrettyPrintResponse) prettyPrintData(etLog, responseGetAppCrypto);
+                                        } else {
+                                            writeToUiAppend(etLog, "get AC failed");
+                                        }
+
+
+
+                                        // check for aip + cvm
+/*
+comd visa
+I/System.out: 77 81 C6 -- Response Message Template Format 2
+I/System.out:          82 02 -- Application Interchange Profile
+I/System.out:                20 20 (BINARY)
+lloyds visa:
+I/System.out:                20 00 (BINARY)
+
+lloyds mc
+I/System.out: 77 81 C6 -- Response Message Template Format 2
+I/System.out:          82 02 -- Application Interchange Profile
+I/System.out:                19 80 (BINARY)
+
+in: data from file SFI 16 record 1
+I/System.out: ------------------------------------
+I/System.out: 70 81 81 -- Record Template (EMV Proprietary)
+I/System.out:          8E 0E -- Cardholder Verification Method (CVM) List
+I/System.out:                00 00 00 00 00 00 00 00 42 03 1E 03 1F 03 (BINARY)
+
+aab mc
+I/System.out: 77 12 -- Response Message Template Format 2
+I/System.out:       82 02 -- Application Interchange Profile
+I/System.out:             19 80 (BINARY)
+
+in I/System.out: data from file SFI 16 record 1
+I/System.out: ------------------------------------
+I/System.out: 70 81 A6 -- Record Template (EMV Proprietary)
+I/System.out:          8E 0E -- Cardholder Verification Method (CVM) List
+I/System.out:                00 00 00 00 00 00 00 00 42 03 1E 03 1F 03 (BINARY)
+ */
 
                                     }
                                 } else {
@@ -959,7 +1006,45 @@ I/System.out: 90 00 -- Command successfully executed (OK)
         }
     }
 
+    private byte[] getCommandGetAppCryptoVisacard() {
+        // https://stackoverflow.com/questions/63547124/unable-to-generate-application-cryptogram
+        // generate AC https://stackoverflow.com/questions/66419082/emv-issuer-authenticate-in-second-generate-ac
+        /*
+        // does not run
+        return new byte[]{
+                // empty cdol1
+                (byte) 0x80, (byte) 0xAE, // CLA INS
+                (byte) 0x40, 0x00, // P1 P2
+                0x00, // length // hex 00 decimal = 00 hex = empty
+                0x00, // LE
+        };
+        */
+        // does not run, returns 6a81
+        return hexBlankToBytes("80 AE 40 00 2B 00 00 00 00 02 01 00 00 00 00 00 00 08 26 00 00 00 00 00 08 26 20 07 01 00 30 90 1B 6A 22 00 00 00 00 00 00 00 00 00 00 00 00 00 00");
+        // https://stackoverflow.com/questions/62745297/generate-application-cryptogram-response-6985-not-using-pdol
+        // 80 AE 40 00 2B 00 00 00 00 02 01 00 00 00 00 00 00 08 26 00 00 00 00 00 08 26 20 07 01 00 30 90 1B 6A 22 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+    }
 
+    private byte[] getApplicationCrypto(IsoDep nfc, byte[] command) {
+        // https://stackoverflow.com/questions/63547124/unable-to-generate-application-cryptogram
+        // generate AC https://stackoverflow.com/questions/66419082/emv-issuer-authenticate-in-second-generate-ac
+        byte[] result = new byte[0];
+        try {
+            result = nfc.transceive(command);
+            System.out.println("getApplicationCrypto result: " + bytesToHex(result));
+            //result = nfc.transceive(getCommandGetAppCryptoMastercard2());
+        } catch (IOException e) {
+            System.out.println("* getAC failed: " + e.getMessage());
+            return null;
+        }
+        byte[] resultOk = checkResponse(result);
+
+        if (resultOk == null) {
+            return null;
+        } else {
+            return resultOk;
+        }
+    }
 
     private byte[] getCommandGetAppCryptoMastercard() {
         // https://stackoverflow.com/questions/63547124/unable-to-generate-application-cryptogram
@@ -1009,7 +1094,7 @@ I/System.out: 90 00 -- Command successfully executed (OK)
                 0x22, // 1 terminal type ok (30 up to here)
                 0x00, 0x00,// 2 data auth code ok
                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // 8 icc dynamic ok
-                0x00, 0x00, 0x00, // 3 cvm results ok
+                0x00, 0x00, 0x00, // 3 cvm results ok total 43
                 0x00, // LE
         };
     }

@@ -59,6 +59,17 @@ public class BinaryUtils {
         return bytes;
     }
 
+    public static byte[] hexBlankToBytes(String str) {
+        str = str.replaceAll(" ", "");
+        System.out.println("### hexBlankToBytes: " + str);
+        byte[] bytes = new byte[str.length() / 2];
+        for (int i = 0; i < bytes.length; i++) {
+            bytes[i] = (byte) Integer.parseInt(str.substring(2 * i, 2 * i + 2),
+                    16);
+        }
+        return bytes;
+    }
+
     /**
      * converts a byte array to a hex encoded string
      * @param bytes
