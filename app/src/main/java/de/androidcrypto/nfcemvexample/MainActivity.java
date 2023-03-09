@@ -340,6 +340,9 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
 
 
                                         // check for aip + cvm
+                                        // see: https://github.com/sasc999/javaemvreader/tree/master/src/main/java/sasc/emv
+
+
 /*
 comd visa
 I/System.out: 77 81 C6 -- Response Message Template Format 2
