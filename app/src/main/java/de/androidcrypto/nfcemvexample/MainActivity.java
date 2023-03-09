@@ -2,12 +2,11 @@ package de.androidcrypto.nfcemvexample;
 
 import static de.androidcrypto.nfcemvexample.BinaryUtils.bytesToHex;
 import static de.androidcrypto.nfcemvexample.BinaryUtils.hexToBytes;
+import static de.androidcrypto.nfcemvexample.BinaryUtils.intFromByteArrayV4;
 
 import android.app.Activity;
-import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
-import android.database.Cursor;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.nfc.NfcAdapter;
@@ -17,7 +16,6 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
-import android.provider.OpenableColumns;
 import android.provider.Settings;
 import android.text.TextUtils;
 import android.util.Log;
@@ -35,6 +33,8 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
+import com.github.devnied.emvnfccard.iso7816emv.ITag;
+import com.github.devnied.emvnfccard.iso7816emv.TagAndLength;
 import com.github.devnied.emvnfccard.utils.TlvUtil;
 import com.google.android.material.switchmaterial.SwitchMaterial;
 import com.payneteasy.tlv.BerTag;
@@ -42,18 +42,12 @@ import com.payneteasy.tlv.BerTlv;
 import com.payneteasy.tlv.BerTlvParser;
 import com.payneteasy.tlv.BerTlvs;
 
-import java.io.BufferedReader;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
 
 import de.androidcrypto.nfcemvexample.nfccreditcards.AidValues;
 import de.androidcrypto.nfcemvexample.nfccreditcards.PdolUtil;
@@ -506,12 +500,113 @@ I/System.out: 90 00 -- Command successfully executed (OK)
                                     writeToUiAppend(etLog, "get AC failed");
                                 }
 
-                                String CDOL1 = "";
+                                // https://werner.rothschopf.net/201703_arduino_esp8266_nfc.htm example communication
+                                // https://mstcompany.net/blog/acquiring-emv-transaction-flow-part-5-read-records
+                                // https://github.com/AndreasFagschlunger/O2Xfs
+                                // https://nicolas.riousset.com/category/software-methodologies/example-of-a-mastercard-paypass-contactless-transaction/
+                                // https://hackernoon.com/examining-your-emv-chip-cards-frc93wa6
+                                // https://sdk.supply/list-of-commands-used-in-emv-applications/
+                                // https://www.openscdp.org/scripts/tutorial/emv/cardactionanalysis.html Analyzis of generate AC response !
+                                // https://www.linkedin.com/pulse/decoding-emv-contactless-kenny-shi
+                                // .. The first section is the input and out of readWithPSE() which returns the available AID of A0000000031010 which is one of Visa's AIDs.
+                                // Second section is to selectPID(A0000000031010) which returns the PDOL.
+                                // Third section is to getProcessingOptions(PDOL), which returns more interesting card data, including:
+                                // Track2 equivalent (that contains PAN/card number which I masked, card expiration date)
+                                // Card holder name (in this case, this card doesn't return the real name)
+                                // Application Cryptogram (AC)
+                                // Cryptogram Information Data (CID) - it's 0x80, which means the AC is an Application ReQuest Cryptogram (ARQC), which forces
+                                //   the transaction to be online (issuer must authorize the transaction)
+                                // Application Transaction Counter (ATC) - it's 0x0032, which is 50 in decimal. This is a sequential counter the card remembers
+                                //   and increments whenever there is a new inquiry.
+                                // https://www.youtube.com/watch?v=DChVE1NEME0 34C3 - Decoding Contactless (Card) Payments
+                                // https://developer.pxp-solutions.com/docs/emv
+                                // list of commands:
+                                // https://github.com/sasc999/javaemvreader/blob/master/src/main/java/sasc/emv/EMVAPDUCommands.java
+                                // https://github.com/sasc999/javaemvreader/blob/master/src/main/java/sasc/emv/system/mastercard/MCTags.java
+                                // https://github.com/sasc999/javaemvreader/blob/master/src/main/java/sasc/emv/system/visa/VISATags.java
+
+                                // pin verify https://stackoverflow.com/questions/21019137/emv-verify-command-returning-69-85
+                                // https://stackoverflow.com/questions/36300447/is-plaintext-offline-pin-verification-on-emv-card-by-micro-usb-otg-reader
+                                // https://stackoverflow.com/questions/52676530/smartcard-verify-pin-apdu-command-problem-in-android
+
+
+
+
+                                String CDOL1 = "9F02069F03069F1A0295055F2A029A039C019F37049F35019F45029F4C089F34039F21039F7C14";
+                                String CDOL2 = "910A8A0295059F37049F4C08";
                                 byte[] cdol1Byte = hexToBytes(CDOL1);
                                 // try to examine CDOL1 for length of fields
-                                String parsed = TlvUtil.parseTagAndLength(data);
+                                List<TagAndLength> tagAndLengthParsed = TlvUtil.parseTagAndLength(cdol1Byte);
+                                int tlpSize = tagAndLengthParsed.size();
+                                System.out.println("*** CDOL1: " + bytesToHex(cdol1Byte));
+                                System.out.println("*** tlpSize: " + tlpSize);
+                                int valueOfTagSum = 0;
+                                for (int i = 0; i < tlpSize; i++) {
+                                    System.out.println("*** tlp number: " + i);
+                                    TagAndLength tal = tagAndLengthParsed.get(i);
+                                    ITag talTag = tal.getTag();
+                                    System.out.println("*** talTag getName: " +talTag.getName());
+                                    byte[] talTagValue = tal.getBytes();
+                                    System.out.println("*** talTag getBytes: " + bytesToHex(talTagValue));
+                                    byte[] talTagBytes = tal.getTag().getTagBytes();
+                                    System.out.println("*** talTagBytes: " + bytesToHex(talTagBytes));
+                                    int talTagNumBytes = tal.getTag().getNumTagBytes();
+                                    System.out.println("*** talTagNumBytes: " + talTagNumBytes);
+                                    int posLength = talTagBytes.length - talTagNumBytes;
+                                    byte[] valueOfTagBytes = Arrays.copyOfRange(talTagValue, talTagNumBytes, talTagValue.length);
+                                    System.out.println("*** valueOfTagBytes: " + bytesToHex(valueOfTagBytes));
+                                    int valueOfTag;
+                                    if (valueOfTagBytes.length > 1) {
+                                        valueOfTag = intFromByteArrayV4(valueOfTagBytes);
+                                    } else {
+                                        valueOfTag = (byte) valueOfTagBytes[0];
+                                    }
+                                    System.out.println("*** valueOfTag: " + valueOfTag);
+                                    valueOfTagSum += valueOfTag;
+                                }
+                                System.out.println("*** total length of values: " + valueOfTagSum);
+                                writeToUiAppend(etLog, "CDOL1 total length: " + valueOfTagSum);
 
+                                byte[] cdol2Byte = hexToBytes(CDOL2);
+                                // try to examine CDOL2 for length of fields
+                                List<TagAndLength> tagAndLengthParsed2 = TlvUtil.parseTagAndLength(cdol2Byte);
+                                int tlp2Size = tagAndLengthParsed2.size();
+                                System.out.println("*** CDOL2: " + bytesToHex(cdol2Byte));
+                                System.out.println("*** tlp2Size: " + tlp2Size);
+                                int valueOfTagSum2 = 0;
+                                for (int i = 0; i < tlp2Size; i++) {
+                                    System.out.println("*** tlp number: " + i);
+                                    TagAndLength tal = tagAndLengthParsed.get(i);
+                                    ITag talTag = tal.getTag();
+                                    System.out.println("*** talTag getName: " +talTag.getName());
+                                    byte[] talTagValue = tal.getBytes();
+                                    System.out.println("*** talTag getBytes: " + bytesToHex(talTagValue));
+                                    byte[] talTagBytes = tal.getTag().getTagBytes();
+                                    System.out.println("*** talTagBytes: " + bytesToHex(talTagBytes));
+                                    int talTagNumBytes = tal.getTag().getNumTagBytes();
+                                    System.out.println("*** talTagNumBytes: " + talTagNumBytes);
+                                    byte[] valueOfTagBytes = Arrays.copyOfRange(talTagValue, talTagNumBytes, talTagValue.length);
+                                    System.out.println("*** valueOfTagBytes: " + bytesToHex(valueOfTagBytes));
+                                    int valueOfTag;
+                                    if (valueOfTagBytes.length > 1) {
+                                        valueOfTag = intFromByteArrayV4(valueOfTagBytes);
+                                    } else {
+                                        valueOfTag = (byte) valueOfTagBytes[0];
+                                    }
+                                    System.out.println("*** valueOfTag: " + valueOfTag);
+                                    valueOfTagSum2 += valueOfTag;
+                                }
+                                System.out.println("*** total length of values: " + valueOfTagSum2);
+                                writeToUiAppend(etLog, "CDOL2 total length: " + valueOfTagSum2);
 
+/*
+8D 0C -- Card Risk Management Data Object List 2 (CDOL2)
+               91 0a -- Issuer Authentication Data
+               8A 02 -- Authorisation Response Code
+               95 05 -- Terminal Verification Results (TVR)
+               9F 37 04 -- Unpredictable Number
+               9F 4C 08 -- ICC Dynamic Number
+ */
                             }
                         }
                     }
@@ -924,13 +1019,14 @@ I/System.out: 90 00 -- Command successfully executed (OK)
         // generate AC https://stackoverflow.com/questions/66419082/emv-issuer-authenticate-in-second-generate-ac
         byte[] result = new byte[0];
         try {
-            //result = nfc.transceive(getCommandGetAppCryptoMastercard());
-            result = nfc.transceive(getCommandGetAppCryptoMastercard2());
+            result = nfc.transceive(getCommandGetAppCryptoMastercard());
+            //result = nfc.transceive(getCommandGetAppCryptoMastercard2());
         } catch (IOException e) {
             System.out.println("* getAC failed");
             return null;
         }
         byte[] resultOk = checkResponse(result);
+
         if (resultOk == null) {
             return null;
         } else {
