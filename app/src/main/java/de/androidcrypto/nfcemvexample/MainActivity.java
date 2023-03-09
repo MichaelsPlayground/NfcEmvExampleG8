@@ -4,6 +4,7 @@ import static de.androidcrypto.nfcemvexample.BinaryUtils.bytesToHex;
 import static de.androidcrypto.nfcemvexample.BinaryUtils.hexBlankToBytes;
 import static de.androidcrypto.nfcemvexample.BinaryUtils.hexToBytes;
 import static de.androidcrypto.nfcemvexample.BinaryUtils.intFromByteArrayV4;
+import static de.androidcrypto.nfcemvexample.sasc.Log.getPrintWriter;
 
 import android.app.Activity;
 import android.content.Context;
@@ -53,6 +54,8 @@ import java.util.List;
 import de.androidcrypto.nfcemvexample.nfccreditcards.AidValues;
 import de.androidcrypto.nfcemvexample.nfccreditcards.PdolUtil;
 import de.androidcrypto.nfcemvexample.nfccreditcards.TagValues;
+import de.androidcrypto.nfcemvexample.sasc.ApplicationInterchangeProfile;
+import de.androidcrypto.nfcemvexample.sasc.ApplicationUsageControl;
 
 public class MainActivity extends AppCompatActivity implements NfcAdapter.ReaderCallback {
 
@@ -341,6 +344,15 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
 
                                         // check for aip + cvm
                                         // see: https://github.com/sasc999/javaemvreader/tree/master/src/main/java/sasc/emv
+                                        // todo get real card data from tag 0x82
+                                        ApplicationInterchangeProfile aip = new ApplicationInterchangeProfile((byte) 0x20, (byte) 0x20);
+                                        writeToUiAppend(etLog, aip.toString());
+
+                                        // todo get real card data from tag 0x9f07 /e.g. AAB MasterCard ff co
+                                        ApplicationUsageControl auc = new ApplicationUsageControl((byte)0xff, (byte)0xc0);
+                                        //ApplicationUsageControl auc = new ApplicationUsageControl((byte)0xab, (byte)0x80);
+                                        writeToUiAppend(etLog, auc.toString());
+
 
 
 /*

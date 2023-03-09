@@ -1,4 +1,4 @@
-package de.androidcrypto.nfcemvexample;
+package de.androidcrypto.nfcemvexample.sasc;
 
 /*
  * Copyright 2010 sasc
@@ -18,8 +18,6 @@ package de.androidcrypto.nfcemvexample;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import sasc.util.Log;
-import sasc.util.Util;
 
 /**
  * Application Interchange Profile
@@ -32,6 +30,8 @@ import sasc.util.Util;
  * source: https://github.com/sasc999/javaemvreader/blob/master/src/main/java/sasc/emv/ApplicationInterchangeProfile.java
  */
 public class ApplicationInterchangeProfile {
+
+    private final String TAG = "ApplicationInterchangeProfile";
     private byte firstByte;
     private byte secondByte;
 
