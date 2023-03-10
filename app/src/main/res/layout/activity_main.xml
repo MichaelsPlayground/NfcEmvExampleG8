@@ -60,7 +60,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:checked="false"
+            android:checked="true"
             android:clickable="true"
             android:text="pretty print the response data"
             android:textSize="18sp" />

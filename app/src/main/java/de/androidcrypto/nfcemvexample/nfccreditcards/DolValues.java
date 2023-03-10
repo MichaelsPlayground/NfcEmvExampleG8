@@ -12,7 +12,8 @@ public class DolValues {
 
     private List<DolTag> dolList = new ArrayList<>();
     // used in PDOL
-    private final DolTag t9f66 = setTag(new byte[]{(byte) 0x9f, (byte) 0x66}, "Terminal Transaction Qualifiers", hexBlankToBytes("F0 20 40 00")); // A0000000
+    private final DolTag t9f66 = setTag(new byte[]{(byte) 0x9f, (byte) 0x66}, "Terminal Transaction Qualifiers", hexBlankToBytes("A0 00 00 00")); // runs on all my cards
+    //private final DolTag t9f66 = setTag(new byte[]{(byte) 0x9f, (byte) 0x66}, "Terminal Transaction Qualifiers", hexBlankToBytes("F0 20 40 00")); // this fails on DKB debit card
     private final DolTag t9f02 = setTag(new byte[]{(byte) 0x9f, (byte) 0x02}, "Transaction Amount", hexBlankToBytes("00 00 00 00 10 00")); // 00 00 00 00 10 00
     private final DolTag t9f03 = setTag(new byte[]{(byte) 0x9f, (byte) 0x03}, "Amount, Other (Numeric)", hexBlankToBytes("00 00 00 00 00 00"));
     private final DolTag t9f1a = setTag(new byte[]{(byte) 0x9f, (byte) 0x1a}, "Terminal Country Code", hexBlankToBytes("09 78")); // eur
