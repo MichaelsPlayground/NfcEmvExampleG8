@@ -217,8 +217,8 @@ public class BinaryUtils {
         return new BigInteger(bytes).intValue();
     }
 
-    public static byte[] intToByteArrayV4(byte[] bytes) {
-        return new BigInteger(bytes).toByteArray();
+    public static byte[] intToByteArrayV4(int value) {
+        return new BigInteger(String.valueOf(value)).toByteArray();
     }
 
 }

@@ -4,6 +4,7 @@ import static de.androidcrypto.nfcemvexample.BinaryUtils.bytesToHex;
 import static de.androidcrypto.nfcemvexample.BinaryUtils.hexBlankToBytes;
 import static de.androidcrypto.nfcemvexample.BinaryUtils.hexToBytes;
 import static de.androidcrypto.nfcemvexample.BinaryUtils.intFromByteArrayV4;
+import static de.androidcrypto.nfcemvexample.BinaryUtils.intToByteArrayV4;
 import static de.androidcrypto.nfcemvexample.sasc.Log.getPrintWriter;
 
 import android.app.Activity;
@@ -52,6 +53,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import de.androidcrypto.nfcemvexample.nfccreditcards.AidValues;
+import de.androidcrypto.nfcemvexample.nfccreditcards.DolValues;
 import de.androidcrypto.nfcemvexample.nfccreditcards.PdolUtil;
 import de.androidcrypto.nfcemvexample.nfccreditcards.TagValues;
 import de.androidcrypto.nfcemvexample.sasc.ApplicationInterchangeProfile;
@@ -117,13 +119,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
      */
     @Override
     public void onTagDiscovered(Tag tag) {
-        runOnUiThread(() -> {
-            etLog.setText("");
-            etData.setText("");
-            exportString = "";
-            aidSelectedForAnalyze = "";
-            aidSelectedForAnalyzeName = "";
-        });
+        runOnUiThread(this::clearData);
         playPing();
         writeToUiAppend(etLog, "NFC tag discovered");
 
@@ -161,6 +157,14 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
     private void playDoublePing() {
         MediaPlayer mp = MediaPlayer.create(MainActivity.this, R.raw.double_ping);
         mp.start();
+    }
+
+    private void clearData(){
+        etLog.setText("");
+        etData.setText("");
+        exportString = "";
+        aidSelectedForAnalyze = "";
+        aidSelectedForAnalyzeName = "";
     }
 
     private void readIsoDep(Tag tag) {
@@ -361,10 +365,88 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
 
                                         // PDOL
                                         // todo get real card data
+                                        //                                9f66049f02069f03069f1a0295055f2a029a039c019f3704
+                                        // so                             9F66049F02069F03069F1A0295055F2A029A039C019F3704
                                         byte[] pdolData = hexToBytes("9f66049f02069f03069f1a0295055f2a029a039c019f3704");
                                         DOL dol = new DOL(DOL.Type.PDOL, pdolData);
                                         writeToUiAppend(etLog, dol.toString());
 
+                                        // generate a gpo with this pdol
+                                        // funktioniert !
+                                        // perfect analyze https://stackoverflow.com/questions/55337693/generate-get-processing-options-gpo-for-emv-card-apdu-by-pdol
+
+                                        // pdol Visa 9f66049f02069f03069f1a0295055f2a029a039c019f3704
+                                        String PDOL_VISA = "9f66049f02069f03069f1a0295055f2a029a039c019f3704";
+                                        byte[] pdol1Byte = hexToBytes(PDOL_VISA);
+                                        // try to examine CDOL1 for length of fields
+                                        List<TagAndLength> tagAndLength = TlvUtil.parseTagAndLength(pdol1Byte);
+                                        int tagAndLengthSize = tagAndLength.size();
+                                        System.out.println("*** PDOL1: " + bytesToHex(pdol1Byte));
+                                        System.out.println("*** tagAndLength Size: " + tagAndLengthSize);
+                                        int valueOfTagSum = 0; // total length
+                                        StringBuilder sbPdol = new StringBuilder(); // takes the default values of the tags
+                                        DolValues dolValues = new DolValues();
+                                        for (int i = 0; i < tagAndLengthSize; i++) {
+                                            System.out.println("*** tal number: " + i);
+                                            TagAndLength tal = tagAndLength.get(i); // eg 9f3704
+                                            System.out.println("*** tal " + bytesToHex(tal.getBytes())); // 9f3704
+                                            System.out.println("*** tal tag: " + bytesToHex(tal.getTag().getTagBytes())); // gives the tag 9f37
+                                            ITag talTag = tal.getTag();
+                                            System.out.println("*** talTag getName: " +talTag.getName()); // Unpredictable Number
+                                            int lengthOfTag = tal.getLength();
+                                            System.out.println("*** valueOfTag: " + lengthOfTag); // 4
+                                            valueOfTagSum += tal.getLength();
+                                            // now we are trying to find a default value
+                                            System.out.println("************************");
+                                            System.out.println("constructing the gpo");
+                                            byte[] tagToSearch = tal.getTag().getTagBytes();
+                                            byte[] defaultValue = dolValues.getDolValue(tagToSearch);
+                                            System.out.println("searching value for tag " + bytesToHex(tagToSearch) + " = " + talTag.getName());
+                                            byte[] usedValue = new byte[0];
+                                            if (defaultValue != null) {
+                                                if (defaultValue.length > lengthOfTag) {
+                                                    // cut it to correct length
+                                                    usedValue = Arrays.copyOfRange(defaultValue, 0, lengthOfTag);
+                                                    System.out.println("asked for tag: " + bytesToHex(tal.getTag().getTagBytes()) + " default is too long, cut to: " + bytesToHex(usedValue));
+                                                } else if (defaultValue.length < lengthOfTag) {
+                                                    usedValue = new byte[lengthOfTag];
+                                                    System.arraycopy(defaultValue, 0, usedValue, 0, defaultValue.length);
+                                                    System.out.println("asked for tag: " + bytesToHex(tal.getTag().getTagBytes()) + " default is too short, increased to: " + bytesToHex(usedValue));
+                                                } else {
+                                                    usedValue = defaultValue.clone();
+                                                    System.out.println("asked for tag: " + bytesToHex(tal.getTag().getTagBytes()) + " default found: " + bytesToHex(usedValue));
+                                                }
+                                            } else {
+                                                // defaultValue is null means the tag was not found in our tags database for default values
+                                                usedValue = new byte[lengthOfTag];
+                                                System.out.println("asked for tag: " + bytesToHex(tal.getTag().getTagBytes()) + " NO default, generate zeroed: " + bytesToHex(usedValue));
+                                            }
+                                            // now usedValue does have the correct length
+                                            sbPdol.append(bytesToHex(usedValue));
+                                            System.out.println("result value for tag " + bytesToHex(tagToSearch) + " = " + talTag.getName() + " is " + bytesToHex(usedValue));
+                                            System.out.println("*************************");
+                                        }
+                                        System.out.println("total length: " + valueOfTagSum);
+                                        String constructedGpoString = sbPdol.toString();
+                                        String tagLength2d = bytesToHex(intToByteArrayV4(valueOfTagSum));
+                                        String tagLength2dAnd2 = bytesToHex(intToByteArrayV4(valueOfTagSum + 2));
+                                        String constructedGpoCommandString = "80A80000" + tagLength2dAnd2 + "83" + tagLength2d + constructedGpoString + "00";
+                                        System.out.println("constructed GPO: " + constructedGpoCommandString);
+                                        // constructed GPO: 80A80000238321f0204000000000001000000000000000097800000000000978230301003839303100
+                                        String pdolWithCountryCode = pu.getPdolWithCountryCode();
+                                        System.out.println("used        GPO: " + pdolWithCountryCode);
+                                        // test it with card
+                                        String selAidVisa = "00a4040007a000000003101000";
+                                        byte[] selAidVisaRes = nfc.transceive(hexToBytes(selAidVisa));
+                                        System.out.println("selAidVisaRes: " + bytesToHex(selAidVisaRes));
+                                        byte[] gpoConstructedResult = nfc.transceive(hexToBytes(constructedGpoCommandString));
+                                        System.out.println("gpoConstructedResult: " + bytesToHex(gpoConstructedResult));
+                                        // 7781c68202202094041005050057134871780042076633d26042211045868701000f9f100706011203a000009f260894af16601ac47f6c9f2701809f360200419f6c0204009f4b818000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000009000
+
+
+
+// I/System.out: constructed GPO:               b66040000000000100000000000000000826000000000008262303030038393031
+// I/System.out: used        GPO: 80A80000238321A0000000000000000001000000000008400000000000084007020300801733700000
                                         /*
                                         be careful before uncommenting this part - it could BLOCK your card
 
@@ -760,32 +842,48 @@ Michael Roland
                                 int tlpSize = tagAndLengthParsed.size();
                                 System.out.println("*** CDOL1: " + bytesToHex(cdol1Byte));
                                 System.out.println("*** tlpSize: " + tlpSize);
-                                int valueOfTagSum = 0;
+                                int valueOfTagSum1 = 0;
                                 for (int i = 0; i < tlpSize; i++) {
                                     System.out.println("*** tlp number: " + i);
                                     TagAndLength tal = tagAndLengthParsed.get(i);
+                                    System.out.println("*** tal " + tal.getBytes());
                                     ITag talTag = tal.getTag();
                                     System.out.println("*** talTag getName: " +talTag.getName());
-                                    byte[] talTagValue = tal.getBytes();
-                                    System.out.println("*** talTag getBytes: " + bytesToHex(talTagValue));
-                                    byte[] talTagBytes = tal.getTag().getTagBytes();
-                                    System.out.println("*** talTagBytes: " + bytesToHex(talTagBytes));
-                                    int talTagNumBytes = tal.getTag().getNumTagBytes();
-                                    System.out.println("*** talTagNumBytes: " + talTagNumBytes);
-                                    int posLength = talTagBytes.length - talTagNumBytes;
-                                    byte[] valueOfTagBytes = Arrays.copyOfRange(talTagValue, talTagNumBytes, talTagValue.length);
-                                    System.out.println("*** valueOfTagBytes: " + bytesToHex(valueOfTagBytes));
-                                    int valueOfTag;
-                                    if (valueOfTagBytes.length > 1) {
-                                        valueOfTag = intFromByteArrayV4(valueOfTagBytes);
-                                    } else {
-                                        valueOfTag = (byte) valueOfTagBytes[0];
-                                    }
-                                    System.out.println("*** valueOfTag: " + valueOfTag);
-                                    valueOfTagSum += valueOfTag;
+                                    byte[] talTagBytes = tal.getBytes();
+                                    System.out.println("*** talTag getBytes: " + bytesToHex(talTagBytes));
+                                    System.out.println("*** valueOfTag: " + tal.getLength());
+                                    valueOfTagSum1 += tal.getLength();
                                 }
-                                System.out.println("*** total length of values: " + valueOfTagSum);
-                                writeToUiAppend(etLog, "CDOL1 total length: " + valueOfTagSum);
+                                System.out.println("*** total length of values: " + valueOfTagSum1);
+                                writeToUiAppend(etLog, "CDOL1 total length: " + valueOfTagSum1);
+
+                                // generate a gpo with this pdol
+                                // pdol Visa 9f66049f02069f03069f1a0295055f2a029a039c019f3704
+                                String PDOL_VISA = "9f66049f02069f03069f1a0295055f2a029a039c019f3704";
+                                byte[] pdol1Byte = hexToBytes(PDOL_VISA);
+                                // try to examine CDOL1 for length of fields
+                                List<TagAndLength> tagAndLength = TlvUtil.parseTagAndLength(pdol1Byte);
+                                int tagAndLengthSize = tagAndLength.size();
+                                System.out.println("*** PDOL1: " + bytesToHex(pdol1Byte));
+                                System.out.println("*** tagAndLength Size: " + tagAndLengthSize);
+                                int valueOfTagSum = 0; // total length
+                                StringBuilder sbPdol = new StringBuilder(); // takes the default values of the tags
+                                DolValues dolValues = new DolValues();
+                                for (int i = 0; i < tagAndLengthSize; i++) {
+                                    System.out.println("*** tal number: " + i);
+                                    TagAndLength tal = tagAndLengthParsed.get(i);
+                                    System.out.println("*** tal " + tal.getBytes());
+                                    ITag talTag = tal.getTag();
+                                    System.out.println("*** talTag getName: " +talTag.getName());
+                                    byte[] talTagBytes = tal.getBytes();
+                                    System.out.println("*** talTag getBytes: " + bytesToHex(talTagBytes));
+                                    System.out.println("*** valueOfTag: " + tal.getLength());
+                                    valueOfTagSum1 += tal.getLength();
+                                    // now we are trying to find a default value
+                                    //byte[] defaultValue = dolValues.getDolValue()
+                                }
+
+
 
                                 byte[] cdol2Byte = hexToBytes(CDOL2);
                                 // try to examine CDOL2 for length of fields
@@ -1541,6 +1639,15 @@ Michael Roland
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.menu_activity_main, menu);
+
+        MenuItem mClearData = menu.findItem(R.id.action_clear_data);
+        mClearData.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
+            @Override
+            public boolean onMenuItemClick(@NonNull MenuItem menuItem) {
+                clearData();
+                return false;
+            }
+        });
 
         MenuItem mMainActivity = menu.findItem(R.id.action_activity_main);
         mMainActivity.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {

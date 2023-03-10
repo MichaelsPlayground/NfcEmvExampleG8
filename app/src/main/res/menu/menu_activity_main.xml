@@ -6,6 +6,11 @@
     <!-- https://fonts.google.com/icons?selected=Material+Icons -->
 
     <item
+        android:id="@+id/action_clear_data"
+        android:title="clear data"
+        app:showAsAction="never"/>
+
+    <item
         android:id="@+id/action_activity_main"
         android:title="Main activity"
         app:showAsAction="never"/>

@@ -33,8 +33,11 @@ Tag 9F 37: Unpredictable Number :            38 39 30 31
 
 /*
 Commd Visa 9f66049f02069f03069f1a0295055f2a029a039c019f3704
-  9f66 04 Terminal Transaction Qualifiers : B6 60 40 00
-  9f02 06 Transaction Amount :              00 00 00 01 00 00
+
+80A800002383 21A00000 000000000000 010000000000 0840 0000000000 0840 070203 00 80173370 0000
+                                              old                    working
+  9f66 04 Terminal Transaction Qualifiers : B6 60 40 00              A0 00 00 00
+  9f02 06 Transaction Amount :              00 00 00 01 00 00        00 00 00 00 00 01
   9f03 06 Amount, Other (Numeric) always:   00 00 00 00 00 00
   9f1a 02 Terminal Country Code :           08 26              UK
   95   05 Terminal Verificat.Results alway: 00 00 00 00 00

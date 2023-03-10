@@ -12,13 +12,13 @@ public class DolValues {
 
     private List<DolTag> dolList = new ArrayList<>();
     // used in PDOL
-    private final DolTag t9f66 = setTag(new byte[]{(byte) 0x9f, (byte) 0x66}, "Terminal Transaction Qualifiers", hexBlankToBytes("B6 60 40 00"));
-    private final DolTag t9f02 = setTag(new byte[]{(byte) 0x9f, (byte) 0x02}, "Transaction Amount", hexBlankToBytes("00 00 00 01 00 00"));
+    private final DolTag t9f66 = setTag(new byte[]{(byte) 0x9f, (byte) 0x66}, "Terminal Transaction Qualifiers", hexBlankToBytes("F0 20 40 00")); // A0000000
+    private final DolTag t9f02 = setTag(new byte[]{(byte) 0x9f, (byte) 0x02}, "Transaction Amount", hexBlankToBytes("00 00 00 00 10 00")); // 00 00 00 00 10 00
     private final DolTag t9f03 = setTag(new byte[]{(byte) 0x9f, (byte) 0x03}, "Amount, Other (Numeric)", hexBlankToBytes("00 00 00 00 00 00"));
-    private final DolTag t9f1a = setTag(new byte[]{(byte) 0x9f, (byte) 0x1a}, "Terminal Country Code", hexBlankToBytes("08 26")); // uk
+    private final DolTag t9f1a = setTag(new byte[]{(byte) 0x9f, (byte) 0x1a}, "Terminal Country Code", hexBlankToBytes("09 78")); // eur
     private final DolTag t95 = setTag(new byte[]{(byte) 0x95}, "Terminal Verificat.Results", hexBlankToBytes("00 00 00 00 00"));
-    private final DolTag t5f2a = setTag(new byte[]{(byte) 0x5f, (byte) 0x2a}, "Transaction Currency Code", hexBlankToBytes("08 26")); // uk
-    private final DolTag t9a = setTag(new byte[]{(byte) 0x9a}, "Transaction Date", hexBlankToBytes("23 03 03"));
+    private final DolTag t5f2a = setTag(new byte[]{(byte) 0x5f, (byte) 0x2a}, "Transaction Currency Code", hexBlankToBytes("09 78")); // eur
+    private final DolTag t9a = setTag(new byte[]{(byte) 0x9a}, "Transaction Date", hexBlankToBytes("23 03 01"));
     private final DolTag t9c = setTag(new byte[]{(byte) 0x9c}, "Transaction Type", hexBlankToBytes("00"));
     private final DolTag t9f37 = setTag(new byte[]{(byte) 0x9f, (byte) 0x37}, "Unpredictable Number", hexBlankToBytes("38 39 30 31"));
 
@@ -84,7 +84,6 @@ CDOL1 MC
     }
 
     public String getDolName(byte[] tagByte) {
-        System.out.println(bytesToHex(tagByte));
         for (int i = 0; i < dolList.size(); i++) {
             DolTag dolTag = dolList.get(i);
             if (Arrays.equals(dolTag.getTag(), tagByte)) {
@@ -92,6 +91,16 @@ CDOL1 MC
             }
         }
         return t00.getTagName(); // default, entry not found
+    }
+
+    public byte[] getDolValue(byte[] tagByte) {
+        for (int i = 0; i < dolList.size(); i++) {
+            DolTag dolTag = dolList.get(i);
+            if (Arrays.equals(dolTag.getTag(), tagByte)) {
+                return dolTag.getDefaultValue();
+            }
+        }
+        return null; // default, entry not found
     }
 
     private DolTag setTag(byte[] tagByte, String tagName, byte[] tagValueByte) {
