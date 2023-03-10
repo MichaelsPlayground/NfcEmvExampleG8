@@ -221,4 +221,14 @@ public class BinaryUtils {
         return new BigInteger(String.valueOf(value)).toByteArray();
     }
 
+    public static int byteToInt(byte b) {
+        return (int) b & 0xFF;
+    }
+
+    public static int byteToInt(byte first, byte second) {
+        int value = (first & 0xFF) << 8;
+        value += second & 0xFF;
+        return value;
+    }
+
 }

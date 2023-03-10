@@ -1,5 +1,6 @@
 package de.androidcrypto.nfcemvexample;
 
+import static de.androidcrypto.nfcemvexample.BinaryUtils.byteToInt;
 import static de.androidcrypto.nfcemvexample.BinaryUtils.bytesToHex;
 import static de.androidcrypto.nfcemvexample.BinaryUtils.hexBlankToBytes;
 import static de.androidcrypto.nfcemvexample.BinaryUtils.hexToBytes;
@@ -79,6 +80,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
     String aidSelectedForAnalyze = "";
     String aidSelectedForAnalyzeName = "";
 
+    String outputString = ""; // used for the UI output
     // exporting the data
     String exportString = "";
     String exportStringFileName = "emv.html";
@@ -165,6 +167,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
         exportString = "";
         aidSelectedForAnalyze = "";
         aidSelectedForAnalyzeName = "";
+        outputString = "";
     }
 
     private void readIsoDep(Tag tag) {
@@ -301,7 +304,17 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                                 writeToUiAppend(etLog, "found tag 0x9F38 in the selectAid with this length: " + pdolValue.length + " data: " + bytesToHex(pdolValue));
                                 // code will run for VISA and NOT for MasterCard
                                 // we are using a generalized selectGpo command
-                                byte[] commandGpoRequest = hexToBytes(pu.getPdolWithCountryCode());
+
+                                /**
+                                * BASIC CODE
+                                 */
+                                // byte[] commandGpoRequest = hexToBytes(pu.getPdolWithCountryCode()); // basic code
+
+                                /**
+                                 * ADVANCED CODE
+                                 */
+                                byte[] commandGpoRequest = getGpoFromPdol(pdolValue); // advanced one
+
                                 //byte[] commandGpoRequest = hexToBytes(pu.getPdolWithCountryCode2());
                                 //byte[] commandGpoRequest = hexToBytes(pu.getPdolVisaComdirect());
                                 writeToUiAppend(etLog, "");
@@ -585,6 +598,14 @@ I/System.out:                00 00 00 00 00 00 00 00 42 03 1E 03 1F 03 (BINARY)
                                     // print single data
                                     printSingleData(etLog, applicationTransactionCounter, pinTryCounter, lastOnlineATCRegister, logFormat);
 
+                                    String sampleCdol1 = "9f02069f03069f1a0295055f2a029a039c019f37049f35019f3403"; // tag 0x8C1B
+                                    // todo use real data
+                                    byte[] getApplicationCrypto = getAppCryptoCommandFromCdol(hexToBytes(sampleCdol1));
+                                    if (getApplicationCrypto != null) {
+                                        byte[] getApplicationCryptoOk = checkResponse(getApplicationCrypto);
+                                        writeToUiAppend(etLog, "getApplicationCrypto length: " + getApplicationCryptoOk.length + " data: " + bytesToHex(getApplicationCryptoOk));
+                                        if (isPrettyPrintResponse) prettyPrintData(etLog, getApplicationCryptoOk);
+                                    }
                                 }
                             } else { // could not find a tag 0x9f38 in the selectAid response means there is no PDOL request available
                                 // instead we use an empty PDOL of length 0
@@ -929,7 +950,8 @@ Michael Roland
                         }
                     }
                 }
-
+                // print the complete Log
+                writeToUiFinal(etLog);
             } catch (IOException e) {
                 Log.e(TAG, "IsoDep Error on connecting to card: " + e.getMessage());
                 //throw new RuntimeException(e);
@@ -980,6 +1002,7 @@ Michael Roland
 
     /**
      * reads a single file (sector) of an EMV card
+     * used for the completeReading method
      * source: https://stackoverflow.com/a/38999989/8166854 answered Aug 17, 2016
      * by Michael Roland
      *
@@ -1029,7 +1052,7 @@ Michael Roland
             int posSeparator = track2DataString.toUpperCase().indexOf("D");
             pan = track2DataString.substring(0, posSeparator);
             expirationDate = track2DataString.substring((posSeparator + 1), (posSeparator + 5));
- //           return pan + "_" + expirationDate;
+            //           return pan + "_" + expirationDate;
         } else {
             writeToUiAppend(etLog, "tag 0x57 not found, try to find in tag 0x94 = AFL");
         }
@@ -1044,6 +1067,7 @@ Michael Roland
             List<byte[]> tag94BytesList = divideArray(tag94Bytes, 4);
             int tag94BytesListLength = tag94BytesList.size();
             //writeToUiAppend(etLog, "tag94Bytes divided into " + tag94BytesListLength + " arrays");
+            writeToUiAppend(etLog, "The AFL contains " + tag94BytesListLength + " entries to read");
             for (int i = 0; i < tag94BytesListLength; i++) {
                 //writeToUiAppend(etLog, "get sfi + record for array " + i + " data: " + bytesToHex(tag94BytesList.get(i)));
                 // get sfi from first byte, 2nd byte is first record, 3rd byte is last record, 4th byte is offline transactions
@@ -1071,10 +1095,10 @@ Michael Roland
                         //writeToUiAppend(etLog, "readRecordCommand length: " + cmd.length + " data: " + bytesToHex(cmd));
                         byte[] resultReadRecordOk = checkResponse(resultReadRecord);
                         if (resultReadRecordOk != null) {
-
+                            writeToUiAppend(etLog, "data from AFL " + bytesToHex(tag94BytesListEntry));
+                            writeToUiAppend(etLog, "read result length: " + resultReadRecordOk.length + " data: " + bytesToHex(resultReadRecordOk));
                             // pretty print of response
                             if (isPrettyPrintResponse) {
-                                writeToUiAppend(etLog, "data from file SFI " + sfiOrg + " record " + iRecords);
                                 prettyPrintData(etLog, resultReadRecordOk);
                             }
                             // this is the shortened one
@@ -1276,6 +1300,108 @@ Michael Roland
             return getTagValueFromResult(resultOk, (byte) 0x9f, (byte) 0x4F);
         }
     }
+
+    private byte[] getGpoFromPdol(@NonNull byte[] pdol) {
+        // get the tags in a list
+        List<TagAndLength> tagAndLength = TlvUtil.parseTagAndLength(pdol);
+        int tagAndLengthSize = tagAndLength.size();
+        if (tagAndLengthSize < 1) {
+            // there are no pdols in the list
+            Log.e(TAG, "there are no PDOLs in the pdol array, aborted");
+            return null;
+        }
+        int valueOfTagSum = 0; // total length
+        StringBuilder sb = new StringBuilder(); // takes the default values of the tags
+        DolValues dolValues = new DolValues();
+        for (int i = 0; i < tagAndLengthSize; i++) {
+            // get a single tag
+            TagAndLength tal = tagAndLength.get(i); // eg 9f3704
+            byte[] tagToSearch = tal.getTag().getTagBytes(); // gives the tag 9f37
+            int lengthOfTag = tal.getLength(); // 4
+            valueOfTagSum += tal.getLength(); // add it to the sum
+            // now we are trying to find a default value
+            byte[] defaultValue = dolValues.getDolValue(tagToSearch);
+            byte[] usedValue = new byte[0];
+            if (defaultValue != null) {
+                if (defaultValue.length > lengthOfTag) {
+                    // cut it to correct length
+                    usedValue = Arrays.copyOfRange(defaultValue, 0, lengthOfTag);
+                    Log.i(TAG, "asked for tag: " + bytesToHex(tal.getTag().getTagBytes()) + " default is too long, cut to: " + bytesToHex(usedValue));
+                } else if (defaultValue.length < lengthOfTag) {
+                    // increase length
+                    usedValue = new byte[lengthOfTag];
+                    System.arraycopy(defaultValue, 0, usedValue, 0, defaultValue.length);
+                    Log.i(TAG, "asked for tag: " + bytesToHex(tal.getTag().getTagBytes()) + " default is too short, increased to: " + bytesToHex(usedValue));
+                } else {
+                    // correct length
+                    usedValue = defaultValue.clone();
+                    Log.i(TAG, "asked for tag: " + bytesToHex(tal.getTag().getTagBytes()) + " default found: " + bytesToHex(usedValue));
+                }
+            } else {
+                // defaultValue is null means the tag was not found in our tags database for default values
+                usedValue = new byte[lengthOfTag];
+                Log.i(TAG, "asked for tag: " + bytesToHex(tal.getTag().getTagBytes()) + " NO default found, generate zeroed: " + bytesToHex(usedValue));
+            }
+            // now usedValue does have the correct length
+            sb.append(bytesToHex(usedValue));
+        }
+        String constructedGpoString = sb.toString();
+        String tagLength2d = bytesToHex(intToByteArrayV4(valueOfTagSum)); // length value
+        String tagLength2dAnd2 = bytesToHex(intToByteArrayV4(valueOfTagSum + 2)); // length value + 2
+        String constructedGpoCommandString = "80A80000" + tagLength2dAnd2 + "83" + tagLength2d + constructedGpoString + "00";
+        return hexToBytes(constructedGpoCommandString);
+    }
+
+    private byte[] getAppCryptoCommandFromCdol(@NonNull byte[] cdol) {
+        // get the tags in a list
+        List<TagAndLength> tagAndLength = TlvUtil.parseTagAndLength(cdol);
+        int tagAndLengthSize = tagAndLength.size();
+        if (tagAndLengthSize < 1) {
+            // there are no cdols in the list
+            Log.e(TAG, "there are no CDOLs in the cdol array, aborted");
+            return null;
+        }
+        int valueOfTagSum = 0; // total length
+        StringBuilder sb = new StringBuilder(); // takes the default values of the tags
+        DolValues dolValues = new DolValues();
+        for (int i = 0; i < tagAndLengthSize; i++) {
+            // get a single tag
+            TagAndLength tal = tagAndLength.get(i); // eg 9F0206
+            byte[] tagToSearch = tal.getTag().getTagBytes(); // gives the tag 9F02
+            int lengthOfTag = tal.getLength(); // 2
+            valueOfTagSum += tal.getLength(); // add it to the sum
+            // now we are trying to find a default value
+            byte[] defaultValue = dolValues.getDolValue(tagToSearch);
+            byte[] usedValue = new byte[0];
+            if (defaultValue != null) {
+                if (defaultValue.length > lengthOfTag) {
+                    // cut it to correct length
+                    usedValue = Arrays.copyOfRange(defaultValue, 0, lengthOfTag);
+                    Log.i(TAG, "asked for tag: " + bytesToHex(tal.getTag().getTagBytes()) + " default is too long, cut to: " + bytesToHex(usedValue));
+                } else if (defaultValue.length < lengthOfTag) {
+                    // increase length
+                    usedValue = new byte[lengthOfTag];
+                    System.arraycopy(defaultValue, 0, usedValue, 0, defaultValue.length);
+                    Log.i(TAG, "asked for tag: " + bytesToHex(tal.getTag().getTagBytes()) + " default is too short, increased to: " + bytesToHex(usedValue));
+                } else {
+                    // correct length
+                    usedValue = defaultValue.clone();
+                    Log.i(TAG, "asked for tag: " + bytesToHex(tal.getTag().getTagBytes()) + " default found: " + bytesToHex(usedValue));
+                }
+            } else {
+                // defaultValue is null means the tag was not found in our tags database for default values
+                usedValue = new byte[lengthOfTag];
+                Log.i(TAG, "asked for tag: " + bytesToHex(tal.getTag().getTagBytes()) + " NO default found, generate zeroed: " + bytesToHex(usedValue));
+            }
+            // now usedValue does have the correct length
+            sb.append(bytesToHex(usedValue));
+        }
+        String constructedGetAcString = sb.toString();
+        String tagLength2d = bytesToHex(intToByteArrayV4(valueOfTagSum)); // length value
+        String constructedGetAcCommandString = "80AE8000" + tagLength2d + constructedGetAcString + "00";
+        return hexToBytes(constructedGetAcCommandString);
+    }
+
 
     private byte[] getCommandGetAppCryptoVisacard() {
         // https://stackoverflow.com/questions/63547124/unable-to-generate-application-cryptogram
@@ -1482,18 +1608,57 @@ Michael Roland
     // special version, needs a boolean variable in class header: boolean debugPrint = true;
     // if true this method will print the output additionally to the console
     // a second variable is need for export of a log file exportString
-    private void writeToUiAppend(TextView textView, String message) {
+    // to avoid heavy printing on UI thread this method "prints" message to an outputString variable
+    // to show the messages you need to call writeToUiFinal(TextView view)
+    private void writeToUiAppend(final TextView textView, String message) {
         exportString += message + "\n";
         runOnUiThread(() -> {
             if (TextUtils.isEmpty(textView.getText().toString())) {
+                if (textView == (TextView) etLog) {
+                    outputString += message + "\n";
+                }
                 textView.setText(message);
             } else {
                 String newString = textView.getText().toString() + "\n" + message;
-                textView.setText(newString);
+                if (textView == (TextView)  etLog) {
+                    outputString += newString + "\n";
+                }
             }
             if (debugPrint) System.out.println(message);
         });
     }
+
+    private void writeToUiFinal(final TextView textView) {
+        if (textView  == (TextView) etLog) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    textView.setText(outputString);
+                    outputString = ""; // clear the outputString
+                }
+            });
+        }
+    }
+
+    /*
+    private void writeToUiAppendData(String message) {
+        TextView textView =
+        exportString += message + "\n";
+        runOnUiThread(() -> {
+            if (TextUtils.isEmpty(textView.getText().toString())) {
+                if (textView == etLog) {
+                    outputString += message + "\n";
+                }
+                textView.setText(message);
+            } else {
+                String newString = textView.getText().toString() + "\n" + message;
+                if (textView. == etLog) {
+                    outputString += newString + "\n";
+                }
+            }
+            if (debugPrint) System.out.println(message);
+        });
+    }*/
 
     // special version, needs a boolean variable in class header: boolean debugPrint = true;
     // if true this method will print the output additionally to the console
