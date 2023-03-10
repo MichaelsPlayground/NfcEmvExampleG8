@@ -87,6 +87,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
     // exporting the data
     String exportString = "";
     String exportStringFileName = "emv.html";
+    String stepSeparatorString = "*********************************";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -191,6 +192,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                 byte[] command;
                 writeToUiAppend(etLog, "");
                 writeToUiAppend(etLog, "01 select PPSE");
+                printStepHeader(etLog, 1, "select PPSE");
                 byte[] PPSE = "2PAY.SYS.DDF01".getBytes(StandardCharsets.UTF_8); // PPSE
                 command = selectApdu(PPSE);
                 byte[] responsePpse = nfc.transceive(command);
@@ -219,6 +221,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
 
                     writeToUiAppend(etLog, "");
                     writeToUiAppend(etLog, "02 analyze select PPSE response and search for tag 0x4F (applications on card)");
+                    printStepHeader(etLog, 2, "search applications on card");
 
                     BerTlvParser parser = new BerTlvParser();
                     BerTlvs tlv4Fs = parser.parse(responsePpseOk);
@@ -249,7 +252,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                         aidSelectedForAnalyze = bytesToHex(aidSelected);
                         aidSelectedForAnalyzeName = aidV.getAidName(aidSelected);
                         writeToUiAppend(etLog, "");
-                        writeToUiAppend(etLog, "************************************");
+                        printStepHeader(etLog, 3, "select application by AID");
                         writeToUiAppend(etLog, "03 select application by AID " + aidSelectedForAnalyze + " (number " + (aidNumber + 1) + ")");
                         writeToUiAppend(etLog, "card is a " + aidSelectedForAnalyzeName);
                         command = selectApdu(aidSelected);
@@ -294,6 +297,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                             byte[] logFormat = getLogFormat(nfc);
 
                             writeToUiAppend(etLog, "");
+                            printStepHeader(etLog, 4, "search for tag 0x9F38");
                             writeToUiAppend(etLog, "04 search for tag 0x9F38 in the selectAid response");
                             /**
                              * note: different behaviour between Visa and Mastercard and German Girocards
@@ -329,6 +333,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
 
                                 //byte[] commandGpoRequest = hexToBytes(pu.getPdolWithCountryCode2());
                                 //byte[] commandGpoRequest = hexToBytes(pu.getPdolVisaComdirect());
+                                printStepHeader(etLog, 5, "get the processing options");
                                 writeToUiAppend(etLog, "");
                                 writeToUiAppend(etLog, "05 get the processing options command length: " + commandGpoRequest.length + " data: " + bytesToHex(commandGpoRequest));
                                 // girocard: 80a800000a8308000000001000000000
@@ -345,10 +350,12 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                                             prettyPrintData(etLog, responseGpoRequestOk);
 
                                         writeToUiAppend(etLog, "");
+                                        printStepHeader(etLog, 6, "read files & search PAN");
                                         writeToUiAppend(etLog, "06 read the files from card and search for tag 0x57 in each file");
                                         String pan_expirationDate = readPanFromFilesFromGpo(nfc, responseGpoRequestOk);
                                         String[] parts = pan_expirationDate.split("_");
                                         writeToUiAppend(etLog, "");
+                                        printStepHeader(etLog, 7, "print PAN & expire date");
                                         writeToUiAppend(etLog, "07 get PAN and Expiration date from tag 0x57 (Track 2 Equivalent Data)");
                                         writeToUiAppend(etLog, "data for AID " + aidSelectedForAnalyze + " (" + aidSelectedForAnalyzeName + ")");
                                         writeToUiAppend(etLog, "PAN: " + parts[0]);
@@ -629,34 +636,49 @@ I/System.out:                00 00 00 00 00 00 00 00 42 03 1E 03 1F 03 (BINARY)
                                 writeToUiAppend(etLog, "No PDOL found in the selectAid response");
                                 writeToUiAppend(etLog, "try to request the get processing options (GPO) with an empty PDOL");
 
-                                byte[] responseGpoRequestOk = pu.getGpo(0);
-                                if (responseGpoRequestOk != null) {
-                                    writeToUiAppend(etLog, "");
-                                    writeToUiAppend(etLog, "05 select GPO response length: " + responseGpoRequestOk.length + " data: " + bytesToHex(responseGpoRequestOk));
+                                printStepHeader(etLog, 5, "get the processing options");
 
-                                    // pretty print of response
-                                    if (isPrettyPrintResponse)
-                                        prettyPrintData(etLog, responseGpoRequestOk);
+                                /**
+                                 * simple code
+                                 */
+                                //byte[] responseGpoRequestOk = pu.getGpo(0);
 
-                                    // the template contains the tag 0x9F36 = Application Transaction Counter (ATC) !
-                                    // todo get the ATC from response
+                                /**
+                                 * advanced code
+                                 */
+                                byte[] commandGpoRequest = getGpoFromPdol(new byte[0]); // empty PDOL
+                                writeToUiAppend(etLog, "05 get the processing options command length: " + commandGpoRequest.length + " data: " + bytesToHex(commandGpoRequest));
+                                byte[] responseGpoRequest = nfc.transceive(commandGpoRequest);
+                                if (!responseSendWithPdolFailure(responseGpoRequest)) {
+                                    byte[] responseGpoRequestOk = checkResponse(responseGpoRequest);
+                                    if (responseGpoRequestOk != null) {
+                                        writeToUiAppend(etLog, "05 select GPO response length: " + responseGpoRequestOk.length + " data: " + bytesToHex(responseGpoRequestOk));
 
-                                    writeToUiAppend(etLog, "");
-                                    writeToUiAppend(etLog, "06 read the files from card and search for tag 0x57 in each file");
-                                    String pan_expirationDate = readPanFromFilesFromGpo(nfc, responseGpoRequestOk);
-                                    String[] parts = pan_expirationDate.split("_");
-                                    writeToUiAppend(etLog, "");
-                                    writeToUiAppend(etLog, "07 get PAN and Expiration date from tag 0x57 (Track 2 Equivalent Data)");
-                                    writeToUiAppend(etLog, "data for AID " + aidSelectedForAnalyze + " (" + aidSelectedForAnalyzeName + ")");
-                                    writeToUiAppend(etLog, "PAN: " + parts[0]);
-                                    writeToUiAppend(etLog, "Expiration date (YYMM): " + parts[1]);
-                                    writeToUiAppendNoExport(etData, "");
-                                    writeToUiAppendNoExport(etData, "data for AID " + aidSelectedForAnalyze + " (" + aidSelectedForAnalyzeName + ")");
-                                    writeToUiAppendNoExport(etData, "PAN: " + parts[0]);
-                                    writeToUiAppendNoExport(etData, "Expiration date (YYMMDD): " + parts[1]);
-                                }
-                                // print single data
-                                printSingleData(etLog, applicationTransactionCounter, pinTryCounter, lastOnlineATCRegister, logFormat);
+                                        // pretty print of response
+                                        if (isPrettyPrintResponse)
+                                            prettyPrintData(etLog, responseGpoRequestOk);
+
+                                        // the template contains the tag 0x9F36 = Application Transaction Counter (ATC) !
+                                        // todo get the ATC from response
+
+                                        writeToUiAppend(etLog, "");
+                                        writeToUiAppend(etLog, "06 read the files from card and search for tag 0x57 in each file");
+                                        printStepHeader(etLog, 6, "read files & search PAN");
+                                        String pan_expirationDate = readPanFromFilesFromGpo(nfc, responseGpoRequestOk);
+                                        String[] parts = pan_expirationDate.split("_");
+                                        writeToUiAppend(etLog, "");
+                                        printStepHeader(etLog, 7, "print PAN & expire date");
+                                        writeToUiAppend(etLog, "07 get PAN and Expiration date from tag 0x57 (Track 2 Equivalent Data)");
+                                        writeToUiAppend(etLog, "data for AID " + aidSelectedForAnalyze + " (" + aidSelectedForAnalyzeName + ")");
+                                        writeToUiAppend(etLog, "PAN: " + parts[0]);
+                                        writeToUiAppend(etLog, "Expiration date (YYMM): " + parts[1]);
+                                        writeToUiAppendNoExport(etData, "");
+                                        writeToUiAppendNoExport(etData, "data for AID " + aidSelectedForAnalyze + " (" + aidSelectedForAnalyzeName + ")");
+                                        writeToUiAppendNoExport(etData, "PAN: " + parts[0]);
+                                        writeToUiAppendNoExport(etData, "Expiration date (YYMMDD): " + parts[1]);
+                                    }
+                                    // print single data
+                                    printSingleData(etLog, applicationTransactionCounter, pinTryCounter, lastOnlineATCRegister, logFormat);
 
 /*
 https://stackoverflow.com/a/21045743/8166854
@@ -748,79 +770,79 @@ Michael Roland
                                 pinTryCounter = getPinTryCounter(nfc);
                                 printSingleData(etLog, applicationTransactionCounter, pinTryCounter, lastOnlineATCRegister, logFormat);
 */
-                                // https://werner.rothschopf.net/201703_arduino_esp8266_nfc.htm example communication
-                                // https://mstcompany.net/blog/acquiring-emv-transaction-flow-part-5-read-records
-                                // https://github.com/AndreasFagschlunger/O2Xfs
-                                // https://nicolas.riousset.com/category/software-methodologies/example-of-a-mastercard-paypass-contactless-transaction/
-                                // https://hackernoon.com/examining-your-emv-chip-cards-frc93wa6
-                                // https://sdk.supply/list-of-commands-used-in-emv-applications/
-                                // https://www.openscdp.org/scripts/tutorial/emv/cardactionanalysis.html Analyzis of generate AC response !
-                                // https://www.linkedin.com/pulse/decoding-emv-contactless-kenny-shi
-                                // .. The first section is the input and out of readWithPSE() which returns the available AID of A0000000031010 which is one of Visa's AIDs.
-                                // Second section is to selectPID(A0000000031010) which returns the PDOL.
-                                // Third section is to getProcessingOptions(PDOL), which returns more interesting card data, including:
-                                // Track2 equivalent (that contains PAN/card number which I masked, card expiration date)
-                                // Card holder name (in this case, this card doesn't return the real name)
-                                // Application Cryptogram (AC)
-                                // Cryptogram Information Data (CID) - it's 0x80, which means the AC is an Application ReQuest Cryptogram (ARQC), which forces
-                                //   the transaction to be online (issuer must authorize the transaction)
-                                // Application Transaction Counter (ATC) - it's 0x0032, which is 50 in decimal. This is a sequential counter the card remembers
-                                //   and increments whenever there is a new inquiry.
-                                // https://www.youtube.com/watch?v=DChVE1NEME0 34C3 - Decoding Contactless (Card) Payments
-                                // https://developer.pxp-solutions.com/docs/emv
-                                // list of commands:
-                                // https://github.com/sasc999/javaemvreader/blob/master/src/main/java/sasc/emv/EMVAPDUCommands.java
-                                // https://github.com/sasc999/javaemvreader/blob/master/src/main/java/sasc/emv/system/mastercard/MCTags.java
-                                // https://github.com/sasc999/javaemvreader/blob/master/src/main/java/sasc/emv/system/visa/VISATags.java
+                                    // https://werner.rothschopf.net/201703_arduino_esp8266_nfc.htm example communication
+                                    // https://mstcompany.net/blog/acquiring-emv-transaction-flow-part-5-read-records
+                                    // https://github.com/AndreasFagschlunger/O2Xfs
+                                    // https://nicolas.riousset.com/category/software-methodologies/example-of-a-mastercard-paypass-contactless-transaction/
+                                    // https://hackernoon.com/examining-your-emv-chip-cards-frc93wa6
+                                    // https://sdk.supply/list-of-commands-used-in-emv-applications/
+                                    // https://www.openscdp.org/scripts/tutorial/emv/cardactionanalysis.html Analyzis of generate AC response !
+                                    // https://www.linkedin.com/pulse/decoding-emv-contactless-kenny-shi
+                                    // .. The first section is the input and out of readWithPSE() which returns the available AID of A0000000031010 which is one of Visa's AIDs.
+                                    // Second section is to selectPID(A0000000031010) which returns the PDOL.
+                                    // Third section is to getProcessingOptions(PDOL), which returns more interesting card data, including:
+                                    // Track2 equivalent (that contains PAN/card number which I masked, card expiration date)
+                                    // Card holder name (in this case, this card doesn't return the real name)
+                                    // Application Cryptogram (AC)
+                                    // Cryptogram Information Data (CID) - it's 0x80, which means the AC is an Application ReQuest Cryptogram (ARQC), which forces
+                                    //   the transaction to be online (issuer must authorize the transaction)
+                                    // Application Transaction Counter (ATC) - it's 0x0032, which is 50 in decimal. This is a sequential counter the card remembers
+                                    //   and increments whenever there is a new inquiry.
+                                    // https://www.youtube.com/watch?v=DChVE1NEME0 34C3 - Decoding Contactless (Card) Payments
+                                    // https://developer.pxp-solutions.com/docs/emv
+                                    // list of commands:
+                                    // https://github.com/sasc999/javaemvreader/blob/master/src/main/java/sasc/emv/EMVAPDUCommands.java
+                                    // https://github.com/sasc999/javaemvreader/blob/master/src/main/java/sasc/emv/system/mastercard/MCTags.java
+                                    // https://github.com/sasc999/javaemvreader/blob/master/src/main/java/sasc/emv/system/visa/VISATags.java
 
-                                // pin verify https://stackoverflow.com/questions/21019137/emv-verify-command-returning-69-85
-                                // https://stackoverflow.com/questions/36300447/is-plaintext-offline-pin-verification-on-emv-card-by-micro-usb-otg-reader
-                                // https://stackoverflow.com/questions/52676530/smartcard-verify-pin-apdu-command-problem-in-android
+                                    // pin verify https://stackoverflow.com/questions/21019137/emv-verify-command-returning-69-85
+                                    // https://stackoverflow.com/questions/36300447/is-plaintext-offline-pin-verification-on-emv-card-by-micro-usb-otg-reader
+                                    // https://stackoverflow.com/questions/52676530/smartcard-verify-pin-apdu-command-problem-in-android
 
-                                writeToUiAppend(etLog, "");
-                                writeToUiAppend(etLog, "get the application cryptogram");
-                                // check that it was found in any file
-                                writeToUiAppend(etLog, "### tag0x8cFound: " + bytesToHex(tag0x8cFound));
-                                if (tag0x8cFound.length > 1) {
-                                    byte[] getApplicationCryptoCommand = getAppCryptoCommandFromCdol(tag0x8cFound);
-                                    writeToUiAppend(etLog, "getApplicationCryptoCommand length: " + getApplicationCryptoCommand.length + " data: " + bytesToHex(getApplicationCryptoCommand));
-                                    byte[] getApplicationCryptoResponse = nfc.transceive(getApplicationCryptoCommand);
-                                    if (getApplicationCryptoResponse != null) {
-                                        byte[] getApplicationCryptoResponseOk = checkResponse(getApplicationCryptoResponse);
-                                        if (getApplicationCryptoResponseOk != null) {
-                                            writeToUiAppend(etLog, "getApplicationCryptoResponse length: " + getApplicationCryptoResponseOk.length + " data: " + bytesToHex(getApplicationCryptoResponseOk));
-                                            if (isPrettyPrintResponse)
-                                                prettyPrintData(etLog, getApplicationCryptoResponseOk);
+                                    writeToUiAppend(etLog, "");
+                                    writeToUiAppend(etLog, "get the application cryptogram");
+                                    // check that it was found in any file
+                                    writeToUiAppend(etLog, "### tag0x8cFound: " + bytesToHex(tag0x8cFound));
+                                    if (tag0x8cFound.length > 1) {
+                                        byte[] getApplicationCryptoCommand = getAppCryptoCommandFromCdol(tag0x8cFound);
+                                        writeToUiAppend(etLog, "getApplicationCryptoCommand length: " + getApplicationCryptoCommand.length + " data: " + bytesToHex(getApplicationCryptoCommand));
+                                        byte[] getApplicationCryptoResponse = nfc.transceive(getApplicationCryptoCommand);
+                                        if (getApplicationCryptoResponse != null) {
+                                            byte[] getApplicationCryptoResponseOk = checkResponse(getApplicationCryptoResponse);
+                                            if (getApplicationCryptoResponseOk != null) {
+                                                writeToUiAppend(etLog, "getApplicationCryptoResponse length: " + getApplicationCryptoResponseOk.length + " data: " + bytesToHex(getApplicationCryptoResponseOk));
+                                                if (isPrettyPrintResponse)
+                                                    prettyPrintData(etLog, getApplicationCryptoResponseOk);
+                                            } else {
+                                                writeToUiAppend(etLog, "getApplicationCryptoResponse length: " + getApplicationCryptoResponse.length + " data: " + bytesToHex(getApplicationCryptoResponse));
+                                            }
                                         } else {
                                             writeToUiAppend(etLog, "getApplicationCryptoResponse length: " + getApplicationCryptoResponse.length + " data: " + bytesToHex(getApplicationCryptoResponse));
                                         }
-                                    } else {
-                                        writeToUiAppend(etLog, "getApplicationCryptoResponse length: " + getApplicationCryptoResponse.length + " data: " + bytesToHex(getApplicationCryptoResponse));
                                     }
-                                }
 
-                                writeToUiAppend(etLog, "");
-                                writeToUiAppend(etLog, "get the application cryptogram 2");
-                                // check that it was found in any file
-                                writeToUiAppend(etLog, "### tag0x8dFound: " + bytesToHex(tag0x8dFound));
-                                if (tag0x8dFound.length > 1) {
-                                    byte[] getApplicationCryptoCommand = getAppCryptoCommandFromCdol(tag0x8dFound);
-                                    writeToUiAppend(etLog, "getApplicationCryptoCommand length: " + getApplicationCryptoCommand.length + " data: " + bytesToHex(getApplicationCryptoCommand));
-                                    byte[] getApplicationCryptoResponse = nfc.transceive(getApplicationCryptoCommand);
-                                    if (getApplicationCryptoResponse != null) {
-                                        byte[] getApplicationCryptoResponseOk = checkResponse(getApplicationCryptoResponse);
-                                        if (getApplicationCryptoResponseOk != null) {
-                                            writeToUiAppend(etLog, "getApplicationCryptoResponse length: " + getApplicationCryptoResponseOk.length + " data: " + bytesToHex(getApplicationCryptoResponseOk));
-                                            if (isPrettyPrintResponse)
-                                                prettyPrintData(etLog, getApplicationCryptoResponseOk);
+                                    writeToUiAppend(etLog, "");
+                                    writeToUiAppend(etLog, "get the application cryptogram 2");
+                                    // check that it was found in any file
+                                    writeToUiAppend(etLog, "### tag0x8dFound: " + bytesToHex(tag0x8dFound));
+                                    if (tag0x8dFound.length > 1) {
+                                        byte[] getApplicationCryptoCommand = getAppCryptoCommandFromCdol(tag0x8dFound);
+                                        writeToUiAppend(etLog, "getApplicationCryptoCommand length: " + getApplicationCryptoCommand.length + " data: " + bytesToHex(getApplicationCryptoCommand));
+                                        byte[] getApplicationCryptoResponse = nfc.transceive(getApplicationCryptoCommand);
+                                        if (getApplicationCryptoResponse != null) {
+                                            byte[] getApplicationCryptoResponseOk = checkResponse(getApplicationCryptoResponse);
+                                            if (getApplicationCryptoResponseOk != null) {
+                                                writeToUiAppend(etLog, "getApplicationCryptoResponse length: " + getApplicationCryptoResponseOk.length + " data: " + bytesToHex(getApplicationCryptoResponseOk));
+                                                if (isPrettyPrintResponse)
+                                                    prettyPrintData(etLog, getApplicationCryptoResponseOk);
+                                            } else {
+                                                writeToUiAppend(etLog, "getApplicationCryptoResponse length: " + getApplicationCryptoResponse.length + " data: " + bytesToHex(getApplicationCryptoResponse));
+                                            }
                                         } else {
                                             writeToUiAppend(etLog, "getApplicationCryptoResponse length: " + getApplicationCryptoResponse.length + " data: " + bytesToHex(getApplicationCryptoResponse));
                                         }
-                                    } else {
-                                        writeToUiAppend(etLog, "getApplicationCryptoResponse length: " + getApplicationCryptoResponse.length + " data: " + bytesToHex(getApplicationCryptoResponse));
                                     }
                                 }
-
                             }
                         }
                     }
@@ -1208,8 +1230,13 @@ Michael Roland
         int tagAndLengthSize = tagAndLength.size();
         if (tagAndLengthSize < 1) {
             // there are no pdols in the list
-            Log.e(TAG, "there are no PDOLs in the pdol array, aborted");
-            return null;
+            //Log.e(TAG, "there are no PDOLs in the pdol array, aborted");
+            //return null;
+            // returning an empty PDOL
+            String tagLength2d = "00"; // length value
+            String tagLength2dAnd2 = "02"; // length value + 2
+            String constructedGpoCommandString = "80A80000" + tagLength2dAnd2 + "83" + tagLength2d + "" + "00";
+            return hexToBytes(constructedGpoCommandString);
         }
         int valueOfTagSum = 0; // total length
         StringBuilder sb = new StringBuilder(); // takes the default values of the tags
@@ -1306,120 +1333,6 @@ Michael Roland
         return hexToBytes(constructedGetAcCommandString);
     }
 
-
-    private byte[] getCommandGetAppCryptoVisacard() {
-        // https://stackoverflow.com/questions/63547124/unable-to-generate-application-cryptogram
-        // generate AC https://stackoverflow.com/questions/66419082/emv-issuer-authenticate-in-second-generate-ac
-        /*
-        // does not run
-        return new byte[]{
-                // empty cdol1
-                (byte) 0x80, (byte) 0xAE, // CLA INS
-                (byte) 0x40, 0x00, // P1 P2
-                0x00, // length // hex 00 decimal = 00 hex = empty
-                0x00, // LE
-        };
-        */
-        // does not run, returns 6a81
-        return hexBlankToBytes("80 AE 40 00 2B 00 00 00 00 02 01 00 00 00 00 00 00 08 26 00 00 00 00 00 08 26 20 07 01 00 30 90 1B 6A 22 00 00 00 00 00 00 00 00 00 00 00 00 00 00");
-        // https://stackoverflow.com/questions/62745297/generate-application-cryptogram-response-6985-not-using-pdol
-        // 80 AE 40 00 2B 00 00 00 00 02 01 00 00 00 00 00 00 08 26 00 00 00 00 00 08 26 20 07 01 00 30 90 1B 6A 22 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-    }
-
-    private byte[] getApplicationCrypto(IsoDep nfc, byte[] command) {
-        // https://stackoverflow.com/questions/63547124/unable-to-generate-application-cryptogram
-        // generate AC https://stackoverflow.com/questions/66419082/emv-issuer-authenticate-in-second-generate-ac
-        byte[] result = new byte[0];
-        try {
-            result = nfc.transceive(command);
-            System.out.println("getApplicationCrypto result: " + bytesToHex(result));
-            //result = nfc.transceive(getCommandGetAppCryptoMastercard2());
-        } catch (IOException e) {
-            System.out.println("* getAC failed: " + e.getMessage());
-            return null;
-        }
-        byte[] resultOk = checkResponse(result);
-
-        if (resultOk == null) {
-            return null;
-        } else {
-            return resultOk;
-        }
-    }
-
-    private byte[] getCommandGetAppCryptoMastercard() {
-        // https://stackoverflow.com/questions/63547124/unable-to-generate-application-cryptogram
-        // generate AC https://stackoverflow.com/questions/66419082/emv-issuer-authenticate-in-second-generate-ac
-        // runs with MC AAB
-        return new byte[]{
-                (byte) 0x80, (byte) 0xAE, // CLA INS
-                (byte) 0x80, 0x00, // P1 P2
-                0x42, // length // hex 66 decimal = 42 hex
-                0x00, 0x00, 0x00, 0x00, 0x01, 0x00, // amount ok
-                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // other amount ok
-                0x06, 0x42, // terminal country ok
-                0x00, 0x00, 0x00, 0x00, 0x00, // tvr terminal ok
-                0x09, 0x46, // currency code ok
-                0x20, 0x08, 0x23, // transaction date ok, todo fix date ?
-                0x00, // transaction type ok
-                0x11, 0x22, 0x33, 0x44, // UN ok
-                0x22, // terminal type ok
-                0x00, 0x00,// data auth code ok
-                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // icc dynamic ok
-                0x00, 0x00, 0x00, // cvm results ok
-                0x11, 0x10, 0x09, // Transaction Time (HHMMSS) added
-                //0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // 8 cut
-                //0x54, 0x11, // 2 merchant category cut
-                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,// 14 merchant name or location now 20 bytes
-                0x00, // LE
-        };
-    }
-
-
-    private byte[] getCommandGetAppCryptoMastercard2() {
-        // runs with MC Lloyds old
-        // https://stackoverflow.com/questions/63547124/unable-to-generate-application-cryptogram
-        // generate AC https://stackoverflow.com/questions/66419082/emv-issuer-authenticate-in-second-generate-ac
-        return new byte[]{
-                (byte) 0x80, (byte) 0xAE, // CLA INS
-                (byte) 0x80, 0x00, // P1 P2
-                0x2B, // length // hex 43 decimal = 2B hex
-                0x00, 0x00, 0x00, 0x00, 0x01, 0x00, // 6 amount ok
-                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // 6 other amount ok
-                0x06, 0x42, // 2 terminal country ok
-                0x00, 0x00, 0x00, 0x00, 0x00, // 5 tvr terminal ok
-                0x09, 0x46, // 2 currency code ok
-                0x20, 0x08, 0x23, // 3 transaction date ok
-                0x00, // 1 transaction type ok
-                0x11, 0x22, 0x33, 0x44, // 4 UN ok
-                0x22, // 1 terminal type ok (30 up to here)
-                0x00, 0x00,// 2 data auth code ok
-                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // 8 icc dynamic ok
-                0x00, 0x00, 0x00, // 3 cvm results ok total 43
-                0x00, // LE
-        };
-    }
-
-    private byte[] getAcMasterCard(IsoDep nfc) {
-        // https://stackoverflow.com/questions/63547124/unable-to-generate-application-cryptogram
-        // generate AC https://stackoverflow.com/questions/66419082/emv-issuer-authenticate-in-second-generate-ac
-        byte[] result = new byte[0];
-        try {
-            result = nfc.transceive(getCommandGetAppCryptoMastercard());
-            //result = nfc.transceive(getCommandGetAppCryptoMastercard2());
-        } catch (IOException e) {
-            System.out.println("* getAC failed");
-            return null;
-        }
-        byte[] resultOk = checkResponse(result);
-
-        if (resultOk == null) {
-            return null;
-        } else {
-            return resultOk;
-        }
-    }
-
     /**
      * section for activity workflow - important is the disabling of the ReaderMode when activity is pausing
      */
@@ -1464,6 +1377,20 @@ Michael Roland
     /**
      * section for UI
      */
+
+    private void printStepHeader(TextView textView, int step, String message) {
+        // message should not extend 29 characters
+        //String stepSeparatorString = "*********************************";
+        String emptyMessage =          "                                 ";
+        //                              ************ step  4 ************
+        //
+        writeToUiAppend(textView, "");
+        writeToUiAppend(textView, stepSeparatorString);
+        writeToUiAppend(textView, "************ step  " + String.valueOf(step) + " ************");
+        writeToUiAppend(textView, "*            step " + String.valueOf(step) + "             *");
+        writeToUiAppend(textView, "* " + (message + emptyMessage).substring(0, 29) + " *");
+        writeToUiAppend(textView, stepSeparatorString);
+    }
 
     private void provideTextViewDataForExport(TextView textView) {
         System.out.println("*# get Data:" + textView.getText().toString());
