@@ -11,14 +11,16 @@ import androidx.annotation.NonNull;
 public class PureFileModel {
 
     private String aflAddress; // 2 hex encoded bytes aabb, aa = afl sfi bb = afl record
-    private String sfi; // sfi on thee card
+    private String sfi; // sfi on the card
+    private String sfiAfl; // sfi in afl notation
     private String record; // record on the card
     private String length; // content length (bytes)
     private String content; // content in hex encoding
 
-    public PureFileModel(@NonNull String aflAddress, @NonNull String sfi, @NonNull String record, @NonNull String length, @NonNull String content) {
+    public PureFileModel(@NonNull String aflAddress, @NonNull String sfi, @NonNull String sfiAfl, @NonNull String record, @NonNull String length, @NonNull String content) {
         this.aflAddress = aflAddress;
         this.sfi = sfi;
+        this.sfiAfl = sfiAfl;
         this.record = record;
         this.length = length;
         this.content = content;
@@ -38,6 +40,14 @@ public class PureFileModel {
 
     public void setSfi(@NonNull String sfi) {
         this.sfi = sfi;
+    }
+
+    public String getSfiAfl() {
+        return sfiAfl;
+    }
+
+    public void setSfiAfl(@NonNull String sfi) {
+        this.sfi = sfiAfl;
     }
 
     public String getRecord() {
