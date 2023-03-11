@@ -1,12 +1,9 @@
 package de.androidcrypto.nfcemvexample;
 
-import static de.androidcrypto.nfcemvexample.BinaryUtils.byteToInt;
 import static de.androidcrypto.nfcemvexample.BinaryUtils.bytesToHex;
 import static de.androidcrypto.nfcemvexample.BinaryUtils.hexBlankToBytes;
 import static de.androidcrypto.nfcemvexample.BinaryUtils.hexToBytes;
-import static de.androidcrypto.nfcemvexample.BinaryUtils.intFromByteArrayV4;
 import static de.androidcrypto.nfcemvexample.BinaryUtils.intToByteArrayV4;
-import static de.androidcrypto.nfcemvexample.sasc.Log.getPrintWriter;
 
 import android.app.Activity;
 import android.content.Context;
@@ -37,8 +34,9 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
-import com.github.devnied.emvnfccard.iso7816emv.ITag;
+import com.github.devnied.emvnfccard.model.EmvCard;
 import com.github.devnied.emvnfccard.iso7816emv.TagAndLength;
+import com.github.devnied.emvnfccard.parser.EmvTemplate;
 import com.github.devnied.emvnfccard.utils.TlvUtil;
 import com.google.android.material.switchmaterial.SwitchMaterial;
 import com.payneteasy.tlv.BerTag;
@@ -51,6 +49,7 @@ import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 
 import de.androidcrypto.nfcemvexample.nfccreditcards.AidValues;
@@ -62,7 +61,7 @@ import de.androidcrypto.nfcemvexample.sasc.ApplicationUsageControl;
 import de.androidcrypto.nfcemvexample.sasc.CVMList;
 import de.androidcrypto.nfcemvexample.sasc.DOL;
 
-public class MainActivity extends AppCompatActivity implements NfcAdapter.ReaderCallback {
+public class MainActivityDevnied extends AppCompatActivity implements NfcAdapter.ReaderCallback {
 
     private final String TAG = "NfcCreditCardAct";
 
@@ -89,10 +88,11 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
     String exportStringFileName = "emv.html";
     String stepSeparatorString = "*********************************";
 
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.activity_main_devnied);
 
         Toolbar myToolbar = (Toolbar) findViewById(R.id.main_toolbar);
         setSupportActionBar(myToolbar);
@@ -156,12 +156,12 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
     }
 
     private void playPing() {
-        MediaPlayer mp = MediaPlayer.create(MainActivity.this, R.raw.single_ping);
+        MediaPlayer mp = MediaPlayer.create(MainActivityDevnied.this, R.raw.single_ping);
         mp.start();
     }
 
     private void playDoublePing() {
-        MediaPlayer mp = MediaPlayer.create(MainActivity.this, R.raw.double_ping);
+        MediaPlayer mp = MediaPlayer.create(MainActivityDevnied.this, R.raw.double_ping);
         mp.start();
     }
 
@@ -188,7 +188,51 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
 
             try {
                 nfc.connect();
-                writeToUiAppend(etLog, "try to read a payment card with PPSE");
+                writeToUiAppend(etLog, "try to read a payment card with DEVNIED library");
+
+                // this code runs but not for Lloyds Visa card
+
+                PcscProvider provider = new PcscProvider();
+                provider.setmTagCom(nfc);
+
+                EmvTemplate.Config config = EmvTemplate.Config()
+                        .setContactLess(true) // Enable contact less reading (default: true)
+                        .setReadAllAids(true) // Read all aids in card (default: true)
+                        .setReadTransactions(true) // Read all transactions (default: true)
+                        .setReadCplc(false) // Read and extract CPCLC data (default: false)
+                        .setRemoveDefaultParsers(false) // Remove default parsers for GeldKarte and EmvCard (default: false)
+                        .setReadAt(true) // Read and extract ATR/ATS and description
+                        ;
+
+                EmvTemplate parserDevnied = EmvTemplate.Builder()
+                        .setProvider(provider)
+                        .setConfig(config)
+                        .build();
+                // Read card
+                EmvCard card = parserDevnied.readEmvCard();
+
+                int numberOfApplications = card.getApplications().size();
+                String applications = "found " + String.valueOf(numberOfApplications) + " application(s) on card:\n";
+                for (int i = 0; i < numberOfApplications; i++) {
+                        applications += "app no " + i + " AID: " + bytesToHex(card.getApplications().get(i).getAid()) +
+                                " = " + card.getApplications().get(i).getApplicationLabel() + "\n";
+                }
+                String pan = card.getTrack2().getCardNumber();
+                Date exp = card.getTrack2().getExpireDate();
+                String iban = card.getIban();
+                String bic = card.getBic();
+                String outputString = "Card data\n" +
+                        applications +
+                        "PAN: " + pan + "\n" +
+                        "Expire date: " + exp.toString() + "\n" +
+                        "IBAN: " + iban + "\n" +
+                        "BIC: " + bic + "\n";
+                writeToUiAppend(etData, outputString);
+
+                writeToUiFinal(etLog);
+                if (nfc != null) return;
+                // code below is original MainActivity - this code is never called because of 'if (nfc != null) return;' that is true everytime
+
                 byte[] command;
                 writeToUiAppend(etLog, "");
                 printStepHeader(etLog, 1, "select PPSE");
@@ -222,6 +266,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                     printStepHeader(etLog, 2, "search applications on card");
                     writeToUiAppend(etLog, "02 analyze select PPSE response and search for tag 0x4F (applications on card)");
 
+                    // old BerTlvParser
                     BerTlvParser parser = new BerTlvParser();
                     BerTlvs tlv4Fs = parser.parse(responsePpseOk);
                     // by searching for tag 4f
@@ -1682,7 +1727,7 @@ Michael Roland
         mFileReaderActivity.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
             @Override
             public boolean onMenuItemClick(@NonNull MenuItem menuItem) {
-                Intent intent = new Intent(MainActivity.this, FileReaderActivity.class);
+                Intent intent = new Intent(MainActivityDevnied.this, FileReaderActivity.class);
                 startActivity(intent);
                 return false;
             }
@@ -1692,7 +1737,7 @@ Michael Roland
         mExportEmulationDataActivity.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
             @Override
             public boolean onMenuItemClick(@NonNull MenuItem menuItem) {
-                Intent intent = new Intent(MainActivity.this, ExportEmulationDataActivity.class);
+                Intent intent = new Intent(MainActivityDevnied.this, ExportEmulationDataActivity.class);
                 startActivity(intent);
                 return false;
             }

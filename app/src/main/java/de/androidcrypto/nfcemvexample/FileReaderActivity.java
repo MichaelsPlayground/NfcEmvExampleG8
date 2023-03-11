@@ -1,6 +1,8 @@
 package de.androidcrypto.nfcemvexample;
 
 import static de.androidcrypto.nfcemvexample.BinaryUtils.bytesToHex;
+import static de.androidcrypto.nfcemvexample.BinaryUtils.bytesToHexBlank;
+import static de.androidcrypto.nfcemvexample.BinaryUtils.hexBlankToBytes;
 import static de.androidcrypto.nfcemvexample.BinaryUtils.hexToBytes;
 
 import android.app.Activity;
@@ -34,6 +36,7 @@ import androidx.appcompat.widget.Toolbar;
 
 import com.github.devnied.emvnfccard.utils.TlvUtil;
 import com.google.android.material.switchmaterial.SwitchMaterial;
+import com.google.gson.GsonBuilder;
 import com.payneteasy.tlv.BerTag;
 import com.payneteasy.tlv.BerTlv;
 import com.payneteasy.tlv.BerTlvParser;
@@ -46,16 +49,21 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import de.androidcrypto.nfcemvexample.emulate.Aids;
+import de.androidcrypto.nfcemvexample.emulate.PureFileModel;
+import de.androidcrypto.nfcemvexample.emulate.PureFilesModel;
 import de.androidcrypto.nfcemvexample.nfccreditcards.AidValues;
 import de.androidcrypto.nfcemvexample.nfccreditcards.PdolUtil;
 import de.androidcrypto.nfcemvexample.nfccreditcards.TagValues;
+import de.androidcrypto.nfcemvexample.sasc.ApplicationElementaryFile;
+import de.androidcrypto.nfcemvexample.sasc.ShortFileIdentifier;
 
 public class FileReaderActivity extends AppCompatActivity implements NfcAdapter.ReaderCallback {
 
     private final String TAG = "NfcCCFileReaderAct";
 
     TextView tv1;
-    com.google.android.material.textfield.TextInputEditText etData, etLog;
+    com.google.android.material.textfield.TextInputEditText etData, etLog, etGivenName;
     SwitchMaterial prettyPrintResponse;
 
     private NfcAdapter mNfcAdapter;
@@ -64,13 +72,22 @@ public class FileReaderActivity extends AppCompatActivity implements NfcAdapter.
     final String TechIsoDep = "android.nfc.tech.IsoDep";
 
     boolean debugPrint = true; // if set to true the writeToUi method will print to console
+    String outputString = ""; // used for the UI output in etLog
+    String outputDataString = ""; // used for the UI output in etData
     boolean isPrettyPrintResponse = false; // default
     String aidSelectedForAnalyze = "";
     String aidSelectedForAnalyzeName = "";
 
     // exporting the data
     String exportString = "";
-    String exportStringFileName = "emv.html";
+    //String exportStringFileName = "emv.html";
+
+    PureFilesModel pureFiles;
+    PureFileModel pureFile;
+    //String givenName; // name given by the user for this file, here fixed
+    String givenName = "emv card";
+    String exportJsonString = "";
+    String exportStringFileName = "emvfiles.json";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -81,6 +98,7 @@ public class FileReaderActivity extends AppCompatActivity implements NfcAdapter.
         setSupportActionBar(myToolbar);
 
         tv1 = findViewById(R.id.tv1);
+        etGivenName = findViewById(R.id.etGivenName);
         etData = findViewById(R.id.etData);
         etLog = findViewById(R.id.etLog);
         prettyPrintResponse = findViewById(R.id.swPrettyPrint);
@@ -115,6 +133,14 @@ public class FileReaderActivity extends AppCompatActivity implements NfcAdapter.
             aidSelectedForAnalyze = "";
             aidSelectedForAnalyzeName = "";
         });
+        if (TextUtils.isEmpty(etGivenName.getText().toString())) {
+            writeToUiToast("before reading the card you need to provide a name for this card");
+            return;
+        } else {
+            givenName = etGivenName.getText().toString();
+        }
+
+
         playPing();
         writeToUiAppend(etLog, "NFC tag discovered");
 
@@ -166,6 +192,12 @@ public class FileReaderActivity extends AppCompatActivity implements NfcAdapter.
 
             try {
                 nfc.connect();
+
+                writeToUiAppend(etLog, "increase IsoDep timeout for long reading");
+                writeToUiAppend(etLog, "timeout old: " + nfc.getTimeout() + " ms");
+                nfc.setTimeout(10000);
+                writeToUiAppend(etLog, "timeout new: " + nfc.getTimeout() + " ms");
+
                 writeToUiAppend(etLog, "try to read a payment card with PPSE");
                 byte[] command;
                 writeToUiAppend(etLog, "");
@@ -184,6 +216,8 @@ public class FileReaderActivity extends AppCompatActivity implements NfcAdapter.
                 if (responsePpseNotAllowed) {
                     writeToUiAppend(etLog, "");
                     writeToUiAppend(etLog, "The card is not a credit card, reading aborted");
+                    writeToUiFinal(etLog);
+                    writeToUiFinal(etData);
                     try {
                         nfc.close();
                     } catch (IOException e) {
@@ -191,6 +225,7 @@ public class FileReaderActivity extends AppCompatActivity implements NfcAdapter.
                     }
                     return;
                 }
+
                 byte[] responsePpseOk = checkResponse(responsePpse);
                 if (responsePpseOk != null) {
                     // pretty print of response
@@ -205,6 +240,8 @@ public class FileReaderActivity extends AppCompatActivity implements NfcAdapter.
                     List<BerTlv> tag4fList = tlv4Fs.findAll(new BerTag(0x4F));
                     if (tag4fList.size() < 1) {
                         writeToUiAppend(etLog, "there is no tag 0x4F available, stopping here");
+                        writeToUiFinal(etLog);
+                        writeToUiFinal(etData);
                         try {
                             nfc.close();
                         } catch (IOException e) {
@@ -253,15 +290,49 @@ public class FileReaderActivity extends AppCompatActivity implements NfcAdapter.
                         // pretty print of response
                         if (isPrettyPrintResponse) prettyPrintData(etLog, responseSelectedAidOk);
 
+                        /*
+                        byte[] afl1 = hexBlankToBytes("08 01 01 00");
+                        ApplicationElementaryFile aef = new ApplicationElementaryFile(afl1);
+                        writeToUiAppend(etLog, "aef: " + aef.toString());
+                        ShortFileIdentifier shoFiId = aef.getSFI();
+                        writeToUiAppend(etLog, "shoFiId1: " + shoFiId.getValue());
+                        writeToUiAppend(etLog, "shoFiId1: " + shoFiId.toString());
+
+                        byte[] afl2 = hexBlankToBytes("10 01 01 01");
+                        aef = new ApplicationElementaryFile(afl2);
+                        writeToUiAppend(etLog, "aef: " + aef.toString());
+                        shoFiId = aef.getSFI();
+                        writeToUiAppend(etLog, "shoFiId2: " + shoFiId.getValue());
+                        writeToUiAppend(etLog, "shoFiId2: " + shoFiId.toString());
+
+                        byte[] afl3 = hexBlankToBytes("20 01 02 00");
+                        aef = new ApplicationElementaryFile(afl3);
+                        writeToUiAppend(etLog, "aef: " + aef.toString());
+                        shoFiId = aef.getSFI();
+                        writeToUiAppend(etLog, "shoFiId3: " + shoFiId.getValue());
+                        writeToUiAppend(etLog, "shoFiId3: " + shoFiId.toString());
+                        if (nfc != null) return;*/
+/*
                         byte[] applicationTransactionCounterBeforeReading = getApplicationTransactionCounter(nfc);
                         writeToUiAppendNoExport(etLog, "application transaction counter (ATC) before reading");
                         printSingleData(etLog, applicationTransactionCounterBeforeReading);
+                        */
                         writeToUiAppend(etLog, "");
-                        writeToUiAppend(etLog, "04 read the files for sector 1-4 and records 1-10 for each sector");
+                        writeToUiAppend(etLog, "04 read the files for sector 1-31 and records 1-16 for each sector");
                         completeFileReading(nfc);
+  /*
                         byte[] applicationTransactionCounterAfterReading = getApplicationTransactionCounter(nfc);
                         writeToUiAppendNoExport(etLog, "application transaction counter (ATC) after reading");
                         printSingleData(etLog, applicationTransactionCounterAfterReading);
+*/
+                        exportString = new GsonBuilder().setPrettyPrinting().create().toJson(pureFiles, PureFilesModel.class);
+                        writeToUiAppend(etLog, "");
+                        writeToUiAppend(etLog, "this data will be exported:\n" + exportString);
+
+                        writeToUiFinal(etLog);
+                        writeToUiFinal(etData);
+
+                        writeStringToExternalSharedStorage();
                     }
                 }
             } catch (IOException e) {
@@ -283,6 +354,42 @@ public class FileReaderActivity extends AppCompatActivity implements NfcAdapter.
         }
     }
 
+/*
+
+afl SFI >>> 3 = file SFI
+file SFI <<< 3 = aflSFI
+
+MC AFL:
+08 01 01 00
+10 01 01 01
+20 01 02 00
+
+I/System.out: data from AFL 08010100 was SFI 1 Rec 1
+I/System.out: 70 75 -- Record Template (EMV Proprietary)
+I/System.out:       9F 6C 02 -- Mag Stripe Application Version Number (Card)
+I/System.out:                00 01 (BINARY)
+I/System.out:       9F 62 06 -- Track 1 bit map for CVC3
+...
+
+I/System.out: data from AFL 10010101 was SFI 2 Rec 1
+I/System.out: 70 81 A6 -- Record Template (EMV Proprietary)
+I/System.out:          9F 42 02 -- Application Currency Code
+I/System.out:                   09 78 (NUMERIC)
+I/System.out:          5F 25 03 -- Application Effective Date
+I/System.out:                   22 03 01 (NUMERIC)
+
+I/System.out: data from AFL 20010200 was SFI 3 Rec 1 AND SFI 4 Rec 1
+I/System.out: 70 81 B8 -- Record Template (EMV Proprietary)
+I/System.out:          9F 47 01 -- ICC Public Key Exponent
+I/System.out:                   03 (BINARY)
+I/System.out:          9F 46 81 B0 -- ICC Public Key Certificate
+I/System.out:                      3C AD A9 02 AF B4 02 89 FB DF EA 01 95 0C 49 81
+
+Additional: (no AFL) SFI 4 Rec 2
+Additional: (no AFL) SFI 4 Rec 3
+ */
+
+
     /**
      * section for brute force reading of afl
      */
@@ -292,14 +399,83 @@ public class FileReaderActivity extends AppCompatActivity implements NfcAdapter.
         writeToUiAppend(etLog, "complete reading of files in EMV card");
 
         String resultString = "";
+        pureFiles = new PureFilesModel(givenName);
+        List<PureFileModel> pureFileList = new ArrayList<>();
         StringBuilder sb = new StringBuilder();
         // limit the loop to 1-4, could be 31
-        for (int sfi = 1; sfi < 5; ++sfi) {
-        //for (int sfi = 1; sfi < 32; ++sfi) {
-            for (int record = 1; record < 10; ++record) {
+        //for (int sfi = 1; sfi < 5; ++sfi) {
+        for (int sfi = 1; sfi < 32; ++sfi) {
+            //for (int record = 1; record < 10; ++record) {
+            for (int record = 1; record < 17; ++record) {
+                //for (int record = 1; record < 2; ++record) {
+                byte[] readResult = readFile(nfc, sfi, record);
+
+                // here restricting the printing on non null readings
+                if (readResult != null) {
+                    sb.append("SFI: ").append(String.valueOf(sfi)).append("\n");
+                    sb.append("Record: ").append(String.valueOf(record)).append("\n");
+                    String aflAddress = convertSfiRecordToAfl(sfi, record);
+                    sb.append("AFL data: ").append(aflAddress).append("\n");
+                /*
+                byte sfiOld = (byte) (sfi &0xFF);
+                byte sfiAfl = (byte) ((sfiOld << 3) & 0x0F8);
+                sb.append("SFI AFL (dec): ").append(String.valueOf(sfiAfl)).append(" (hex): ").append(String.format("%02X ", sfiAfl)) .append("\n");
+                */
+
+                    if (readResult != null) {
+                        sb.append(bytesToHex(readResult)).append("\n");
+                        // pretty print of response
+                        if (isPrettyPrintResponse)
+                            sb.append(prettyPrintDataToString(readResult)).append("\n");
+                    } else {
+                        sb.append("NULL").append("\n");
+                    }
+                    sb.append("-----------------------").append("\n");
+
+                    // prepairing the data for export - only for non null readings
+                    if (readResult != null) {
+                        pureFile = new PureFileModel(aflAddress, String.valueOf(sfi), String.valueOf(record), String.valueOf(readResult.length), bytesToHex(readResult));
+                        pureFileList.add(pureFile);
+                    }
+                }
+            }
+        }
+        resultString = sb.toString();
+        writeToUiAppend(etData, resultString);
+        writeToUiAppendNoExport(etLog, "reading complete");
+        // pureFiles now have all entries
+        int numberOfPureFileInList = pureFileList.size();
+        if (numberOfPureFileInList > 0) {
+            pureFiles.setNumberOfRecords(numberOfPureFileInList);
+            for (int i = 0; i < numberOfPureFileInList; i++) {
+                pureFiles.setPureFile(i, pureFileList.get(i));
+            }
+        }
+
+    }
+
+    private void completeFileReadingOrg(IsoDep nfc) {
+        writeToUiAppend(etLog, "");
+        writeToUiAppend(etLog, "complete reading of files in EMV card");
+
+        String resultString = "";
+        StringBuilder sb = new StringBuilder();
+        // limit the loop to 1-4, could be 31
+        //for (int sfi = 1; sfi < 5; ++sfi) {
+        for (int sfi = 1; sfi < 32; ++sfi) {
+            //for (int record = 1; record < 10; ++record) {
+            for (int record = 1; record < 17; ++record) {
+            //for (int record = 1; record < 2; ++record) {
                 byte[] readResult = readFile(nfc, sfi, record);
                 sb.append("SFI: ").append(String.valueOf(sfi)).append("\n");
                 sb.append("Record: ").append(String.valueOf(record)).append("\n");
+                sb.append("AFL data: ").append(convertSfiRecordToAfl(sfi, record)).append("\n");
+                /*
+                byte sfiOld = (byte) (sfi &0xFF);
+                byte sfiAfl = (byte) ((sfiOld << 3) & 0x0F8);
+                sb.append("SFI AFL (dec): ").append(String.valueOf(sfiAfl)).append(" (hex): ").append(String.format("%02X ", sfiAfl)) .append("\n");
+                */
+
                 if (readResult != null) {
                     sb.append(bytesToHex(readResult)).append("\n");
                     // pretty print of response
@@ -315,6 +491,15 @@ public class FileReaderActivity extends AppCompatActivity implements NfcAdapter.
         writeToUiAppendNoExport(etLog, "reading complete");
     }
 
+    private String convertSfiRecordToAfl(int sfi, int record) {
+        byte sfiOld = (byte) (sfi &0xFF);
+        byte sfiAfl = (byte) ((sfiOld << 3) & 0x0F8);
+        StringBuilder sb = new StringBuilder();
+        sb.append(String.format("%02X", sfiAfl));
+        sb.append(String.format("%02X", record));
+        return sb.toString();
+    }
+
     /**
      * reads a single file (sector) of an EMV card
      * source: https://stackoverflow.com/a/38999989/8166854 answered Aug 17, 2016
@@ -327,23 +512,44 @@ public class FileReaderActivity extends AppCompatActivity implements NfcAdapter.
      */
     private byte[] readFile(IsoDep nfc, int sfi, int record) {
         byte[] cmd = new byte[]{(byte) 0x00, (byte) 0xB2, (byte) 0x00, (byte) 0x04, (byte) 0x00};
+        // calculate byte 3 = cmd[3] |= (byte) ((sfi << 3) & 0x0F8);
+        //byte cmd3 = (byte) ((sfi << 3) & 0x0F8);
         cmd[2] = (byte) (record & 0x0FF);
         cmd[3] |= (byte) ((sfi << 3) & 0x0F8);
+        //cmd[3] |= cmd3;
+/*
+        writeToUiAppend(etLog, "readFile sfi: " + sfi);
+        byte sfiByte = (byte) sfi;
+        writeToUiAppend(etLog, "readFile sfiByte: " + sfiByte);
+        writeToUiAppend(etLog, "sfiByte: " + BinaryUtils.printByteBinary(sfiByte));
+        //writeToUiAppend(etLog, "cmd3Byte:" + BinaryUtils.printByteBinary(cmd3));
+        //writeToUiAppend(etLog, "readFile cmd3Byte:" + cmd3);
+        writeToUiAppend(etLog, "|cmd3Byte:" + BinaryUtils.printByteBinary(cmd[3]));
+        writeToUiAppend(etLog, "readFile |cmd3Byte:" + cmd[3]);
+*/
+
         byte[] result = new byte[0];
         try {
             result = nfc.transceive(cmd);
         } catch (IOException e) {
+            /*
             System.out.println("* readFile sfi " + sfi + " record " + record +
                     " result length: " + 0 + " data: NULL");
-            return null;
+            return null;*/
+
         }
         byte[] resultOk = checkResponse(result);
         if (resultOk != null) {
+            /*
             System.out.println("* readFile sfi " + sfi + " record " + record +
                     " result length: " + resultOk.length + " data: " + bytesToHex(resultOk));
+             */
         } else {
+            /*
             System.out.println("* readFile sfi " + sfi + " record " + record +
                     " result length: " + 0 + " data: NULL");
+
+             */
         }
         return resultOk;
     }
@@ -377,18 +583,18 @@ public class FileReaderActivity extends AppCompatActivity implements NfcAdapter.
     }
 
     private byte[] checkResponse(byte[] data) {
-        System.out.println("checkResponse: " + bytesToHex(data));
+        //System.out.println("checkResponse: " + bytesToHex(data));
         //if (data.length < 5) return null; // not ok
         if (data.length < 5) {
-            System.out.println("checkResponse: data length " + data.length);
+            //System.out.println("checkResponse: data length " + data.length);
             return null;
         } // not ok
         int status = ((0xff & data[data.length - 2]) << 8) | (0xff & data[data.length - 1]);
         if (status != 0x9000) {
-            System.out.println("status: " + status);
+            //System.out.println("status: " + status);
             return null;
         } else {
-            System.out.println("will return: " + bytesToHex(Arrays.copyOfRange(data, 0, data.length - 2)));
+            //System.out.println("will return: " + bytesToHex(Arrays.copyOfRange(data, 0, data.length - 2)));
             return Arrays.copyOfRange(data, 0, data.length - 2);
         }
     }
@@ -519,17 +725,46 @@ public class FileReaderActivity extends AppCompatActivity implements NfcAdapter.
     // special version, needs a boolean variable in class header: boolean debugPrint = true;
     // if true this method will print the output additionally to the console
     // a second variable is need for export of a log file exportString
-    private void writeToUiAppend(TextView textView, String message) {
+    // to avoid heavy printing on UI thread this method "prints" message to an outputString variable
+    // to show the messages you need to call writeToUiFinal(TextView view)
+    private void writeToUiAppend(final TextView textView, String message) {
         exportString += message + "\n";
         runOnUiThread(() -> {
             if (TextUtils.isEmpty(textView.getText().toString())) {
-                textView.setText(message);
+                if (textView == (TextView) etLog) {
+                    outputString += message + "\n";
+                } else if (textView == (TextView) etData) {
+                    outputDataString += message + "\n";
+                } else {
+                    textView.setText(message);
+                }
             } else {
                 String newString = textView.getText().toString() + "\n" + message;
-                textView.setText(newString);
+                if (textView == (TextView) etLog) {
+                    outputString += newString + "\n";
+                } else if (textView == (TextView) etData) {
+                    outputDataString += newString + "\n";
+                } else{
+                    textView.setText(newString);
+                }
             }
             if (debugPrint) System.out.println(message);
         });
+    }
+
+    private void writeToUiFinal(final TextView textView) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    if (textView == (TextView) etLog) {
+                        textView.setText(outputString);
+                        outputString = ""; // clear the outputString
+                    } else if (textView == (TextView) etData) {
+                        textView.setText(outputDataString);
+                        outputDataString = ""; // clear the outputDataString
+                    }
+                }
+            });
     }
 
     // special version, needs a boolean variable in class header: boolean debugPrint = true;
