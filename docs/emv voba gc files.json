@@ -1,0 +1,495 @@
+{
+  "name": "voba girocard",
+  "numberOfRecords": 30,
+  "pureFiles": [
+    {
+      "aflAddress": "0801",
+      "content": "70059f08020002",
+      "length": "7",
+      "record": "1",
+      "sfi": "1",
+      "sfiAfl": "08"
+    },
+    {
+      "aflAddress": "0802",
+      "content": "70059f08020002",
+      "length": "7",
+      "record": "2",
+      "sfi": "1",
+      "sfiAfl": "08"
+    },
+    {
+      "aflAddress": "0803",
+      "content": "703d8c1b9f02069f03069f1a0295055f2a029a039c019f37049f35019f34038d0991108a0295059f370457136726428902046846007d21122010254828156f",
+      "length": "63",
+      "record": "3",
+      "sfi": "1",
+      "sfiAfl": "08"
+    },
+    {
+      "aflAddress": "0804",
+      "content": "700c8e0a00000000000000000203",
+      "length": "14",
+      "record": "4",
+      "sfi": "1",
+      "sfiAfl": "08"
+    },
+    {
+      "aflAddress": "0805",
+      "content": "70385f24032112315a0a6726428902046846007f5f3401025f280202809f0702ffc09f0d05fc40a480009f0e0500101800009f0f05fc40a49800",
+      "length": "58",
+      "record": "5",
+      "sfi": "1",
+      "sfiAfl": "08"
+    },
+    {
+      "aflAddress": "0806",
+      "content": "70188e0c0000000000000000440302039f4a01829f49039f3704",
+      "length": "26",
+      "record": "6",
+      "sfi": "1",
+      "sfiAfl": "08"
+    },
+    {
+      "aflAddress": "0807",
+      "content": "701c8e0c00000000000000001f0302039f080200029f6c02ffff9f4a0182",
+      "length": "30",
+      "record": "7",
+      "sfi": "1",
+      "sfiAfl": "08"
+    },
+    {
+      "aflAddress": "0808",
+      "content": "701a8e0a000000000000000002039f080200029f6c02ffff9f4a0182",
+      "length": "28",
+      "record": "8",
+      "sfi": "1",
+      "sfiAfl": "08"
+    },
+    {
+      "aflAddress": "1801",
+      "content": "7081e28f01059081b078cdb2c84b435325ec4478fd6f0f9f0dd61210a78c791adcb22c85fb0095db3a540658569a1c0d35a48d1fd9c2dba83ed941fcb3f2cfe56c943bfa0f8d25f0896284006cbdc10821cf0f0f6ec033332f8eb52c1acad9c52221a27dd23aba70c27c547aece994c7dc5c4d5f1b28529a803340cc249caf6bcb3614d071de141f89a1f4a545c5598395864474514e42c7f1edbeedef27b9a50eeb81ed5762a0af36505ee084703dfd168ec6f02245077d8b9f3201039224b0568adf146b092492be46e5d57d920b026be8e734264cf34710483a0af52d46790f01ab0000",
+      "length": "229",
+      "record": "1",
+      "sfi": "3",
+      "sfiAfl": "18"
+    },
+    {
+      "aflAddress": "2001",
+      "content": "70339f47030100019f480a757271487e0b220c81cb0000000000000000000000000000000000000000000000000000000000000000",
+      "length": "53",
+      "record": "1",
+      "sfi": "4",
+      "sfiAfl": "20"
+    },
+    {
+      "aflAddress": "2002",
+      "content": "7081b49f4681b06658bded357473566956e7d4e9d7220e906b0c7efd1c342040890d24a8ba157ee3da3822f6649cc30f5df0566f453b43f3966655701c2b1df35c93fbba27ca0a1b9261f8e9454d9f51f58ef4f0ebaa7271f5b1d282a2ce46761c7d4c30849945c872b9857066cc7a35d6e488c14fcf574b337156ba666a4bd4acec84b4388d0a7618cee7a896959a012645ae9f7bc2a918d3e4141bca42983a002d394f2b710afb7dcf9c0d7f50b92524534dc1993d06",
+      "length": "183",
+      "record": "2",
+      "sfi": "4",
+      "sfiAfl": "20"
+    },
+    {
+      "aflAddress": "2003",
+      "content": "7081b49f4681b02e9419171b0065fc462339ec45cfbe2b8358167ba3a73fd8e1290ea31ead5617652724d8bc308c0348d1ddaaea25d337668ba0b5db2bdc398027c067d30adcdd089b200cd4f930d34f406bcc43bb029d30c775e40a96e4639d66e2c22f368986d65639c5e3699ca21ad99b130b23c321f8184a18fca59ae3a0c5629cfea8ef89cc9438d59adc7ebf6dba32b6f538058f359ef1a5ccb4af7a850ab7bae2eb878d2a2156e94776d96dd16a5c19713279c5",
+      "length": "183",
+      "record": "3",
+      "sfi": "4",
+      "sfiAfl": "20"
+    },
+    {
+      "aflAddress": "2004",
+      "content": "7081b49f4681b087df5942ee89317aea2e53d477ab272794375e9025b0447b304f52e07f54494bea054076a0fd22faf4ee85cfd06ae61c44e0bf1c0156b1c0f287312e1c9460c0b93fac7bdd88a6cf286daeeab5d81310ff49b9d80f4b905261429b44a2c0e3b876ee8825fbb6ff3aef14a645983e886a61a7acde252698868b74033bbecee902050196579b2df75bfe070a14a45ce710c5e782da9ecd20d21db77352461b031ad83d9137615b8a63aca55900619a7a9c",
+      "length": "183",
+      "record": "4",
+      "sfi": "4",
+      "sfiAfl": "20"
+    },
+    {
+      "aflAddress": "B801",
+      "content": "6726428921000148846d21121801120280455552015b0007",
+      "length": "24",
+      "record": "1",
+      "sfi": "23",
+      "sfiAfl": "B8"
+    },
+    {
+      "aflAddress": "D001",
+      "content": "08010102ff0400818c",
+      "length": "9",
+      "record": "1",
+      "sfi": "26",
+      "sfiAfl": "D0"
+    },
+    {
+      "aflAddress": "D002",
+      "content": "12020602ffffffffffff000000005000028481",
+      "length": "19",
+      "record": "2",
+      "sfi": "26",
+      "sfiAfl": "D0"
+    },
+    {
+      "aflAddress": "D003",
+      "content": "06020600f78182",
+      "length": "7",
+      "record": "3",
+      "sfi": "26",
+      "sfiAfl": "D0"
+    },
+    {
+      "aflAddress": "D004",
+      "content": "06000000b78381",
+      "length": "7",
+      "record": "4",
+      "sfi": "26",
+      "sfiAfl": "D0"
+    },
+    {
+      "aflAddress": "D005",
+      "content": "080801028080000403",
+      "length": "9",
+      "record": "5",
+      "sfi": "26",
+      "sfiAfl": "D0"
+    },
+    {
+      "aflAddress": "D006",
+      "content": "080801028080008403",
+      "length": "9",
+      "record": "6",
+      "sfi": "26",
+      "sfiAfl": "D0"
+    },
+    {
+      "aflAddress": "D007",
+      "content": "080801028080008105",
+      "length": "9",
+      "record": "7",
+      "sfi": "26",
+      "sfiAfl": "D0"
+    },
+    {
+      "aflAddress": "D008",
+      "content": "080801021010008106",
+      "length": "9",
+      "record": "8",
+      "sfi": "26",
+      "sfiAfl": "D0"
+    },
+    {
+      "aflAddress": "D009",
+      "content": "080801020101000806",
+      "length": "9",
+      "record": "9",
+      "sfi": "26",
+      "sfiAfl": "D0"
+    },
+    {
+      "aflAddress": "D00A",
+      "content": "080801021010008104",
+      "length": "9",
+      "record": "10",
+      "sfi": "26",
+      "sfiAfl": "D0"
+    },
+    {
+      "aflAddress": "D00B",
+      "content": "080801020101000881",
+      "length": "9",
+      "record": "11",
+      "sfi": "26",
+      "sfiAfl": "D0"
+    },
+    {
+      "aflAddress": "D00C",
+      "content": "06020600d70607",
+      "length": "7",
+      "record": "12",
+      "sfi": "26",
+      "sfiAfl": "D0"
+    },
+    {
+      "aflAddress": "D00D",
+      "content": "08010102ff10007f81",
+      "length": "9",
+      "record": "13",
+      "sfi": "26",
+      "sfiAfl": "D0"
+    },
+    {
+      "aflAddress": "D00E",
+      "content": "08010102ff08000981",
+      "length": "9",
+      "record": "14",
+      "sfi": "26",
+      "sfiAfl": "D0"
+    },
+    {
+      "aflAddress": "D00F",
+      "content": "080301025000008181",
+      "length": "9",
+      "record": "15",
+      "sfi": "26",
+      "sfiAfl": "D0"
+    },
+    {
+      "aflAddress": "D010",
+      "content": "08040102f010008183",
+      "length": "9",
+      "record": "16",
+      "sfi": "26",
+      "sfiAfl": "D0"
+    }
+  ]
+}
+this data will be exported:
+{
+  "name": "voba girocard",
+  "numberOfRecords": 30,
+  "pureFiles": [
+    {
+      "aflAddress": "0801",
+      "content": "70059f08020002",
+      "length": "7",
+      "record": "1",
+      "sfi": "1",
+      "sfiAfl": "08"
+    },
+    {
+      "aflAddress": "0802",
+      "content": "70059f08020002",
+      "length": "7",
+      "record": "2",
+      "sfi": "1",
+      "sfiAfl": "08"
+    },
+    {
+      "aflAddress": "0803",
+      "content": "703d8c1b9f02069f03069f1a0295055f2a029a039c019f37049f35019f34038d0991108a0295059f370457136726428902046846007d21122010254828156f",
+      "length": "63",
+      "record": "3",
+      "sfi": "1",
+      "sfiAfl": "08"
+    },
+    {
+      "aflAddress": "0804",
+      "content": "700c8e0a00000000000000000203",
+      "length": "14",
+      "record": "4",
+      "sfi": "1",
+      "sfiAfl": "08"
+    },
+    {
+      "aflAddress": "0805",
+      "content": "70385f24032112315a0a6726428902046846007f5f3401025f280202809f0702ffc09f0d05fc40a480009f0e0500101800009f0f05fc40a49800",
+      "length": "58",
+      "record": "5",
+      "sfi": "1",
+      "sfiAfl": "08"
+    },
+    {
+      "aflAddress": "0806",
+      "content": "70188e0c0000000000000000440302039f4a01829f49039f3704",
+      "length": "26",
+      "record": "6",
+      "sfi": "1",
+      "sfiAfl": "08"
+    },
+    {
+      "aflAddress": "0807",
+      "content": "701c8e0c00000000000000001f0302039f080200029f6c02ffff9f4a0182",
+      "length": "30",
+      "record": "7",
+      "sfi": "1",
+      "sfiAfl": "08"
+    },
+    {
+      "aflAddress": "0808",
+      "content": "701a8e0a000000000000000002039f080200029f6c02ffff9f4a0182",
+      "length": "28",
+      "record": "8",
+      "sfi": "1",
+      "sfiAfl": "08"
+    },
+    {
+      "aflAddress": "1801",
+      "content": "7081e28f01059081b078cdb2c84b435325ec4478fd6f0f9f0dd61210a78c791adcb22c85fb0095db3a540658569a1c0d35a48d1fd9c2dba83ed941fcb3f2cfe56c943bfa0f8d25f0896284006cbdc10821cf0f0f6ec033332f8eb52c1acad9c52221a27dd23aba70c27c547aece994c7dc5c4d5f1b28529a803340cc249caf6bcb3614d071de141f89a1f4a545c5598395864474514e42c7f1edbeedef27b9a50eeb81ed5762a0af36505ee084703dfd168ec6f02245077d8b9f3201039224b0568adf146b092492be46e5d57d920b026be8e734264cf34710483a0af52d46790f01ab0000",
+      "length": "229",
+      "record": "1",
+      "sfi": "3",
+      "sfiAfl": "18"
+    },
+    {
+      "aflAddress": "2001",
+      "content": "70339f47030100019f480a757271487e0b220c81cb0000000000000000000000000000000000000000000000000000000000000000",
+      "length": "53",
+      "record": "1",
+      "sfi": "4",
+      "sfiAfl": "20"
+    },
+    {
+      "aflAddress": "2002",
+      "content": "7081b49f4681b06658bded357473566956e7d4e9d7220e906b0c7efd1c342040890d24a8ba157ee3da3822f6649cc30f5df0566f453b43f3966655701c2b1df35c93fbba27ca0a1b9261f8e9454d9f51f58ef4f0ebaa7271f5b1d282a2ce46761c7d4c30849945c872b9857066cc7a35d6e488c14fcf574b337156ba666a4bd4acec84b4388d0a7618cee7a896959a012645ae9f7bc2a918d3e4141bca42983a002d394f2b710afb7dcf9c0d7f50b92524534dc1993d06",
+      "length": "183",
+      "record": "2",
+      "sfi": "4",
+      "sfiAfl": "20"
+    },
+    {
+      "aflAddress": "2003",
+      "content": "7081b49f4681b02e9419171b0065fc462339ec45cfbe2b8358167ba3a73fd8e1290ea31ead5617652724d8bc308c0348d1ddaaea25d337668ba0b5db2bdc398027c067d30adcdd089b200cd4f930d34f406bcc43bb029d30c775e40a96e4639d66e2c22f368986d65639c5e3699ca21ad99b130b23c321f8184a18fca59ae3a0c5629cfea8ef89cc9438d59adc7ebf6dba32b6f538058f359ef1a5ccb4af7a850ab7bae2eb878d2a2156e94776d96dd16a5c19713279c5",
+      "length": "183",
+      "record": "3",
+      "sfi": "4",
+      "sfiAfl": "20"
+    },
+    {
+      "aflAddress": "2004",
+      "content": "7081b49f4681b087df5942ee89317aea2e53d477ab272794375e9025b0447b304f52e07f54494bea054076a0fd22faf4ee85cfd06ae61c44e0bf1c0156b1c0f287312e1c9460c0b93fac7bdd88a6cf286daeeab5d81310ff49b9d80f4b905261429b44a2c0e3b876ee8825fbb6ff3aef14a645983e886a61a7acde252698868b74033bbecee902050196579b2df75bfe070a14a45ce710c5e782da9ecd20d21db77352461b031ad83d9137615b8a63aca55900619a7a9c",
+      "length": "183",
+      "record": "4",
+      "sfi": "4",
+      "sfiAfl": "20"
+    },
+    {
+      "aflAddress": "B801",
+      "content": "6726428921000148846d21121801120280455552015b0007",
+      "length": "24",
+      "record": "1",
+      "sfi": "23",
+      "sfiAfl": "B8"
+    },
+    {
+      "aflAddress": "D001",
+      "content": "08010102ff0400818c",
+      "length": "9",
+      "record": "1",
+      "sfi": "26",
+      "sfiAfl": "D0"
+    },
+    {
+      "aflAddress": "D002",
+      "content": "12020602ffffffffffff000000005000028481",
+      "length": "19",
+      "record": "2",
+      "sfi": "26",
+      "sfiAfl": "D0"
+    },
+    {
+      "aflAddress": "D003",
+      "content": "06020600f78182",
+      "length": "7",
+      "record": "3",
+      "sfi": "26",
+      "sfiAfl": "D0"
+    },
+    {
+      "aflAddress": "D004",
+      "content": "06000000b78381",
+      "length": "7",
+      "record": "4",
+      "sfi": "26",
+      "sfiAfl": "D0"
+    },
+    {
+      "aflAddress": "D005",
+      "content": "080801028080000403",
+      "length": "9",
+      "record": "5",
+      "sfi": "26",
+      "sfiAfl": "D0"
+    },
+    {
+      "aflAddress": "D006",
+      "content": "080801028080008403",
+      "length": "9",
+      "record": "6",
+      "sfi": "26",
+      "sfiAfl": "D0"
+    },
+    {
+      "aflAddress": "D007",
+      "content": "080801028080008105",
+      "length": "9",
+      "record": "7",
+      "sfi": "26",
+      "sfiAfl": "D0"
+    },
+    {
+      "aflAddress": "D008",
+      "content": "080801021010008106",
+      "length": "9",
+      "record": "8",
+      "sfi": "26",
+      "sfiAfl": "D0"
+    },
+    {
+      "aflAddress": "D009",
+      "content": "080801020101000806",
+      "length": "9",
+      "record": "9",
+      "sfi": "26",
+      "sfiAfl": "D0"
+    },
+    {
+      "aflAddress": "D00A",
+      "content": "080801021010008104",
+      "length": "9",
+      "record": "10",
+      "sfi": "26",
+      "sfiAfl": "D0"
+    },
+    {
+      "aflAddress": "D00B",
+      "content": "080801020101000881",
+      "length": "9",
+      "record": "11",
+      "sfi": "26",
+      "sfiAfl": "D0"
+    },
+    {
+      "aflAddress": "D00C",
+      "content": "06020600d70607",
+      "length": "7",
+      "record": "12",
+      "sfi": "26",
+      "sfiAfl": "D0"
+    },
+    {
+      "aflAddress": "D00D",
+      "content": "08010102ff10007f81",
+      "length": "9",
+      "record": "13",
+      "sfi": "26",
+      "sfiAfl": "D0"
+    },
+    {
+      "aflAddress": "D00E",
+      "content": "08010102ff08000981",
+      "length": "9",
+      "record": "14",
+      "sfi": "26",
+      "sfiAfl": "D0"
+    },
+    {
+      "aflAddress": "D00F",
+      "content": "080301025000008181",
+      "length": "9",
+      "record": "15",
+      "sfi": "26",
+      "sfiAfl": "D0"
+    },
+    {
+      "aflAddress": "D010",
+      "content": "08040102f010008183",
+      "length": "9",
+      "record": "16",
+      "sfi": "26",
+      "sfiAfl": "D0"
+    }
+  ]
+}
+
+
