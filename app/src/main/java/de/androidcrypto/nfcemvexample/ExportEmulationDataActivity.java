@@ -5,6 +5,7 @@ import static de.androidcrypto.nfcemvexample.BinaryUtils.hexToBytes;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.media.MediaPlayer;
 import android.net.Uri;
@@ -30,6 +31,7 @@ import androidx.activity.result.ActivityResultCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
@@ -98,6 +100,7 @@ public class ExportEmulationDataActivity extends AppCompatActivity implements Nf
         loadingLayout = findViewById(R.id.loading_layout);
 
         mNfcAdapter = NfcAdapter.getDefaultAdapter(this);
+
 
         prettyPrintResponse.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
