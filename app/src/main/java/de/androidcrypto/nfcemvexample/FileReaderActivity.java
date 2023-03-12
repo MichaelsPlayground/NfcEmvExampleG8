@@ -20,6 +20,7 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
 import android.widget.CompoundButton;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -58,6 +59,7 @@ public class FileReaderActivity extends AppCompatActivity implements NfcAdapter.
     TextView tv1;
     com.google.android.material.textfield.TextInputEditText etData, etLog, etGivenName;
     SwitchMaterial prettyPrintResponse;
+    private View loadingLayout;
 
     private NfcAdapter mNfcAdapter;
     private byte[] tagId;
@@ -93,6 +95,7 @@ public class FileReaderActivity extends AppCompatActivity implements NfcAdapter.
         etData = findViewById(R.id.etData);
         etLog = findViewById(R.id.etLog);
         prettyPrintResponse = findViewById(R.id.swPrettyPrint);
+        loadingLayout = findViewById(R.id.loading_layout);
 
         mNfcAdapter = NfcAdapter.getDefaultAdapter(this);
 
@@ -137,6 +140,7 @@ public class FileReaderActivity extends AppCompatActivity implements NfcAdapter.
         }
 
         playPing();
+        setLoadingLayoutVisibility(true);
         writeToUiAppend(etLog, "NFC tag discovered");
 
         tagId = tag.getId();
@@ -211,6 +215,7 @@ public class FileReaderActivity extends AppCompatActivity implements NfcAdapter.
                     writeToUiAppend(etLog, "The card is not a credit card, reading aborted");
                     writeToUiFinal(etLog);
                     writeToUiFinal(etData);
+                    setLoadingLayoutVisibility(false);
                     try {
                         nfc.close();
                     } catch (IOException e) {
@@ -235,6 +240,7 @@ public class FileReaderActivity extends AppCompatActivity implements NfcAdapter.
                         writeToUiAppend(etLog, "there is no tag 0x4F available, stopping here");
                         writeToUiFinal(etLog);
                         writeToUiFinal(etData);
+                        setLoadingLayoutVisibility(false);
                         try {
                             nfc.close();
                         } catch (IOException e) {
@@ -293,7 +299,7 @@ public class FileReaderActivity extends AppCompatActivity implements NfcAdapter.
 
                         writeToUiFinal(etLog);
                         writeToUiFinal(etData);
-
+                        setLoadingLayoutVisibility(false);
                         writeStringToExternalSharedStorage();
                     }
                 }
@@ -308,6 +314,7 @@ public class FileReaderActivity extends AppCompatActivity implements NfcAdapter.
             }
         }
         playDoublePing();
+        setLoadingLayoutVisibility(false);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             ((Vibrator) getSystemService(VIBRATOR_SERVICE)).vibrate(VibrationEffect.createOneShot(150, 10));
         } else {
@@ -364,6 +371,7 @@ public class FileReaderActivity extends AppCompatActivity implements NfcAdapter.
         resultString = sb.toString();
         writeToUiAppend(etData, resultString);
         writeToUiAppendNoExport(etLog, "reading complete");
+        setLoadingLayoutVisibility(false);
         // pureFiles now have all entries
         int numberOfPureFileInList = pureFileList.size();
         if (numberOfPureFileInList > 0) {
@@ -683,6 +691,16 @@ public class FileReaderActivity extends AppCompatActivity implements NfcAdapter.
             Toast.makeText(getApplicationContext(),
                     message,
                     Toast.LENGTH_SHORT).show();
+        });
+    }
+
+    private void setLoadingLayoutVisibility(boolean isVisible) {
+        runOnUiThread(() -> {
+            if (isVisible) {
+                loadingLayout.setVisibility(View.VISIBLE);
+            } else {
+                loadingLayout.setVisibility(View.GONE);
+            }
         });
     }
 

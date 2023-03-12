@@ -25,6 +25,7 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
 import android.widget.CompoundButton;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -69,7 +70,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
     TextView tv1;
     com.google.android.material.textfield.TextInputEditText etData, etLog;
     SwitchMaterial prettyPrintResponse;
-
+    private View loadingLayout;
     private NfcAdapter mNfcAdapter;
     private byte[] tagId;
 
@@ -101,6 +102,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
         etData = findViewById(R.id.etData);
         etLog = findViewById(R.id.etLog);
         prettyPrintResponse = findViewById(R.id.swPrettyPrint);
+        loadingLayout = findViewById(R.id.loading_layout);
 
         mNfcAdapter = NfcAdapter.getDefaultAdapter(this);
 
@@ -127,6 +129,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
     public void onTagDiscovered(Tag tag) {
         runOnUiThread(this::clearData);
         playPing();
+        setLoadingLayoutVisibility(true);
         writeToUiAppend(etLog, "NFC tag discovered");
 
         tagId = tag.getId();
@@ -228,6 +231,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                     List<BerTlv> tag4fList = tlv4Fs.findAll(new BerTag(0x4F));
                     if (tag4fList.size() < 1) {
                         writeToUiAppend(etLog, "there is no tag 0x4F available, stopping here");
+                        setLoadingLayoutVisibility(false);
                         try {
                             nfc.close();
                         } catch (IOException e) {
@@ -263,6 +267,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                             writeToUiAppend(etLog, "03 selecting AID is not allowed on card");
                             writeToUiAppend(etLog, "");
                             writeToUiAppend(etLog, "The card is not a credit card, reading aborted");
+                            setLoadingLayoutVisibility(false);
                             try {
                                 nfc.close();
                             } catch (IOException e) {
@@ -877,6 +882,7 @@ Michael Roland
 
         }
         playDoublePing();
+        setLoadingLayoutVisibility(false);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             ((Vibrator) getSystemService(VIBRATOR_SERVICE)).vibrate(VibrationEffect.createOneShot(150, 10));
         } else {
@@ -1556,6 +1562,16 @@ Michael Roland
             Toast.makeText(getApplicationContext(),
                     message,
                     Toast.LENGTH_SHORT).show();
+        });
+    }
+
+    private void setLoadingLayoutVisibility(boolean isVisible) {
+        runOnUiThread(() -> {
+            if (isVisible) {
+                loadingLayout.setVisibility(View.VISIBLE);
+            } else {
+                loadingLayout.setVisibility(View.GONE);
+            }
         });
     }
 

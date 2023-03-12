@@ -20,6 +20,7 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
 import android.widget.CompoundButton;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -64,6 +65,7 @@ public class ExportEmulationDataActivity extends AppCompatActivity implements Nf
     TextView tv1;
     com.google.android.material.textfield.TextInputEditText etData, etLog;
     SwitchMaterial prettyPrintResponse;
+    private View loadingLayout;
 
     private NfcAdapter mNfcAdapter;
     private byte[] tagId;
@@ -93,6 +95,7 @@ public class ExportEmulationDataActivity extends AppCompatActivity implements Nf
         etData = findViewById(R.id.etData);
         etLog = findViewById(R.id.etLog);
         prettyPrintResponse = findViewById(R.id.swPrettyPrint);
+        loadingLayout = findViewById(R.id.loading_layout);
 
         mNfcAdapter = NfcAdapter.getDefaultAdapter(this);
 
@@ -125,6 +128,7 @@ public class ExportEmulationDataActivity extends AppCompatActivity implements Nf
             aidSelectedForAnalyzeName = "";
         });
         playPing();
+        setLoadingLayoutVisibility(true);
         writeToUiAppend(etLog, "NFC tag discovered");
 
         tagId = tag.getId();
@@ -193,6 +197,7 @@ public class ExportEmulationDataActivity extends AppCompatActivity implements Nf
                 if (responsePpseNotAllowed) {
                     writeToUiAppend(etLog, "");
                     writeToUiAppend(etLog, "The card is not a credit card, reading aborted");
+                    setLoadingLayoutVisibility(false);
                     try {
                         nfc.close();
                     } catch (IOException e) {
@@ -258,6 +263,7 @@ public class ExportEmulationDataActivity extends AppCompatActivity implements Nf
                             writeToUiAppend(etLog, "03 selecting AID is not allowed on card");
                             writeToUiAppend(etLog, "");
                             writeToUiAppend(etLog, "The card is not a credit card, reading aborted");
+                            setLoadingLayoutVisibility(false);
                             try {
                                 nfc.close();
                             } catch (IOException e) {
@@ -722,6 +728,7 @@ I/System.out: 90 00 -- Command successfully executed (OK)
                             }
                         }
                     } // for aidNumber loop
+                    setLoadingLayoutVisibility(false);
                     // export the file
                     exportString = new GsonBuilder().setPrettyPrinting().create().toJson(aids, Aids.class);
                     exportStringFileName = "emv.json";
@@ -1307,6 +1314,16 @@ I/System.out: 90 00 -- Command successfully executed (OK)
             Toast.makeText(getApplicationContext(),
                     message,
                     Toast.LENGTH_SHORT).show();
+        });
+    }
+
+    private void setLoadingLayoutVisibility(boolean isVisible) {
+        runOnUiThread(() -> {
+            if (isVisible) {
+                loadingLayout.setVisibility(View.VISIBLE);
+            } else {
+                loadingLayout.setVisibility(View.GONE);
+            }
         });
     }
 
