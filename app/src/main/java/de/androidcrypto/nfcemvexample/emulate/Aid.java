@@ -11,8 +11,8 @@ public class Aid {
     private String getProcessingOptionsCommand;
     private String getProcessingOptionsResponse;
     private int checkFirstBytesGetProcessingOptions;
-    private String panFoundInTrack2Data;
-    private String panFoundInFiles;
+    private String panFound;
+    private String expirationDateFound;
     private int numberOfFiles;
     private String afl;
     // new in version 2
@@ -24,16 +24,14 @@ public class Aid {
     private String getInternalAuthenticationResponse;
     private String getApplicationCryptogramCommand;
     private String getApplicationCryptogramResponse;
-
     private FilesModel[] files;
 
     // constructor version 2
     public Aid(@NonNull String aid, @NonNull String aidName, @NonNull String selectAidCommand, @NonNull String selectAidResponse, @NonNull String getProcessingOptionsCommand,
-               @NonNull String getProcessingOptionsResponse, int checkFirstBytesGetProcessingOptions, @NonNull String panFoundInTrack2Data,
-               @NonNull String panFoundInFiles, int numberOfFiles, @NonNull String afl, @NonNull String applicationTransactionCounter, @NonNull String leftPinTryCounter,
+               @NonNull String getProcessingOptionsResponse, int checkFirstBytesGetProcessingOptions, @NonNull String panFound,
+               @NonNull String expirationDateFound, int numberOfFiles, @NonNull String afl, @NonNull String applicationTransactionCounter, @NonNull String leftPinTryCounter,
                @NonNull String lastOnlineATCRegister, @NonNull String logFormat, @NonNull String getInternalAuthenticationCommand,
-               @NonNull String getInternalAuthenticationResponse, @NonNull String getApplicationCryptogramCommand, @NonNull String getApplicationCryptogramResponse,
-               FilesModel[] files) {
+               @NonNull String getInternalAuthenticationResponse, @NonNull String getApplicationCryptogramCommand, @NonNull String getApplicationCryptogramResponse) {
         this.aid = aid;
         this.aidName = aidName;
         this.selectAidCommand = selectAidCommand;
@@ -41,8 +39,8 @@ public class Aid {
         this.getProcessingOptionsCommand = getProcessingOptionsCommand;
         this.getProcessingOptionsResponse = getProcessingOptionsResponse;
         this.checkFirstBytesGetProcessingOptions = checkFirstBytesGetProcessingOptions;
-        this.panFoundInTrack2Data = panFoundInTrack2Data;
-        this.panFoundInFiles = panFoundInFiles;
+        this.panFound = panFound;
+        this.expirationDateFound = expirationDateFound;
         this.numberOfFiles = numberOfFiles;
         this.afl = afl;
         this.applicationTransactionCounter = applicationTransactionCounter;
@@ -53,7 +51,7 @@ public class Aid {
         this.getInternalAuthenticationResponse = getInternalAuthenticationResponse;
         this.getApplicationCryptogramCommand = getApplicationCryptogramCommand;
         this.getApplicationCryptogramResponse = getApplicationCryptogramResponse;
-        this.files = files;
+        this.files = new FilesModel[numberOfFiles];
     }
 
     // constructor used in version 1
@@ -131,20 +129,20 @@ public class Aid {
         this.checkFirstBytesGetProcessingOptions = checkFirstBytesGetProcessingOptions;
     }
 
-    public String getPanFoundInTrack2Data() {
-        return panFoundInTrack2Data;
+    public String getPanFound() {
+        return panFound;
     }
 
-    public void setPanFoundInTrack2Data(@NonNull String panFoundInTrack2Data) {
-        this.panFoundInTrack2Data = panFoundInTrack2Data;
+    public void setPanFound(@NonNull String panFound) {
+        this.panFound = panFound;
     }
 
-    public String getPanFoundInFiles() {
-        return panFoundInFiles;
+    public String getExpirationDateFound() {
+        return expirationDateFound;
     }
 
-    public void setPanFoundInFiles(@NonNull String panFoundInFiles) {
-        this.panFoundInFiles = panFoundInFiles;
+    public void setExpirationDateFound(@NonNull String expirationDateFound) {
+        this.expirationDateFound = expirationDateFound;
     }
 
     public int getNumberOfFiles() {
@@ -153,6 +151,7 @@ public class Aid {
 
     public void setNumberOfFiles(int numberOfFiles) {
         this.numberOfFiles = numberOfFiles;
+        this.files = new FilesModel[numberOfFiles];
     }
 
     public String getAfl() {
@@ -169,6 +168,9 @@ public class Aid {
 
     public void setFiles(FilesModel[] files) {
         this.files = files;
+    }
+    public void setFile(@NonNull int entry, @NonNull FilesModel filesModel) {
+        files[entry] = filesModel;
     }
 
     public String getApplicationTransactionCounter() {

@@ -494,7 +494,14 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                                                 for (int iFiles = 0; iFiles < filesInAflSize; iFiles++) {
                                                     // show all contents
                                                     FilesModel filesModel = filesInAfl.get(iFiles);
+                                                    writeToUiAppend(etLog, "");
                                                     writeToUiAppend(etLog, "entry " + iFiles + "\n" + filesModel.dumpFilesModel());
+                                                    String panInFile = checkForPanInResponse(hexToBytes(filesModel.getContent()));
+                                                    if (!panInFile.equals("_")) {
+                                                        // there is a PAN in the string, here the short cutted version
+                                                        writeToUiAppend(etLog, "# PAN found in file " + filesModel.getAddressAfl() + " : " + panInFile);
+                                                        if (isPrettyPrintResponse) prettyPrintData(etLog, hexToBytes(filesModel.getContent()));
+                                                    }
                                                 }
                                             }
 
@@ -581,7 +588,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
      *
      * @param response could be from getProcessingOptionsResponse or readFile
      * @return a string pan + "_" + expirationDate
-     *         if no pan was found it returns " _ "
+     * if no pan was found it returns " _ "
      */
     private String checkForPanInResponse(byte[] response) {
         String pan = "";
@@ -610,7 +617,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
             Log.d(TAG, "found tag 0x5a Application Primary Account Number (PAN)");
             byte[] tag5aBytes = tag5a.getBytesValue();
             pan = bytesToHex(tag5aBytes);
-         }
+        }
         // search for expiration date
         BerTlv tag5f24 = tlvs.find(new BerTag(0x5f, 0x24));
         if (tag5f24 != null) {
@@ -623,9 +630,10 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
 
     /**
      * checks that a tag 0x94 Application File Locator (AFL) is available in gpoResponse
+     *
      * @param gpoResponse
      * @return the list with afl entries (each of 4 byte)
-     *         if no afl was found it returns an empty list
+     * if no afl was found it returns an empty list
      */
     private List<byte[]> checkForAflInGpoResponse(byte[] gpoResponse) {
         List<byte[]> aflList = new ArrayList<>();
@@ -656,23 +664,22 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
      * by Michael Roland
      *
      * @param nfc
-     * @param sfi as it comes from AFL
+     * @param sfi    as it comes from AFL
      * @param record
      * @return the data read or new byte[0] if no data found
      */
-    private byte[] readFile(IsoDep nfc, int sfi, int record) {
-        byte[] cmd = new byte[]{(byte) 0x00, (byte) 0xB2, (byte) 0x00, (byte) 0x04, (byte) 0x00};
-        // calculate byte 3 = cmd[3] |= (byte) ((sfi << 3) & 0x0F8);
-        //byte cmd3 = (byte) ((sfi << 3) & 0x0F8);
+    private byte[] readFileAflFormat(IsoDep nfc, int sfi, int record) {
+        int sfiNew = (byte) sfi | 0x04; // add 4 = set bit 3
+        byte[] cmd = hexToBytes("00B2000400");
         cmd[2] = (byte) (record & 0x0FF);
-        cmd[3] |= (byte) ((sfi << 3) & 0x0F8);
-        //cmd[3] |= cmd3;
+        cmd[3] |= (byte) (sfiNew & 0x0FF);
         byte[] result = new byte[0];
         try {
             result = nfc.transceive(cmd);
         } catch (IOException e) {
             // do nothing
         }
+        //writeToUiAppend(etLog, bytesToHex(result));
         return checkResponse(result);
     }
 
@@ -691,30 +698,26 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
             //writeToUiAppend(etLog, "get sfi + record for array " + i + " data: " + bytesToHex(tag94BytesList.get(i)));
             // get sfi from first byte, 2nd byte is first record, 3rd byte is last record, 4th byte is offline transactions
             byte[] aflListEntry = aflList.get(i);
-            byte sfiOrg = aflListEntry[0];
-            byte rec1 = aflListEntry[1];
-            byte recL = aflListEntry[2];
-            byte offl = aflListEntry[3]; // offline authorization
-            // get the sfi that is needed for readFile
-            int sfiNew = (byte) sfiOrg | 0x04; // add 4 = set bit 3
-            byte[] readRecordResponse = new byte[0];
+            writeToUiAppend(etLog, "aflListEntry: " + bytesToHex(aflListEntry));
+            final byte sfi = aflListEntry[0];
+            final byte rec1 = aflListEntry[1];
+            final byte recL = aflListEntry[2];
+            final byte offl = aflListEntry[3]; // offline authorization
+            byte[] readRecordResponseOk = new byte[0];
             // now we loop through all files requested by rec1 (first record) and recL (last record)
-            for (int iRecords = (int) rec1; iRecords <= (int) recL; iRecords++) {
+            for (int iRecord = (int) rec1; iRecord <= (int) recL; iRecord++) {
                 // build the read command
-                writeToUiAppend(etLog, "** read file from sfi " + sfiNew + " rec " + iRecords);
-                readRecordResponse = readFile(nfc, sfiNew, iRecords);
-                if (readRecordResponse != null) {
-                    byte[] readRecordResponseOk = checkResponse(readRecordResponse);
+                writeToUiAppend(etLog, "** read file from sfi " + sfi + " rec " + iRecord);
+                readRecordResponseOk = readFileAflFormat(nfc, sfi, iRecord); // read record responses with a checked response
                     if (readRecordResponseOk != null) {
-                        writeToUiAppend(etLog, "** readRecordResponse: " + bytesToHex(readRecordResponseOk));
-                        FilesModel filesModel = new FilesModel("afl", sfiOrg, iRecords, readRecordResponseOk.length, bytesToHex(readRecordResponseOk), offl);
+                        //
+                        final String addressAfl = String.format("%02X%02d", sfi, iRecord);
+                        final int sfiSector = sfi >>> 3;
+                        FilesModel filesModel = new FilesModel(addressAfl, sfiSector, iRecord, readRecordResponseOk.length, bytesToHex(readRecordResponseOk), offl);
                         readFiles.add(filesModel);
                     } else {
-                        writeToUiAppend(etLog, "** readRecordResponse failure");
+                        //writeToUiAppend(etLog, "** readRecordResponse failure");
                     }
-                } else {
-                    writeToUiAppend(etLog, "** readRecordResponse failure");
-                }
             }
         }
         return readFiles;
@@ -1020,14 +1023,17 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
      * DOL utilities
      */
 
+    /**
+     * take the PDOL list from selectAidResponse and returns the complete getProcessingOptions command
+     * @param pdol
+     * @return
+     */
     private byte[] getGpoFromPdol(@NonNull byte[] pdol) {
         // get the tags in a list
         List<TagAndLength> tagAndLength = TlvUtil.parseTagAndLength(pdol);
         int tagAndLengthSize = tagAndLength.size();
         if (tagAndLengthSize < 1) {
             // there are no pdols in the list
-            //Log.e(TAG, "there are no PDOLs in the pdol array, aborted");
-            //return null;
             // returning an empty PDOL
             String tagLength2d = "00"; // length value
             String tagLength2dAnd2 = "02"; // length value + 2
@@ -1050,21 +1056,21 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                 if (defaultValue.length > lengthOfTag) {
                     // cut it to correct length
                     usedValue = Arrays.copyOfRange(defaultValue, 0, lengthOfTag);
-                    Log.i(TAG, "asked for tag: " + bytesToHex(tal.getTag().getTagBytes()) + " default is too long, cut to: " + bytesToHex(usedValue));
+                    //Log.i(TAG, "asked for tag: " + bytesToHex(tal.getTag().getTagBytes()) + " default is too long, cut to: " + bytesToHex(usedValue));
                 } else if (defaultValue.length < lengthOfTag) {
                     // increase length
                     usedValue = new byte[lengthOfTag];
                     System.arraycopy(defaultValue, 0, usedValue, 0, defaultValue.length);
-                    Log.i(TAG, "asked for tag: " + bytesToHex(tal.getTag().getTagBytes()) + " default is too short, increased to: " + bytesToHex(usedValue));
+                    //Log.i(TAG, "asked for tag: " + bytesToHex(tal.getTag().getTagBytes()) + " default is too short, increased to: " + bytesToHex(usedValue));
                 } else {
                     // correct length
                     usedValue = defaultValue.clone();
-                    Log.i(TAG, "asked for tag: " + bytesToHex(tal.getTag().getTagBytes()) + " default found: " + bytesToHex(usedValue));
+                    //Log.i(TAG, "asked for tag: " + bytesToHex(tal.getTag().getTagBytes()) + " default found: " + bytesToHex(usedValue));
                 }
             } else {
                 // defaultValue is null means the tag was not found in our tags database for default values
                 usedValue = new byte[lengthOfTag];
-                Log.i(TAG, "asked for tag: " + bytesToHex(tal.getTag().getTagBytes()) + " NO default found, generate zeroed: " + bytesToHex(usedValue));
+                //Log.i(TAG, "asked for tag: " + bytesToHex(tal.getTag().getTagBytes()) + " NO default found, generate zeroed: " + bytesToHex(usedValue));
             }
             // now usedValue does have the correct length
             sb.append(bytesToHex(usedValue));
@@ -1076,6 +1082,11 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
         return hexToBytes(constructedGpoCommandString);
     }
 
+    /**
+     * takes the CDOL1 list from any response (file reading) and returns the getApplicationCrypto command
+     * @param cdol
+     * @return
+     */
     private byte[] getAppCryptoCommandFromCdol(@NonNull byte[] cdol) {
         // get the tags in a list
         List<TagAndLength> tagAndLength = TlvUtil.parseTagAndLength(cdol);

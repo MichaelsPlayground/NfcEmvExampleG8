@@ -77,7 +77,7 @@ public class FilesModel {
         sb.append("record: ").append(this.record).append("\n");
         sb.append("dataLength: ").append(this.dataLength).append("\n");
         sb.append("content: ").append(this.content).append("\n");
-        sb.append("offlineAuth: ").append(this.offlineAuth).append("\n");
+        sb.append("offlineAuth: ").append(this.offlineAuth);
         return sb.toString();
     }
 
