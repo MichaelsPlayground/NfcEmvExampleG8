@@ -237,30 +237,6 @@ public class Aid {
         this.getApplicationCryptogramResponse = getApplicationCryptogramResponse;
     }
 
-    /*
-    private String aid;
-    private String aidName;
-    private String selectAidCommand;
-    private String selectAidResponse;
-    private String getProcessingOptionsCommand;
-    private String getProcessingOptionsResponse;
-    private int checkFirstBytesGetProcessingOptions;
-    private String panFound;
-    private String expirationDateFound;
-    private int numberOfFiles;
-    private String afl;
-    // new in version 2
-    private String applicationTransactionCounter;
-    private String leftPinTryCounter;
-    private String lastOnlineATCRegister;
-    private String logFormat;
-    private String getInternalAuthenticationCommand;
-    private String getInternalAuthenticationResponse;
-    private String getApplicationCryptogramCommand;
-    private String getApplicationCryptogramResponse;
-    private FilesModel[] files;
-     */
-
     public String dumpAid() {
         StringBuilder sb = new StringBuilder();
         sb.append("aid: ").append(this.aid).append("\n");

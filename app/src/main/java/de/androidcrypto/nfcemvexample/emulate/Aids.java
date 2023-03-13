@@ -83,15 +83,6 @@ public class Aids {
         this.aid[numberOfEntry] = aid;
     }
 
-    /*
-    private String cardType; // MasterCard, VisaCard, GiroCard
-    private String cardName; // individual name given by user
-    private String selectPpseCommand;
-    private String selectPpseResponse;
-    private int numberOfAid;
-    private Aid[] aid;
-     */
-
     public String dumpAids() {
         StringBuilder sb = new StringBuilder();
         sb.append("cardType: ").append(this.cardType).append("\n");
@@ -100,10 +91,15 @@ public class Aids {
         sb.append("selectPpseResponse: ").append(this.selectPpseResponse).append("\n");
         sb.append("numberOfAid: ").append(this.numberOfAid).append("\n");
         for (int i = 0; i < aid.length; i++) {
-            // todo get the aid dump
-            sb.append("--------");
-            sb.append("aid entry: " + i);
-            sb.append("aid: ").append(this.aid[i].dumpAid());
+            sb.append("-------- aid --------").append("\n");
+            sb.append("aid entry: " + i).append("\n");
+            sb.append("aid: ").append(this.aid[i].dumpAid()).append("\n");
+            // the files in aid dump
+            for (int j = 0; j < this.aid[i].getNumberOfFiles(); j++) {
+                sb.append("-------- file --------").append("\n");
+                sb.append("file entry: " + j).append("\n");
+                sb.append("file: ").append(this.aid[i].getFiles()[j].dumpFilesModel()).append("\n");
+            }
         }
         return sb.toString();
     }

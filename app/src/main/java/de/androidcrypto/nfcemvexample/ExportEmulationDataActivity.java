@@ -467,6 +467,10 @@ public class ExportEmulationDataActivity extends AppCompatActivity implements Nf
                                                         writeToUiAppend(etLog, "# PAN found in file " + filesModel.getAddressAfl() + " : " + panInFile);
                                                         if (isPrettyPrintResponse)
                                                             prettyPrintData(etLog, hexToBytes(filesModel.getContent()));
+                                                        panExpParts = panInFile.split("_");
+                                                        foundPan = panExpParts[0];
+                                                        pan = panExpParts[0];
+                                                        expirationDate = panExpParts[1];
                                                     }
                                                 }
                                             }
@@ -765,12 +769,12 @@ public class ExportEmulationDataActivity extends AppCompatActivity implements Nf
                                         writeToUiAppend(etLog, "");
                                         writeToUiAppend(etLog, "*** new checks for pan and afl ***");
                                         String pan_exp = checkForPanInResponse(gpoRequestResponseOk);
-                                        String[] panExpParts = pan_exp.split("_");
-                                        pan = "";
-                                        expirationDate = "";
+                                        //pan = "";
+                                        //expirationDate = "";
                                         if (pan_exp.equals("_")) {
                                             writeToUiAppend(etLog, "no PAN was included in gpoRequestResponse");
                                         } else {
+                                            String[] panExpParts = pan_exp.split("_");
                                             foundPan = panExpParts[0];
                                             pan = panExpParts[0];
                                             expirationDate = panExpParts[1];
@@ -802,6 +806,10 @@ public class ExportEmulationDataActivity extends AppCompatActivity implements Nf
                                                         writeToUiAppend(etLog, "# PAN found in file " + filesModel.getAddressAfl() + " : " + panInFile);
                                                         if (isPrettyPrintResponse)
                                                             prettyPrintData(etLog, hexToBytes(filesModel.getContent()));
+                                                        String[] panExpParts = panInFile.split("_");
+                                                        foundPan = panExpParts[0];
+                                                        pan = panExpParts[0];
+                                                        expirationDate = panExpParts[1];
                                                     }
                                                 }
                                             }
@@ -1004,6 +1012,9 @@ public class ExportEmulationDataActivity extends AppCompatActivity implements Nf
                     exportString = new GsonBuilder().setPrettyPrinting().create().toJson(aids, Aids.class);
                     exportStringFileName = "emv.json";
                     writeStringToExternalSharedStorage();
+
+                    System.out.println("***********************");
+                    System.out.println(aids.dumpAids());
                 }
 
             } catch (IOException e) {
@@ -1985,7 +1996,7 @@ public class ExportEmulationDataActivity extends AppCompatActivity implements Nf
                             try {
                                 // get file content from edittext
                                 String fileContent = exportString;
-                                System.out.println("## data to write: " + exportString);
+                                //System.out.println("## data to write: " + exportString);
                                 writeTextToUri(uri, fileContent);
                                 writeToUiToast("file written to external shared storage: " + uri.toString());
                             } catch (IOException e) {
@@ -2000,7 +2011,7 @@ public class ExportEmulationDataActivity extends AppCompatActivity implements Nf
 
     private void writeTextToUri(Uri uri, String data) throws IOException {
         try {
-            System.out.println("** data to write: " + data);
+            //System.out.println("** data to write: " + data);
             OutputStreamWriter outputStreamWriter = new OutputStreamWriter(getApplicationContext().getContentResolver().openOutputStream(uri));
             outputStreamWriter.write(data);
             outputStreamWriter.close();
