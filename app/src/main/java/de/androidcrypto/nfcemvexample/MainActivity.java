@@ -2,11 +2,8 @@ package de.androidcrypto.nfcemvexample;
 
 import static de.androidcrypto.nfcemvexample.BinaryUtils.byteToInt;
 import static de.androidcrypto.nfcemvexample.BinaryUtils.bytesToHex;
-import static de.androidcrypto.nfcemvexample.BinaryUtils.hexBlankToBytes;
 import static de.androidcrypto.nfcemvexample.BinaryUtils.hexToBytes;
-import static de.androidcrypto.nfcemvexample.BinaryUtils.intFromByteArrayV4;
 import static de.androidcrypto.nfcemvexample.BinaryUtils.intToByteArrayV4;
-import static de.androidcrypto.nfcemvexample.sasc.Log.getPrintWriter;
 
 import android.app.Activity;
 import android.content.Context;
@@ -55,6 +52,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import de.androidcrypto.nfcemvexample.emulate.FilesModel;
 import de.androidcrypto.nfcemvexample.nfccreditcards.AidValues;
 import de.androidcrypto.nfcemvexample.nfccreditcards.DolValues;
 import de.androidcrypto.nfcemvexample.nfccreditcards.PdolUtil;
@@ -438,15 +436,15 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                                 byte[] gGpoRequestCommand = getGpoFromPdol(new byte[0]); // empty PDOL
 
                                 writeToUiAppend(etLog, "05 get the processing options command length: " + gGpoRequestCommand.length + " data: " + bytesToHex(gGpoRequestCommand));
-                                byte[] gGpoRequestResponse = nfc.transceive(gGpoRequestCommand);
-                                if (!responseSendWithPdolFailure(gGpoRequestResponse)) {
-                                    byte[] gGpoRequestResponseOk = checkResponse(gGpoRequestResponse);
-                                    if (gGpoRequestResponseOk != null) {
-                                        writeToUiAppend(etLog, "05 select GPO response length: " + gGpoRequestResponseOk.length + " data: " + bytesToHex(gGpoRequestResponseOk));
+                                byte[] gpoRequestResponse = nfc.transceive(gGpoRequestCommand);
+                                if (!responseSendWithPdolFailure(gpoRequestResponse)) {
+                                    byte[] gpoRequestResponseOk = checkResponse(gpoRequestResponse);
+                                    if (gpoRequestResponseOk != null) {
+                                        writeToUiAppend(etLog, "05 select GPO response length: " + gpoRequestResponseOk.length + " data: " + bytesToHex(gpoRequestResponseOk));
 
                                         // pretty print of response
                                         if (isPrettyPrintResponse)
-                                            prettyPrintData(etLog, gGpoRequestResponseOk);
+                                            prettyPrintData(etLog, gpoRequestResponseOk);
 
                                         // the template contains the tag 0x9F36 = Application Transaction Counter (ATC) !
                                         // todo get the ATC from response
@@ -454,7 +452,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                                         writeToUiAppend(etLog, "");
                                         writeToUiAppend(etLog, "06 read the files from card and search for tag 0x57 in each file");
                                         printStepHeader(etLog, 6, "read files & search PAN");
-                                        String pan_expirationDate = readPanFromFilesFromGpo(nfc, gGpoRequestResponseOk);
+                                        String pan_expirationDate = readPanFromFilesFromGpo(nfc, gpoRequestResponseOk);
                                         String[] parts = pan_expirationDate.split("_");
                                         writeToUiAppend(etLog, "");
                                         printStepHeader(etLog, 7, "print PAN & expire date");
@@ -467,6 +465,41 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                                         writeToUiAppendNoExport(etData, "PAN: " + parts[0]);
                                         writeToUiAppendNoExport(etData, "Expiration date (YYMMDD): " + parts[1]);
                                         foundPan = parts[0];
+
+                                        // new - check for pan and afl and read files
+                                        writeToUiAppend(etLog, "");
+                                        writeToUiAppend(etLog, "*** new checks for pan and afl ***");
+                                        String pan_exp = checkForPanInResponse(gpoRequestResponseOk);
+                                        String[] panExpParts = pan_exp.split("_");
+                                        if (pan_exp.equals("_")) {
+                                            writeToUiAppend(etLog, "no PAN was included in gpoRequestResponse");
+                                        } else {
+                                            writeToUiAppend(etLog, "PAN was included in gpoRequestResponse");
+                                            writeToUiAppend(etLog, "PAN: " + panExpParts[0]);
+                                            writeToUiAppend(etLog, "Expiration date (YYMM): " + panExpParts[1]);
+                                        }
+                                        // check for afl in response
+                                        List<byte[]> aflList = checkForAflInGpoResponse(gpoRequestResponseOk);
+                                        if (aflList.size() == 0) {
+                                            writeToUiAppend(etLog, "no AFL list found in gpoRequestResponse");
+                                        } else {
+                                            writeToUiAppend(etLog, "AFL list found with " + aflList.size() + " entries");
+                                            // now reading the files in afl list
+                                            List<FilesModel> filesInAfl = readAllFilesFromAfl(nfc, aflList);
+                                            int filesInAflSize = filesInAfl.size();
+                                            if (filesInAflSize == 0) {
+                                                writeToUiAppend(etLog, "no files read from AFL list");
+                                            } else {
+                                                writeToUiAppend(etLog, "read files from AFL list has " + filesInAflSize + " entries");
+                                                for (int iFiles = 0; iFiles < filesInAflSize; iFiles++) {
+                                                    // show all contents
+                                                    FilesModel filesModel = filesInAfl.get(iFiles);
+                                                    writeToUiAppend(etLog, "entry " + iFiles + "\n" + filesModel.dumpFilesModel());
+                                                }
+                                            }
+
+                                        }
+
                                     }
                                     // print single data
                                     printSingleData(etLog, applicationTransactionCounter, pinTryCounter, lastOnlineATCRegister, logFormat);
@@ -537,6 +570,158 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
     }
 
     /**
+     * checks if a pan is included in response
+     * checks for the following tags
+     * tag 0x57   Track 2 Equivalent Data
+     * tag 0x5a   Application Primary Account Number (PAN)
+     * tag 0x5f24 Application Expiration Date
+     * not included:
+     * tag 0x56   Track 1 equivalent data (only on MagStripe)
+     * tag 0x9f6b Track 2 Equivalent Data (only on MagStripe)
+     *
+     * @param response could be from getProcessingOptionsResponse or readFile
+     * @return a string pan + "_" + expirationDate
+     *         if no pan was found it returns " _ "
+     */
+    private String checkForPanInResponse(byte[] response) {
+        String pan = "";
+        String expirationDate = "";
+        BerTlvParser parser = new BerTlvParser();
+        BerTlvs tlvs = parser.parse(response);
+        // 57 Track 2 Equivalent Data field as well
+        // 5a = Application Primary Account Number (PAN)
+        // 5F34 = Application Primary Account Number (PAN) Sequence Number
+        // 5F25  = Application Effective Date (card valid from)
+        // 5F24 = Application Expiration Date
+        // search for track 2 equivalent data
+        BerTlv tag57 = tlvs.find(new BerTag(0x57));
+        if (tag57 != null) {
+            Log.d(TAG, "found tag 0x57 track 2 equivalent data and extract pan and expiration date");
+            byte[] tag57Bytes = tag57.getBytesValue();
+            String track2DataString = bytesToHex(tag57Bytes);
+            int posSeparator = track2DataString.toUpperCase().indexOf("D");
+            pan = track2DataString.substring(0, posSeparator);
+            expirationDate = track2DataString.substring((posSeparator + 1), (posSeparator + 5));
+            return pan + "_" + expirationDate;
+        }
+        // search for pan
+        BerTlv tag5a = tlvs.find(new BerTag(0x5a));
+        if (tag5a != null) {
+            Log.d(TAG, "found tag 0x5a Application Primary Account Number (PAN)");
+            byte[] tag5aBytes = tag5a.getBytesValue();
+            pan = bytesToHex(tag5aBytes);
+         }
+        // search for expiration date
+        BerTlv tag5f24 = tlvs.find(new BerTag(0x5f, 0x24));
+        if (tag5f24 != null) {
+            Log.d(TAG, "found tag 0x5f24 Application Expiration Date");
+            byte[] tag5f24Bytes = tag5f24.getBytesValue();
+            expirationDate = bytesToHex(tag5f24Bytes);
+        }
+        return pan + "_" + expirationDate;
+    }
+
+    /**
+     * checks that a tag 0x94 Application File Locator (AFL) is available in gpoResponse
+     * @param gpoResponse
+     * @return the list with afl entries (each of 4 byte)
+     *         if no afl was found it returns an empty list
+     */
+    private List<byte[]> checkForAflInGpoResponse(byte[] gpoResponse) {
+        List<byte[]> aflList = new ArrayList<>();
+        BerTlvParser parser = new BerTlvParser();
+        BerTlvs tlvs = parser.parse(gpoResponse);
+        // search for tag 0x94 Application File Locator (AFL)
+        BerTlv tag94 = tlvs.find(new BerTag(0x94));
+        if (tag94 != null) {
+            Log.d(TAG, "found tag 0x94 Application File Locator (AFL)");
+            byte[] tag94Bytes = tag94.getBytesValue();
+            // split array by 4 bytes
+            List<byte[]> tag94BytesList = divideArray(tag94Bytes, 4);
+            aflList.addAll(tag94BytesList);
+            /*
+            for (int i = 0; i < tag94BytesList.size(); i++) {
+                aflList.add(tag94BytesList.get(i));
+            }
+             */
+        } else {
+            Log.d(TAG, "found NO tag 0x94 Application File Locator (AFL)");
+        }
+        return aflList;
+    }
+
+    /**
+     * reads a single file (sfi + sector) of an EMV card
+     * source: https://stackoverflow.com/a/38999989/8166854 answered Aug 17, 2016
+     * by Michael Roland
+     *
+     * @param nfc
+     * @param sfi as it comes from AFL
+     * @param record
+     * @return the data read or new byte[0] if no data found
+     */
+    private byte[] readFile(IsoDep nfc, int sfi, int record) {
+        byte[] cmd = new byte[]{(byte) 0x00, (byte) 0xB2, (byte) 0x00, (byte) 0x04, (byte) 0x00};
+        // calculate byte 3 = cmd[3] |= (byte) ((sfi << 3) & 0x0F8);
+        //byte cmd3 = (byte) ((sfi << 3) & 0x0F8);
+        cmd[2] = (byte) (record & 0x0FF);
+        cmd[3] |= (byte) ((sfi << 3) & 0x0F8);
+        //cmd[3] |= cmd3;
+        byte[] result = new byte[0];
+        try {
+            result = nfc.transceive(cmd);
+        } catch (IOException e) {
+            // do nothing
+        }
+        return checkResponse(result);
+    }
+
+    private List<FilesModel> readAllFilesFromAfl(IsoDep nfc, @NonNull List<byte[]> aflList) {
+        List<FilesModel> readFiles = new ArrayList<>();
+        int aflListLength = aflList.size();
+        Log.d(TAG, "The AFL contains " + aflListLength + " entries to read");
+        writeToUiAppend(etLog, "");
+        writeToUiAppend(etLog, "The AFL contains " + aflListLength + " entries to read");
+        if (aflListLength == 0) {
+            Log.d(TAG, "no entries to read found, return an empty list");
+            return readFiles;
+        }
+        // at this point we have files to read
+        for (int i = 0; i < aflListLength; i++) {
+            //writeToUiAppend(etLog, "get sfi + record for array " + i + " data: " + bytesToHex(tag94BytesList.get(i)));
+            // get sfi from first byte, 2nd byte is first record, 3rd byte is last record, 4th byte is offline transactions
+            byte[] aflListEntry = aflList.get(i);
+            byte sfiOrg = aflListEntry[0];
+            byte rec1 = aflListEntry[1];
+            byte recL = aflListEntry[2];
+            byte offl = aflListEntry[3]; // offline authorization
+            // get the sfi that is needed for readFile
+            int sfiNew = (byte) sfiOrg | 0x04; // add 4 = set bit 3
+            byte[] readRecordResponse = new byte[0];
+            // now we loop through all files requested by rec1 (first record) and recL (last record)
+            for (int iRecords = (int) rec1; iRecords <= (int) recL; iRecords++) {
+                // build the read command
+                writeToUiAppend(etLog, "** read file from sfi " + sfiNew + " rec " + iRecords);
+                readRecordResponse = readFile(nfc, sfiNew, iRecords);
+                if (readRecordResponse != null) {
+                    byte[] readRecordResponseOk = checkResponse(readRecordResponse);
+                    if (readRecordResponseOk != null) {
+                        writeToUiAppend(etLog, "** readRecordResponse: " + bytesToHex(readRecordResponseOk));
+                        FilesModel filesModel = new FilesModel("afl", sfiOrg, iRecords, readRecordResponseOk.length, bytesToHex(readRecordResponseOk), offl);
+                        readFiles.add(filesModel);
+                    } else {
+                        writeToUiAppend(etLog, "** readRecordResponse failure");
+                    }
+                } else {
+                    writeToUiAppend(etLog, "** readRecordResponse failure");
+                }
+            }
+        }
+        return readFiles;
+    }
+
+
+    /**
      * reads all files on card using track2 or afl data
      *
      * @param getProcessingOptions
@@ -605,6 +790,10 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                             //writeToUiAppend(etLog, "data from AFL " + bytesToHex(tag94BytesListEntry)); // given wrong output for second or third files in multiple records
                             writeToUiAppend(etLog, "data from AFL was: " + bytesToHex(tag94BytesListEntry));
                             writeToUiAppend(etLog, "data from AFL " + "SFI: " + String.format("%02X", sfiOrg) + " REC: " + String.format("%02d", iRecords));
+
+                            byte sfiFile = (byte) (cmd[3] >>> 3);
+
+                            writeToUiAppend(etLog, "data from AFL " + "SFI: " + String.format("%02X", sfiFile) + " REC: " + String.format("%02d", iRecords));
                             writeToUiAppend(etLog, "read result length: " + resultReadRecordOk.length + " data: " + bytesToHex(resultReadRecordOk));
                             // pretty print of response
                             if (isPrettyPrintResponse) {

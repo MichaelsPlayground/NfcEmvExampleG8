@@ -438,7 +438,7 @@ public class FileReaderActivity extends AppCompatActivity implements NfcAdapter.
      * by Michael Roland
      *
      * @param nfc
-     * @param sfi
+     * @param sfi as it comes from AFL
      * @param record
      * @return
      */

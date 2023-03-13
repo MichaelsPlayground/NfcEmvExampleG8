@@ -51,6 +51,7 @@ import java.util.List;
 import de.androidcrypto.nfcemvexample.emulate.Aid;
 import de.androidcrypto.nfcemvexample.emulate.Aids;
 import de.androidcrypto.nfcemvexample.emulate.FilesModel;
+import de.androidcrypto.nfcemvexample.emulate.FilesModelV1;
 import de.androidcrypto.nfcemvexample.nfccreditcards.AidValues;
 import de.androidcrypto.nfcemvexample.nfccreditcards.PdolUtil;
 import de.androidcrypto.nfcemvexample.nfccreditcards.TagValues;
@@ -682,8 +683,9 @@ I/System.out: 90 00 -- Command successfully executed (OK)
                                                     String offlAuthString = String.valueOf(offl);
                                                     String contentString = bytesToHex(resultReadRecordOk);
 
-                                                    FilesModel filesModel = new FilesModel(aflEntryString, contentString, sfiNewString, rec1String, recLString, offlAuthString, containsTrack2Data, track2DataString, panT2DString, expDateT2DString, containsPanData, panString, expDateString);
-                                                    filesModelList.add(filesModel);
+                                                    // todo changed model !
+                                                    FilesModelV1 filesModel = new FilesModelV1(aflEntryString, contentString, sfiNewString, rec1String, recLString, offlAuthString, containsTrack2Data, track2DataString, panT2DString, expDateT2DString, containsPanData, panString, expDateString);
+                                                    //filesModelList.add(filesModel);
                                                 } else {
                                                     //writeToUiAppend(etLog, "ERROR: read record failed, result: " + bytesToHex(resultReadRecord));
                                                     resultReadRecord = new byte[0];
@@ -714,10 +716,13 @@ I/System.out: 90 00 -- Command successfully executed (OK)
                                     filesModels = new FilesModel[numberOfFilesInList];
                                     numberOfFiles = numberOfFilesInList;
                                     for (int fileInList = 0; fileInList < numberOfFilesInList; fileInList++) {
+                                        // todo changed fileModel to V1
+                                        /*
                                         FilesModel fileInListModel = filesModelList.get(fileInList);
                                         filesModels[fileInList] = fileInListModel;
                                         if (fileInListModel.getContainsTrack2Data().equals("true")) panFoundInTrack2Data = "true";
                                         if (fileInListModel.getContainsPan().equals("true")) panFoundInFiles = "true";
+                                         */
                                     }
                                 }
                                 // todo use this AID

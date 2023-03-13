@@ -199,6 +199,64 @@ public class ExportEmulationDataActivity extends AppCompatActivity implements Nf
             try {
                 nfc.connect();
                 writeToUiAppend(etLog, "try to read a payment card with PPSE");
+                //byte[] command;
+                writeToUiAppend(etLog, "");
+                printStepHeader(etLog, 1, "select PPSE");
+                byte[] PPSE = "2PAY.SYS.DDF01".getBytes(StandardCharsets.UTF_8); // PPSE
+                byte[] selectPpseCommand = selectApdu(PPSE);
+                byte[] selectPpseResponse = nfc.transceive(selectPpseCommand);
+                writeToUiAppend(etLog, "01 select PPSE command length " + selectPpseCommand.length + " data: " + bytesToHex(selectPpseCommand));
+                writeToUiAppend(etLog, "01 select PPSE response length " + selectPpseResponse.length + " data: " + bytesToHex(selectPpseResponse));
+                boolean selectPpseNotAllowed = responseNotAllowed(selectPpseResponse);
+                if (selectPpseNotAllowed) {
+                    // todo The card must not have a PSE or PPSE, then try with known AIDs
+                    writeToUiAppend(etLog, "01 selecting PPSE is not allowed on card");
+                    writeToUiAppend(etLog, "");
+                    writeToUiAppend(etLog, "The card is not a credit card, reading aborted");
+                    setLoadingLayoutVisibility(false);
+                    try {
+                        nfc.close();
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                    return;
+                }
+                byte[] selectPpseResponseOk = checkResponse(selectPpseResponse);
+                Aids aids = null;
+                if (selectPpseResponseOk != null) {
+                    aids = null;
+                    // pretty print of response
+                    if (isPrettyPrintResponse) prettyPrintData(etLog, selectPpseResponseOk);
+
+                    writeToUiAppend(etLog, "");
+                    printStepHeader(etLog, 2, "search applications on card");
+                    writeToUiAppend(etLog, "02 analyze select PPSE response and search for tag 0x4F (applications on card)");
+
+                    BerTlvParser parser = new BerTlvParser();
+                    BerTlvs tlv4Fs = parser.parse(selectPpseResponseOk);
+                    // by searching for tag 4f
+                    List<BerTlv> tag4fList = tlv4Fs.findAll(new BerTag(0x4F));
+                    if (tag4fList.size() < 1) {
+                        writeToUiAppend(etLog, "there is no tag 0x4F available, stopping here");
+                        setLoadingLayoutVisibility(false);
+                        try {
+                            nfc.close();
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                        return;
+                    }
+                    writeToUiAppend(etLog, "Found tag 0x4F " + tag4fList.size() + " time(s):");
+                    ArrayList<byte[]> aidList = new ArrayList<>();
+                    for (int i4f = 0; i4f < tag4fList.size(); i4f++) {
+                        BerTlv tlv4f = tag4fList.get(i4f);
+                        byte[] tlv4fBytes = tlv4f.getBytesValue();
+                        aidList.add(tlv4fBytes);
+                        writeToUiAppend(etLog, "application Id (AID): " + bytesToHex(tlv4fBytes));
+                    }
+                /*
+                // old code starts here
+                writeToUiAppend(etLog, "try to read a payment card with PPSE");
                 byte[] command;
                 writeToUiAppend(etLog, "");
                 printStepHeader(etLog, 1, "select PPSE");
@@ -253,14 +311,21 @@ public class ExportEmulationDataActivity extends AppCompatActivity implements Nf
                         aidList.add(tlv4fBytes);
                         writeToUiAppend(etLog, "application Id (AID): " + bytesToHex(tlv4fBytes));
                     }
-
-                    // starting the export with setting up the aids-model ("master file")
+                                        // starting the export with setting up the aids-model ("master file")
                     byte[] firstAid = aidList.get(0);
                     String cardType = aidV.getAidName(firstAid); // taken from the first AID found on card
                     String selectPpseCommand = bytesToHex(command);
                     String selectPpseResponse = bytesToHex(responsePpseOk);
                     int numberOfAid = aidList.size();
                     aids = new Aids(cardType, givenName, selectPpseCommand, selectPpseResponse, numberOfAid);
+                    // old code goes up to here
+                    */
+                    byte[] firstAid = aidList.get(0);
+                    String cardType = aidV.getAidName(firstAid); // taken from the first AID found on card
+                    String selectPpseCommandString = bytesToHex(selectPpseCommand);
+                    String selectPpseResponseString = bytesToHex(selectPpseResponseOk);
+                    int numberOfAid = aidList.size();
+                    aids = new Aids(cardType, givenName, selectPpseCommandString, selectPpseResponseString, numberOfAid);
 
                     // step 03: iterating through aidList by selecting AID
                     for (int aidNumber = 0; aidNumber < tag4fList.size(); aidNumber++) {
@@ -600,7 +665,7 @@ public class ExportEmulationDataActivity extends AppCompatActivity implements Nf
                                     }
 
                                     // export this aid
-                                    // this is the girocard processing
+                                    // this is the mastercard processing
                                     String aidCard = aidSelectedForAnalyze;
                                     String aidCardName = aidSelectedForAnalyzeName;
                                     String selectAidCommandString = bytesToHex(selectAidCommand);
