@@ -11,6 +11,11 @@
         app:showAsAction="never"/>
 
     <item
+        android:id="@+id/action_anonymize_pan"
+        android:title="anonymize PAN"
+        app:showAsAction="never"/>
+
+    <item
         android:id="@+id/action_activity_main"
         android:title="Main activity"
         app:showAsAction="never"/>
