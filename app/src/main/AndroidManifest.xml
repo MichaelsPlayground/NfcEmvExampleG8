@@ -32,7 +32,10 @@
             android:name=".ExportEmulationDataActivity"
             android:exported="false">
         </activity>
-
+        <activity
+            android:name=".ViewEmulationDataActivity"
+            android:exported="false">
+        </activity>
     </application>
 
     <!-- for sending an email intent -->
