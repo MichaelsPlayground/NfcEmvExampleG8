@@ -236,4 +236,56 @@ public class Aid {
     public void setGetApplicationCryptogramResponse(@NonNull String getApplicationCryptogramResponse) {
         this.getApplicationCryptogramResponse = getApplicationCryptogramResponse;
     }
+
+    /*
+    private String aid;
+    private String aidName;
+    private String selectAidCommand;
+    private String selectAidResponse;
+    private String getProcessingOptionsCommand;
+    private String getProcessingOptionsResponse;
+    private int checkFirstBytesGetProcessingOptions;
+    private String panFound;
+    private String expirationDateFound;
+    private int numberOfFiles;
+    private String afl;
+    // new in version 2
+    private String applicationTransactionCounter;
+    private String leftPinTryCounter;
+    private String lastOnlineATCRegister;
+    private String logFormat;
+    private String getInternalAuthenticationCommand;
+    private String getInternalAuthenticationResponse;
+    private String getApplicationCryptogramCommand;
+    private String getApplicationCryptogramResponse;
+    private FilesModel[] files;
+     */
+
+    public String dumpAid() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("aid: ").append(this.aid).append("\n");
+        sb.append("aidName: ").append(this.aidName).append("\n");
+        sb.append("selectAidCommand: ").append(this.selectAidCommand).append("\n");
+        sb.append("selectAidResponse: ").append(this.selectAidResponse).append("\n");
+        sb.append("getProcessingOptionsCommand: ").append(this.getProcessingOptionsCommand).append("\n");
+        sb.append("getProcessingOptionsResponse: ").append(this.getProcessingOptionsResponse).append("\n");
+        sb.append("checkFirstBytesGetProcessingOptions: ").append(this.checkFirstBytesGetProcessingOptions).append("\n");
+        sb.append("panFound: ").append(this.panFound).append("\n");
+        sb.append("expirationDateFound: ").append(this.expirationDateFound).append("\n");
+        sb.append("afl: ").append(this.afl).append("\n");
+        sb.append("applicationTransactionCounter: ").append(this.applicationTransactionCounter).append("\n");
+        sb.append("leftPinTryCounter: ").append(this.leftPinTryCounter).append("\n");
+        sb.append("lastOnlineATCRegister: ").append(this.lastOnlineATCRegister).append("\n");
+        sb.append("logFormat: ").append(this.logFormat).append("\n");
+        sb.append("getInternalAuthenticationCommand: ").append(this.getInternalAuthenticationCommand).append("\n");
+        sb.append("getInternalAuthenticationResponse: ").append(this.getInternalAuthenticationResponse).append("\n");
+        sb.append("getApplicationCryptogramCommand: ").append(this.getApplicationCryptogramCommand).append("\n");
+        sb.append("getApplicationCryptogramResponse: ").append(this.getApplicationCryptogramResponse).append("\n");
+        sb.append("numberOfFiles: ").append(this.numberOfFiles).append("\n");
+        for (int i = 0; i < files.length; i++) {
+            // todo get the files dump
+            sb.append("files: ").append(this.files);
+        }
+        return sb.toString();
+    }
 }

@@ -82,4 +82,29 @@ public class Aids {
     public void setAidEntry(@NonNull Aid aid, @NonNull int numberOfEntry) {
         this.aid[numberOfEntry] = aid;
     }
+
+    /*
+    private String cardType; // MasterCard, VisaCard, GiroCard
+    private String cardName; // individual name given by user
+    private String selectPpseCommand;
+    private String selectPpseResponse;
+    private int numberOfAid;
+    private Aid[] aid;
+     */
+
+    public String dumpAids() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("cardType: ").append(this.cardType).append("\n");
+        sb.append("cardName: ").append(this.cardName).append("\n");
+        sb.append("selectPpseCommand: ").append(this.selectPpseCommand).append("\n");
+        sb.append("selectPpseResponse: ").append(this.selectPpseResponse).append("\n");
+        sb.append("numberOfAid: ").append(this.numberOfAid).append("\n");
+        for (int i = 0; i < aid.length; i++) {
+            // todo get the aid dump
+            sb.append("--------");
+            sb.append("aid entry: " + i);
+            sb.append("aid: ").append(this.aid[i].dumpAid());
+        }
+        return sb.toString();
+    }
 }
