@@ -258,9 +258,11 @@ public class Aid {
         sb.append("getApplicationCryptogramCommand: ").append(this.getApplicationCryptogramCommand).append("\n");
         sb.append("getApplicationCryptogramResponse: ").append(this.getApplicationCryptogramResponse).append("\n");
         sb.append("numberOfFiles: ").append(this.numberOfFiles).append("\n");
-        for (int i = 0; i < files.length; i++) {
-            // todo get the files dump
-            sb.append("files: ").append(this.files);
+        if (files != null) {
+            for (int i = 0; i < files.length; i++) {
+                // todo get the files dump
+                sb.append("files: ").append(this.files[i].dumpFilesModel());
+            }
         }
         return sb.toString();
     }

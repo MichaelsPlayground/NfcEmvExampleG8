@@ -90,15 +90,17 @@ public class Aids {
         sb.append("selectPpseCommand: ").append(this.selectPpseCommand).append("\n");
         sb.append("selectPpseResponse: ").append(this.selectPpseResponse).append("\n");
         sb.append("numberOfAid: ").append(this.numberOfAid).append("\n");
-        for (int i = 0; i < aid.length; i++) {
-            sb.append("-------- aid --------").append("\n");
-            sb.append("aid entry: " + i).append("\n");
-            sb.append("aid: ").append(this.aid[i].dumpAid()).append("\n");
-            // the files in aid dump
-            for (int j = 0; j < this.aid[i].getNumberOfFiles(); j++) {
-                sb.append("-------- file --------").append("\n");
-                sb.append("file entry: " + j).append("\n");
-                sb.append("file: ").append(this.aid[i].getFiles()[j].dumpFilesModel()).append("\n");
+        if (aid != null) {
+            for (int i = 0; i < aid.length; i++) {
+                sb.append("-------- aid --------").append("\n");
+                sb.append("aid entry: " + i).append("\n");
+                sb.append("aid: ").append(this.aid[i].dumpAid()).append("\n");
+                // the files in aid dump
+                for (int j = 0; j < this.aid[i].getNumberOfFiles(); j++) {
+                    sb.append("-------- file --------").append("\n");
+                    sb.append("file entry: " + j).append("\n");
+                    sb.append("file: ").append(this.aid[i].getFiles()[j].dumpFilesModel()).append("\n");
+                }
             }
         }
         return sb.toString();

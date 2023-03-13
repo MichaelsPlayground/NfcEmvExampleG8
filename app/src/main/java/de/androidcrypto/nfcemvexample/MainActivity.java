@@ -52,10 +52,14 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import de.androidcrypto.nfcemvexample.cardvalidation.CardValidationResult;
+import de.androidcrypto.nfcemvexample.cardvalidation.RegexCardValidator;
 import de.androidcrypto.nfcemvexample.emulate.FilesModel;
 import de.androidcrypto.nfcemvexample.nfccreditcards.AidValues;
 import de.androidcrypto.nfcemvexample.nfccreditcards.DolValues;
 import de.androidcrypto.nfcemvexample.nfccreditcards.PdolUtil;
+import de.androidcrypto.nfcemvexample.paymentcardgenerator.CardType;
+import de.androidcrypto.nfcemvexample.paymentcardgenerator.PaymentCardGeneratorImpl;
 
 public class MainActivity extends AppCompatActivity implements NfcAdapter.ReaderCallback {
 
@@ -1481,6 +1485,38 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
             @Override
             public boolean onMenuItemClick(@NonNull MenuItem menuItem) {
                 anonymizePan();
+                return false;
+            }
+        });
+
+        MenuItem mGeneratePan = menu.findItem(R.id.action_generate_pan);
+        mGeneratePan.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
+            @Override
+            public boolean onMenuItemClick(@NonNull MenuItem menuItem) {
+                clearData();
+                PaymentCardGeneratorImpl pcg = new PaymentCardGeneratorImpl();
+                String visaPan = pcg.generateByCardType(CardType.VISA_FIX16);
+                String masterPan = pcg.generateByCardType(CardType.MASTERCARD_FIX);
+                String amexcoPan = pcg.generateByCardType(CardType.AMERICAN_EXPRESS);
+                StringBuilder sb = new StringBuilder();
+                //masterPan = "5375050000160110";
+                sb.append("Generated CreditCard numbers").append("\n");
+                sb.append("Visa:   ").append(visaPan).append("\n");
+                sb.append("Master: ").append(masterPan).append("\n");
+                sb.append("Amexco: ").append(amexcoPan).append("\n");
+                etData.setText(sb.toString());
+
+                // validate pan
+                CardValidationResult visaPanValid = RegexCardValidator.isValid(visaPan);
+                CardValidationResult masterPanValid = RegexCardValidator.isValid(masterPan);
+                CardValidationResult amexcoPanValid = RegexCardValidator.isValid(amexcoPan);
+                StringBuilder sbV = new StringBuilder();
+                sbV.append("").append("\n");
+                sbV.append("Validation of CC numbers").append("\n");
+                sbV.append("Visa:   ").append(visaPanValid.isValid()).append("\n");
+                sbV.append("Master: ").append(masterPanValid.isValid()).append("\n");
+                sbV.append("Amexco: ").append(amexcoPanValid.isValid()).append("\n");
+                writeToUiAppend(etData, sbV.toString());
                 return false;
             }
         });

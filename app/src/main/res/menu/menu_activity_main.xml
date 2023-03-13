@@ -16,6 +16,11 @@
         app:showAsAction="never"/>
 
     <item
+        android:id="@+id/action_generate_pan"
+        android:title="generate PAN"
+        app:showAsAction="never"/>
+
+    <item
         android:id="@+id/action_activity_main"
         android:title="Main activity"
         app:showAsAction="never"/>
