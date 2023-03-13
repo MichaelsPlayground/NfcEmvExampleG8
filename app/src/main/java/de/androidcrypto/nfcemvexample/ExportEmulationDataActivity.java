@@ -405,6 +405,11 @@ public class ExportEmulationDataActivity extends AppCompatActivity implements Nf
                                 writeToUiAppend(etLog, "05 get the processing options command length: " + gpoRequestCommand.length + " data: " + bytesToHex(gpoRequestCommand));
                                 byte[] gpoRequestResponse = nfc.transceive(gpoRequestCommand);
                                 if (!responseSendWithPdolFailure(gpoRequestResponse)) {
+                                    byte[][] internalAuthorization = null;
+                                    byte[][] applicationCrypto = null;
+                                    String pan = "";
+                                    String expirationDate = "";
+                                    List<FilesModel> filesInAfl = new ArrayList<>();
                                     byte[] gpoRequestResponseOk = checkResponse(gpoRequestResponse);
                                     if (gpoRequestResponseOk != null) {
                                         writeToUiAppend(etLog, "05 run GPO response length: " + gpoRequestResponseOk.length + " data: " + bytesToHex(gpoRequestResponseOk));
@@ -416,6 +421,117 @@ public class ExportEmulationDataActivity extends AppCompatActivity implements Nf
                                         writeToUiAppend(etLog, "");
                                         printStepHeader(etLog, 6, "read files & search PAN");
                                         writeToUiAppend(etLog, "06 read the files from card and search for tag 0x57 in each file");
+
+                                        /**
+                                         * new code
+                                         */
+
+                                        // new - check for pan and afl and read files
+                                        writeToUiAppend(etLog, "");
+                                        writeToUiAppend(etLog, "*** new checks for pan and afl ***");
+                                        String pan_exp = checkForPanInResponse(gpoRequestResponseOk);
+                                        String[] panExpParts = pan_exp.split("_");
+                                        pan = "";
+                                        expirationDate = "";
+                                        if (pan_exp.equals("_")) {
+                                            writeToUiAppend(etLog, "no PAN was included in gpoRequestResponse");
+                                        } else {
+                                            foundPan = panExpParts[0];
+                                            pan = panExpParts[0];
+                                            expirationDate = panExpParts[1];
+                                            //writeToUiAppend(etLog, "PAN was included in gpoRequestResponse");
+                                            //writeToUiAppend(etLog, "PAN: " + panExpParts[0]);
+                                            //writeToUiAppend(etLog, "Expiration date (YYMM): " + panExpParts[1]);
+                                        }
+                                        // check for afl in response
+                                        List<byte[]> aflList = checkForAflInGpoResponse(gpoRequestResponseOk);
+                                        if (aflList.size() == 0) {
+                                            writeToUiAppend(etLog, "no AFL list found in gpoRequestResponse");
+                                        } else {
+                                            writeToUiAppend(etLog, "AFL list found with " + aflList.size() + " entries");
+                                            // now reading the files in afl list
+                                            filesInAfl = readAllFilesFromAfl(nfc, aflList);
+                                            int filesInAflSize = filesInAfl.size();
+                                            if (filesInAflSize == 0) {
+                                                writeToUiAppend(etLog, "no files read from AFL list");
+                                            } else {
+                                                writeToUiAppend(etLog, "read files from AFL list has " + filesInAflSize + " entries");
+                                                for (int iFiles = 0; iFiles < filesInAflSize; iFiles++) {
+                                                    // show all contents
+                                                    FilesModel filesModel = filesInAfl.get(iFiles);
+                                                    writeToUiAppend(etLog, "");
+                                                    writeToUiAppend(etLog, "entry " + iFiles + "\n" + filesModel.dumpFilesModel());
+                                                    String panInFile = checkForPanInResponse(hexToBytes(filesModel.getContent()));
+                                                    if (!panInFile.equals("_")) {
+                                                        // there is a PAN in the string, here the short cutted version
+                                                        writeToUiAppend(etLog, "# PAN found in file " + filesModel.getAddressAfl() + " : " + panInFile);
+                                                        if (isPrettyPrintResponse)
+                                                            prettyPrintData(etLog, hexToBytes(filesModel.getContent()));
+                                                    }
+                                                }
+                                            }
+
+                                        }
+                                        writeToUiAppend(etLog, "");
+                                        printStepHeader(etLog, 7, "print PAN & expire date");
+                                        writeToUiAppend(etLog, "07 get PAN and Expiration date from tag 0x57 (Track 2 Equivalent Data)");
+                                        writeToUiAppend(etLog, "data for AID " + aidSelectedForAnalyze + " (" + aidSelectedForAnalyzeName + ")");
+                                        writeToUiAppend(etLog, "PAN: " + pan);
+                                        writeToUiAppend(etLog, "Expiration date (YYMM): " + expirationDate);
+                                        writeToUiAppendNoExport(etData, "");
+                                        writeToUiAppendNoExport(etData, "data for AID " + aidSelectedForAnalyze + " (" + aidSelectedForAnalyzeName + ")");
+                                        writeToUiAppendNoExport(etData, "PAN: " + pan);
+                                        writeToUiAppendNoExport(etData, "Expiration date (YYMMDD): " + expirationDate);
+
+                                        // checks for get internal authorization and get application crypto
+                                        writeToUiAppend(etLog, "");
+                                        writeToUiAppend(etLog, "get the internal authentication");
+                                        internalAuthorization = getInternalAuthorization(nfc);
+                                        writeToUiAppend(etLog, "internalAuthCommand: " + internalAuthorization[0].length + " data: " + bytesToHex(internalAuthorization[0]));
+                                        if (internalAuthorization[1] == null) {
+                                            writeToUiAppend(etLog, "internalAuthResponse failure");
+                                        } else {
+                                            writeToUiAppend(etLog, "internalAuthResponse: " + internalAuthorization[1].length + " data: " + bytesToHex(internalAuthorization[1]));
+                                            if (isPrettyPrintResponse)
+                                                prettyPrintData(etLog, internalAuthorization[1]);
+                                        }
+
+                                        writeToUiAppend(etLog, "");
+                                        writeToUiAppend(etLog, "get the application cryptogram");
+                                        // check that it was found in any file
+                                        writeToUiAppend(etLog, "### tag0x8cFound: " + bytesToHex(tag0x8cFound));
+                                        //byte[] getApplicationCryptoCommand;
+                                        //byte[] getApplicationCryptoResponse;
+                                        //byte[] getApplicationCryptoResponseOk = null;
+                                        if (tag0x8cFound.length > 1) {
+                                            applicationCrypto = getApplicationCrypto(nfc, tag0x8cFound);
+                                            writeToUiAppend(etLog, "getApplicationCryptoCommand length: " + applicationCrypto[0].length + " data: " + bytesToHex(applicationCrypto[0]));
+                                            if (applicationCrypto[1] != null) {
+                                                writeToUiAppend(etLog, "getApplicationCryptoResponse length: " + applicationCrypto[1].length + " data: " + bytesToHex(applicationCrypto[1]));
+                                                if (isPrettyPrintResponse)
+                                                    prettyPrintData(etLog, applicationCrypto[1]);
+                                            } else {
+                                                writeToUiAppend(etLog, "getApplicationCryptoResponse fails");
+                                            }
+                                        } else {
+                                            writeToUiAppend(etLog, "no CDOL1 found in files, using an empty one");
+                                            applicationCrypto = getApplicationCrypto(nfc, new byte[0]);
+                                            writeToUiAppend(etLog, "getApplicationCryptoCommand length: " + applicationCrypto[0].length + " data: " + bytesToHex(applicationCrypto[0]));
+                                            if (applicationCrypto[1] != null) {
+                                                writeToUiAppend(etLog, "getApplicationCryptoResponse length: " + applicationCrypto[1].length + " data: " + bytesToHex(applicationCrypto[1]));
+                                                if (isPrettyPrintResponse)
+                                                    prettyPrintData(etLog, applicationCrypto[1]);
+                                            } else {
+                                                writeToUiAppend(etLog, "getApplicationCryptoResponse fails");
+                                            }
+                                        }
+
+                                        /**
+                                         * new code ends
+                                         */
+
+                                        /*
+                                        // old code
                                         String pan_expirationDate = readPanFromFilesFromGpo(nfc, gpoRequestResponseOk);
                                         String[] parts = pan_expirationDate.split("_");
                                         writeToUiAppend(etLog, "");
@@ -494,8 +610,59 @@ public class ExportEmulationDataActivity extends AppCompatActivity implements Nf
                                                 writeToUiAppend(etLog, "getApplicationCryptoResponse failure");
                                             }
                                         }
-
+*/
                                         // this is the visacard + girocard processing
+                                        String aidCard = aidSelectedForAnalyze;
+                                        String aidCardName = aidSelectedForAnalyzeName;
+                                        String selectAidCommandString = bytesToHex(selectAidCommand);
+                                        String selectAidResponseString = bytesToHex(selectAidResponseOk);
+                                        String gpoCommandString = bytesToHex(gpoRequestCommand);
+                                        String gpoResponseString = bytesToHex(gpoRequestResponseOk);
+                                        int checkFirstBytesGetProcessingOptions = 6;
+                                        String panFound = pan;
+                                        String expirationDateFound = expirationDate;
+                                        int numberOfFiles = filesInAfl.size();
+                                        String aflString = getAflFromGetProcessingOptionsResponse(gpoRequestResponseOk);
+                                        String applicationTransactionCounterString = "";
+                                        if (applicationTransactionCounter != null)
+                                            applicationTransactionCounterString = bytesToHex(applicationTransactionCounter);
+                                        String leftPinTryCounterString = "";
+                                        if (pinTryCounter != null)
+                                            leftPinTryCounterString = bytesToHex(pinTryCounter);
+                                        String lastOnlineATCRegisterString = "";
+                                        if (lastOnlineATCRegister != null)
+                                            lastOnlineATCRegisterString = bytesToHex(lastOnlineATCRegister);
+                                        String logFormatString = "";
+                                        if (logFormat != null)
+                                            logFormatString = bytesToHex(logFormat);
+                                        String internalAuthenticationCommandString = "";
+                                        if (internalAuthorization[0] != null)
+                                            internalAuthenticationCommandString = bytesToHex(internalAuthorization[0]);
+                                        String internalAuthenticationResponseString = "";
+                                        if (internalAuthorization[1] != null)
+                                            internalAuthenticationResponseString = bytesToHex(internalAuthorization[1]);
+                                        String applicationCryptogramCommandString = "";
+                                        if (applicationCrypto[0] != null)
+                                            applicationCryptogramCommandString = bytesToHex(applicationCrypto[0]);
+                                        String applicationCryptogramResponseString = "";
+                                        if (applicationCrypto[1] != null)
+                                            applicationCryptogramResponseString = bytesToHex(applicationCrypto[1]);
+
+                                        Aid aidForJson = new Aid(aidCard, aidCardName, selectAidCommandString, selectAidResponseString, gpoCommandString, gpoResponseString,
+                                                checkFirstBytesGetProcessingOptions, panFound, expirationDateFound, numberOfFiles, aflString,
+                                                applicationTransactionCounterString, leftPinTryCounterString, lastOnlineATCRegisterString, logFormatString,
+                                                internalAuthenticationCommandString, internalAuthenticationResponseString, applicationCryptogramCommandString,
+                                                applicationCryptogramResponseString);
+                                        for (int fileCount = 0; fileCount < filesInAfl.size(); fileCount++) {
+                                            FilesModel fm = filesInAfl.get(fileCount);
+                                            aidForJson.setFile(fileCount, fm);
+                                        }
+                                        aids.setAidEntry(aidForJson, aidNumber);
+
+                                        /**
+                                         * old code
+                                         */
+                                        /*
                                         // export this aid
                                         String aidCard = aidSelectedForAnalyze;
                                         String aidCardName = aidSelectedForAnalyzeName;
@@ -539,6 +706,8 @@ public class ExportEmulationDataActivity extends AppCompatActivity implements Nf
                                                 internalAuthenticationCommandString, internalAuthenticationResponseString, applicationCryptogramCommandString,
                                                 applicationCryptogramResponseString);
                                         aids.setAidEntry(aidForJson, aidNumber);
+
+                                         */
                                         // end of exporting
                                     }
                                 }
