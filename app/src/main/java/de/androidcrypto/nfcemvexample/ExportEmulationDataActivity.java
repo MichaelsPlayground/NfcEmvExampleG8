@@ -1019,6 +1019,7 @@ public class ExportEmulationDataActivity extends AppCompatActivity implements Nf
                 if (aids != null) {
                     exportString = new GsonBuilder().setPrettyPrinting().create().toJson(aids, Aids.class);
                     // todo anonymize with all foundPan, not only the last one
+                    // todo GiroCard does not work properly
                     if (saveAnonymized.isChecked()) {
                         Log.d(TAG, "the exported json file is anonymized");
                         exportString = anonymizePan(exportString, foundPan);
@@ -1059,6 +1060,7 @@ public class ExportEmulationDataActivity extends AppCompatActivity implements Nf
      * section for anonymize the export string
      */
 
+    // todo anonymizePan does not work for GiroCard, PAN ends on F at the end
     private String anonymizePan(@NonNull String exportString, @NonNull String panFoundInAid) {
         final String ANONYMIZED_PAN = "1122334455667788";
         int numberSubstrings = substring_rec(exportString, panFoundInAid);
