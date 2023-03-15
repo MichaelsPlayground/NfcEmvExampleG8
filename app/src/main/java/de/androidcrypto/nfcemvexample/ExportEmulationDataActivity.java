@@ -24,6 +24,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.CompoundButton;
+import android.widget.RadioButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -69,6 +70,7 @@ public class ExportEmulationDataActivity extends AppCompatActivity implements Nf
 
     TextView tv1;
     com.google.android.material.textfield.TextInputEditText etData, etLog, etGivenName;
+    RadioButton saveNotAnonymized, saveAnonymized, saveRandomAnonymized;
     SwitchMaterial prettyPrintResponse;
     private View loadingLayout;
 
@@ -106,6 +108,9 @@ public class ExportEmulationDataActivity extends AppCompatActivity implements Nf
         etGivenName = findViewById(R.id.etGivenName);
         etData = findViewById(R.id.etData);
         etLog = findViewById(R.id.etLog);
+        saveNotAnonymized = findViewById(R.id.rbSaveNotAnonymized);
+        saveAnonymized = findViewById(R.id.rbSaveAnonymized);
+        saveRandomAnonymized = findViewById(R.id.rbSaveRandomAnonymized);
         prettyPrintResponse = findViewById(R.id.swPrettyPrint);
         loadingLayout = findViewById(R.id.loading_layout);
 
@@ -1013,6 +1018,14 @@ public class ExportEmulationDataActivity extends AppCompatActivity implements Nf
                 // export the file
                 if (aids != null) {
                     exportString = new GsonBuilder().setPrettyPrinting().create().toJson(aids, Aids.class);
+                    // todo anonymize with all foundPan, not only the last one
+                    if (saveAnonymized.isChecked()) {
+                        Log.d(TAG, "the exported json file is anonymized");
+                        exportString = anonymizePan(exportString, foundPan);
+                    } else {
+                        Log.d(TAG, "the exported json file is NOT anonymized");
+                    }
+
                     exportStringFileName = "emv.json";
                     writeStringToExternalSharedStorage();
 
@@ -1040,6 +1053,34 @@ public class ExportEmulationDataActivity extends AppCompatActivity implements Nf
             v.vibrate(200);
         }
 
+    }
+
+    /**
+     * section for anonymize the export string
+     */
+
+    private String anonymizePan(@NonNull String exportString, @NonNull String panFoundInAid) {
+        final String ANONYMIZED_PAN = "1122334455667788";
+        int numberSubstrings = substring_rec(exportString, panFoundInAid);
+        Log.d(TAG, "the panFoundInAid was found " + numberSubstrings + " times before anonymize");
+        String tempString = exportString.replaceAll(panFoundInAid, ANONYMIZED_PAN);
+        numberSubstrings = substring_rec(exportString, panFoundInAid);
+        Log.d(TAG, "the panFoundInAid was found " + numberSubstrings + " times after anonymize");
+        return tempString;
+    }
+
+    /**
+     * count the number of substrings in a string recursively
+     *
+     * @param str complete string
+     * @param sub sub string
+     * @return number or 0 if nothing found
+     */
+    private int substring_rec(@NonNull String str, @NonNull String sub) {
+        if (str.contains(sub)) {
+            return 1 + substring_rec(str.replaceFirst(sub, ""), sub);
+        }
+        return 0;
     }
 
     /**

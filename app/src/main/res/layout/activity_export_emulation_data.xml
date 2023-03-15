@@ -55,6 +55,40 @@
                 app:dividerInsetEnd="16dp"
                 app:dividerInsetStart="16dp" />
 
+            <RadioGroup
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:gravity="center_horizontal"
+                android:orientation="horizontal">
+
+                <RadioButton
+                    android:id="@+id/rbSaveNotAnonymized"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:checked="false"
+                    android:text="not anonymized" />
+
+                <RadioButton
+                    android:id="@+id/rbSaveAnonymized"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:checked="true"
+                    android:text="anonymized" />
+
+                <RadioButton
+                    android:id="@+id/rbSaveRandomAnonymized"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:checked="false"
+                    android:enabled="false"
+                    android:text="random anonymized" />
+
+            </RadioGroup>
+
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/etGivenNameLayout"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
