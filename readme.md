@@ -29,6 +29,8 @@ AndroidManifest.xml:
     
 ```
 
+Curated list of AID: https://en.wikipedia.org/wiki/EMV
+
 old Card emulator project: https://web.archive.org/web/20160415031900/http://developer.android.com/samples/CardEmulation/index.html
 
 https://github.com/championswimmer/NFC-host-card-emulation-Android

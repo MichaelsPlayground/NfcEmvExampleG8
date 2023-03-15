@@ -104,7 +104,7 @@ public class ViewEmulationDataActivity extends AppCompatActivity {
                     try {
                         aids = gson.fromJson(jsonLoaded, Aids.class);
                     } catch (IllegalStateException | JsonSyntaxException e) {
-                        writeToUiToast("Cannot view the view - is it really a Expot emulation data file ?");
+                        writeToUiToast("Cannot view the view - is it really an Export emulation data file ?");
                     }
 
                     if (aids != null) {

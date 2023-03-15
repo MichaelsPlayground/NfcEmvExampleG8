@@ -964,6 +964,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
         }
         //System.out.println("*** getAtc: " + bytesToHex(result));
         // e.g. visa returns 9f360200459000
+        // e.g. visa returns 9f36020045 9000
         byte[] resultOk = checkResponse(result);
         if (resultOk == null) {
             return null;
