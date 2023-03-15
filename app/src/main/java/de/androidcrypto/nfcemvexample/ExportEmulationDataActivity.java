@@ -980,6 +980,9 @@ public class ExportEmulationDataActivity extends AppCompatActivity implements Nf
                                         internalAuthenticationResponseString = bytesToHex(internalAuthorization[1]);
                                     String applicationCryptogramCommandString = "";
                                     if (applicationCrypto[0] != null)
+
+                                        // todo check value in json ,seems to be too short
+
                                         applicationCryptogramCommandString = bytesToHex(applicationCrypto[0]);
                                     String applicationCryptogramResponseString = "";
                                     if (applicationCrypto[1] != null)
@@ -1182,12 +1185,28 @@ public class ExportEmulationDataActivity extends AppCompatActivity implements Nf
                     final int sfiSector = sfi >>> 3;
                     FilesModel filesModel = new FilesModel(addressAfl, sfiSector, iRecord, readRecordResponseOk.length, bytesToHex(readRecordResponseOk), offl);
                     readFiles.add(filesModel);
+                    // finally check for CDOL1
+                    BerTlvParser parser = new BerTlvParser();
+                    BerTlvs tlvs = parser.parse(readRecordResponseOk);
+                    findTag0x8c(tlvs);
                 } else {
                     //writeToUiAppend(etLog, "** readRecordResponse failure");
                 }
             }
         }
         return readFiles;
+    }
+
+    /**
+     * searches for tag 0x8c = CDOL1
+     * @param berTlvs
+     * return the value of tag in global variable tag0x8cFound
+     */
+    private void findTag0x8c(BerTlvs berTlvs) {
+        BerTlv tag = berTlvs.find(new BerTag(0x8c));
+        if (tag != null) {
+            tag0x8cFound = tag.getBytesValue();
+        }
     }
 
 

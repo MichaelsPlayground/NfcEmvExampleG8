@@ -853,6 +853,12 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
     /**
      * ADVANCED CODE
      */
+
+    /**
+     * searches for tag 0x8c = CDOL1
+     * @param berTlvs
+     * return the value of tag in global variable tag0x8cFound
+     */
     private void findTag0x8c(BerTlvs berTlvs) {
         BerTlv tag = berTlvs.find(new BerTag(0x8c));
         if (tag != null) {
