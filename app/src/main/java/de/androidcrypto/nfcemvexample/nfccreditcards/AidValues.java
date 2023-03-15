@@ -32,7 +32,7 @@ public class AidValues {
     }
 
     public String getAidName(byte[] aidByte) {
-        System.out.println(bytesToHex(aidByte));
+        //System.out.println(bytesToHex(aidByte));
         for (int i = 0; i < aidList.size(); i++) {
             AidTag aidTag = aidList.get(i);
             if (Arrays.equals(aidTag.getAidByte(), aidByte)) {

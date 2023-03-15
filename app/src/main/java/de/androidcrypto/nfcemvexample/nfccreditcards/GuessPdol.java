@@ -44,7 +44,7 @@ public class GuessPdol {
     public byte[] getPdol(int preferredLength) {
         String pdol;
         if (preferredLength <= pdolList.size() && preferredLength > -1) {
-            System.out.println("++ preferredLength ++");
+            //System.out.println("++ preferredLength ++");
             // first test with the preferredLength, then test all
             pdol = pdolList.get(preferredLength);
             byte[] pdolCommand = hexToBytes(pdol);
@@ -63,7 +63,7 @@ public class GuessPdol {
         for (int i = 0; i < pdolList.size(); i++) {
             pdol = pdolList.get(i);
             byte[] pdolCommand = hexToBytes(pdol);
-            System.out.println("++ pdolCommand: " + bytesToHex(pdolCommand));
+            //System.out.println("++ pdolCommand: " + bytesToHex(pdolCommand));
             try {
                 byte[] pdolResult = nfc.transceive(pdolCommand);
                 if (pdolResult != null) {
@@ -79,7 +79,7 @@ public class GuessPdol {
             }
         }
         // at this point none of the predefined pdol is working
-        System.out.println("++ predefinedPdols do not work, return null ++");
+        //System.out.println("++ predefinedPdols do not work, return null ++");
         return null;
     }
 

@@ -32,7 +32,7 @@ public class TagValues {
     }
 
     public EmvTag getEmvTagName(byte[] tagByte) {
-        System.out.println(bytesToHex(tagByte));
+        //System.out.println(bytesToHex(tagByte));
         for (int i = 0; i < emvTagList.size(); i++) {
             EmvTag emvTag = emvTagList.get(i);
             if (Arrays.equals(emvTag.getTagByte(), tagByte)) {

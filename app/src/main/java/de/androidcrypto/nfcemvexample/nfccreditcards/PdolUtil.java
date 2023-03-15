@@ -65,17 +65,17 @@ Lloyd Visa 9f66049f02069f03069f1a0295055f2a029a039c019f3704
      */
 
     public byte[] getGpo(int preferredLength) {
-        System.out.println("*** preferredLength: " + preferredLength);
+        //System.out.println("*** preferredLength: " + preferredLength);
         String pdol;
         if (preferredLength <= pdolList.size() && preferredLength > -1) {
             //System.out.println("++ preferredLength ++");
             // first test with the preferredLength, then test all
             pdol = pdolList.get(preferredLength);
             byte[] pdolCommand = hexToBytes(pdol);
-            System.out.println("***pdolCommand: " + bytesToHex(pdolCommand));
+            //System.out.println("***pdolCommand: " + bytesToHex(pdolCommand));
             try {
                 byte[] pdolResult = nfc.transceive(pdolCommand);
-                System.out.println("***pdolResult: " + bytesToHex(pdolResult));
+                //System.out.println("***pdolResult: " + bytesToHex(pdolResult));
                 byte[] pdolResultOk = checkResponse(pdolResult);
                 if (pdolResultOk != null) return pdolResultOk;
             } catch (IOException e) {
@@ -89,7 +89,7 @@ Lloyd Visa 9f66049f02069f03069f1a0295055f2a029a039c019f3704
         for (int i = 0; i < pdolList.size(); i++) {
             pdol = pdolList.get(i);
             byte[] pdolCommand = hexToBytes(pdol);
-            System.out.println("++ pdolCommand: " + bytesToHex(pdolCommand));
+            //System.out.println("++ pdolCommand: " + bytesToHex(pdolCommand));
             try {
                 byte[] pdolResult = nfc.transceive(pdolCommand);
                 /*
