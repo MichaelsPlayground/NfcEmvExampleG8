@@ -259,72 +259,7 @@ public class ExportEmulationDataActivity extends AppCompatActivity implements Nf
                         aidList.add(tlv4fBytes);
                         writeToUiAppend(etLog, "application Id (AID): " + bytesToHex(tlv4fBytes));
                     }
-                /*
-                // old code starts here
-                writeToUiAppend(etLog, "try to read a payment card with PPSE");
-                byte[] command;
-                writeToUiAppend(etLog, "");
-                printStepHeader(etLog, 1, "select PPSE");
-                byte[] PPSE = "2PAY.SYS.DDF01".getBytes(StandardCharsets.UTF_8); // PPSE
-                command = selectApdu(PPSE);
-                byte[] responsePpse = nfc.transceive(command);
-                writeToUiAppend(etLog, "01 select PPSE command length " + command.length + " data: " + bytesToHex(command));
-                writeToUiAppend(etLog, "01 select PPSE response length " + responsePpse.length + " data: " + bytesToHex(responsePpse));
-                boolean responsePpseNotAllowed = responseNotAllowed(responsePpse);
-                if (responsePpseNotAllowed) {
-                    // todo The card must not have a PSE or PPSE, then try with known AIDs
-                    writeToUiAppend(etLog, "01 selecting PPSE is not allowed on card");
-                    writeToUiAppend(etLog, "");
-                    writeToUiAppend(etLog, "The card is not a credit card, reading aborted");
-                    setLoadingLayoutVisibility(false);
-                    try {
-                        nfc.close();
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
-                    return;
-                }
-                byte[] responsePpseOk = checkResponse(responsePpse);
-                Aids aids = null; // used for export
-                if (responsePpseOk != null) {
-                    // pretty print of response
-                    if (isPrettyPrintResponse) prettyPrintData(etLog, responsePpseOk);
 
-                    writeToUiAppend(etLog, "");
-                    printStepHeader(etLog, 2, "search applications on card");
-                    writeToUiAppend(etLog, "02 analyze select PPSE response and search for tag 0x4F (applications on card)");
-
-                    BerTlvParser parser = new BerTlvParser();
-                    BerTlvs tlv4Fs = parser.parse(responsePpseOk);
-                    // by searching for tag 4f
-                    List<BerTlv> tag4fList = tlv4Fs.findAll(new BerTag(0x4F));
-                    if (tag4fList.size() < 1) {
-                        writeToUiAppend(etLog, "there is no tag 0x4F available, stopping here");
-                        setLoadingLayoutVisibility(false);
-                        try {
-                            nfc.close();
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
-                        }
-                        return;
-                    }
-                    writeToUiAppend(etLog, "Found tag 0x4F " + tag4fList.size() + " time(s):");
-                    ArrayList<byte[]> aidList = new ArrayList<>();
-                    for (int i4f = 0; i4f < tag4fList.size(); i4f++) {
-                        BerTlv tlv4f = tag4fList.get(i4f);
-                        byte[] tlv4fBytes = tlv4f.getBytesValue();
-                        aidList.add(tlv4fBytes);
-                        writeToUiAppend(etLog, "application Id (AID): " + bytesToHex(tlv4fBytes));
-                    }
-                                        // starting the export with setting up the aids-model ("master file")
-                    byte[] firstAid = aidList.get(0);
-                    String cardType = aidV.getAidName(firstAid); // taken from the first AID found on card
-                    String selectPpseCommand = bytesToHex(command);
-                    String selectPpseResponse = bytesToHex(responsePpseOk);
-                    int numberOfAid = aidList.size();
-                    aids = new Aids(cardType, givenName, selectPpseCommand, selectPpseResponse, numberOfAid);
-                    // old code goes up to here
-                    */
                     byte[] firstAid = aidList.get(0);
                     String cardType = aidV.getAidName(firstAid); // taken from the first AID found on card
                     String selectPpseCommandString = bytesToHex(selectPpseCommand);
@@ -382,6 +317,7 @@ public class ExportEmulationDataActivity extends AppCompatActivity implements Nf
                              */
                             BerTlvs tlvsAid = parser.parse(selectAidResponseOk);
                             BerTlv tag9f38 = tlvsAid.find(new BerTag(0x9F, 0x38));
+                            byte[] gpoRequestCommand;
                             // tag9f38 is null when not found
                             if (tag9f38 != null) {
                                 /**
@@ -403,324 +339,9 @@ public class ExportEmulationDataActivity extends AppCompatActivity implements Nf
                                 /**
                                  * ADVANCED CODE
                                  */
-                                byte[] gpoRequestCommand = getGpoFromPdol(pdolValue); // advanced one, build it dynamically
-
-                                writeToUiAppend(etLog, "");
-                                printStepHeader(etLog, 5, "get the processing options");
-                                writeToUiAppend(etLog, "05 get the processing options command length: " + gpoRequestCommand.length + " data: " + bytesToHex(gpoRequestCommand));
-                                byte[] gpoRequestResponse = nfc.transceive(gpoRequestCommand);
-                                if (!responseSendWithPdolFailure(gpoRequestResponse)) {
-                                    byte[][] internalAuthorization = null;
-                                    byte[][] applicationCrypto = null;
-                                    String pan = "";
-                                    String expirationDate = "";
-                                    List<FilesModel> filesInAfl = new ArrayList<>();
-                                    byte[] gpoRequestResponseOk = checkResponse(gpoRequestResponse);
-                                    if (gpoRequestResponseOk != null) {
-                                        writeToUiAppend(etLog, "05 run GPO response length: " + gpoRequestResponseOk.length + " data: " + bytesToHex(gpoRequestResponseOk));
-
-                                        // pretty print of response
-                                        if (isPrettyPrintResponse)
-                                            prettyPrintData(etLog, gpoRequestResponseOk);
-
-                                        writeToUiAppend(etLog, "");
-                                        printStepHeader(etLog, 6, "read files & search PAN");
-                                        writeToUiAppend(etLog, "06 read the files from card and search for tag 0x57 in each file");
-
-                                        /**
-                                         * new code
-                                         */
-
-                                        // new - check for pan and afl and read files
-                                        writeToUiAppend(etLog, "");
-                                        writeToUiAppend(etLog, "*** new checks for pan and afl ***");
-                                        String pan_exp = checkForPanInResponse(gpoRequestResponseOk);
-                                        String[] panExpParts = pan_exp.split("_");
-                                        pan = "";
-                                        expirationDate = "";
-                                        if (pan_exp.equals("_")) {
-                                            writeToUiAppend(etLog, "no PAN was included in gpoRequestResponse");
-                                        } else {
-                                            foundPan = panExpParts[0];
-                                            pan = panExpParts[0];
-                                            expirationDate = panExpParts[1];
-                                            //writeToUiAppend(etLog, "PAN was included in gpoRequestResponse");
-                                            //writeToUiAppend(etLog, "PAN: " + panExpParts[0]);
-                                            //writeToUiAppend(etLog, "Expiration date (YYMM): " + panExpParts[1]);
-                                        }
-                                        // check for afl in response
-                                        List<byte[]> aflList = checkForAflInGpoResponse(gpoRequestResponseOk);
-                                        if (aflList.size() == 0) {
-                                            writeToUiAppend(etLog, "no AFL list found in gpoRequestResponse");
-                                        } else {
-                                            writeToUiAppend(etLog, "AFL list found with " + aflList.size() + " entries");
-                                            // now reading the files in afl list
-                                            filesInAfl = readAllFilesFromAfl(nfc, aflList);
-                                            int filesInAflSize = filesInAfl.size();
-                                            if (filesInAflSize == 0) {
-                                                writeToUiAppend(etLog, "no files read from AFL list");
-                                            } else {
-                                                writeToUiAppend(etLog, "read files from AFL list has " + filesInAflSize + " entries");
-                                                for (int iFiles = 0; iFiles < filesInAflSize; iFiles++) {
-                                                    // show all contents
-                                                    FilesModel filesModel = filesInAfl.get(iFiles);
-                                                    writeToUiAppend(etLog, "");
-                                                    writeToUiAppend(etLog, "entry " + iFiles + "\n" + filesModel.dumpFilesModel());
-                                                    String panInFile = checkForPanInResponse(hexToBytes(filesModel.getContent()));
-                                                    if (!panInFile.equals("_")) {
-                                                        // there is a PAN in the string, here the short cutted version
-                                                        writeToUiAppend(etLog, "# PAN found in file " + filesModel.getAddressAfl() + " : " + panInFile);
-                                                        if (isPrettyPrintResponse)
-                                                            prettyPrintData(etLog, hexToBytes(filesModel.getContent()));
-                                                        panExpParts = panInFile.split("_");
-                                                        foundPan = panExpParts[0];
-                                                        pan = panExpParts[0];
-                                                        expirationDate = panExpParts[1];
-                                                    }
-                                                }
-                                            }
-
-                                        }
-                                        writeToUiAppend(etLog, "");
-                                        printStepHeader(etLog, 7, "print PAN & expire date");
-                                        writeToUiAppend(etLog, "07 get PAN and Expiration date from tag 0x57 (Track 2 Equivalent Data)");
-                                        writeToUiAppend(etLog, "data for AID " + aidSelectedForAnalyze + " (" + aidSelectedForAnalyzeName + ")");
-                                        writeToUiAppend(etLog, "PAN: " + pan);
-                                        writeToUiAppend(etLog, "Expiration date (YYMM): " + expirationDate);
-                                        writeToUiAppendNoExport(etData, "");
-                                        writeToUiAppendNoExport(etData, "data for AID " + aidSelectedForAnalyze + " (" + aidSelectedForAnalyzeName + ")");
-                                        writeToUiAppendNoExport(etData, "PAN: " + pan);
-                                        writeToUiAppendNoExport(etData, "Expiration date (YYMMDD): " + expirationDate);
-
-                                        // checks for get internal authorization and get application crypto
-                                        writeToUiAppend(etLog, "");
-                                        writeToUiAppend(etLog, "get the internal authentication");
-                                        internalAuthorization = getInternalAuthorization(nfc);
-                                        writeToUiAppend(etLog, "internalAuthCommand: " + internalAuthorization[0].length + " data: " + bytesToHex(internalAuthorization[0]));
-                                        if (internalAuthorization[1] == null) {
-                                            writeToUiAppend(etLog, "internalAuthResponse failure");
-                                        } else {
-                                            writeToUiAppend(etLog, "internalAuthResponse: " + internalAuthorization[1].length + " data: " + bytesToHex(internalAuthorization[1]));
-                                            if (isPrettyPrintResponse)
-                                                prettyPrintData(etLog, internalAuthorization[1]);
-                                        }
-
-                                        writeToUiAppend(etLog, "");
-                                        writeToUiAppend(etLog, "get the application cryptogram");
-                                        // check that it was found in any file
-                                        writeToUiAppend(etLog, "### tag0x8cFound: " + bytesToHex(tag0x8cFound));
-                                        //byte[] getApplicationCryptoCommand;
-                                        //byte[] getApplicationCryptoResponse;
-                                        //byte[] getApplicationCryptoResponseOk = null;
-                                        if (tag0x8cFound.length > 1) {
-                                            applicationCrypto = getApplicationCrypto(nfc, tag0x8cFound);
-                                            writeToUiAppend(etLog, "getApplicationCryptoCommand length: " + applicationCrypto[0].length + " data: " + bytesToHex(applicationCrypto[0]));
-                                            if (applicationCrypto[1] != null) {
-                                                writeToUiAppend(etLog, "getApplicationCryptoResponse length: " + applicationCrypto[1].length + " data: " + bytesToHex(applicationCrypto[1]));
-                                                if (isPrettyPrintResponse)
-                                                    prettyPrintData(etLog, applicationCrypto[1]);
-                                            } else {
-                                                writeToUiAppend(etLog, "getApplicationCryptoResponse fails");
-                                            }
-                                        } else {
-                                            writeToUiAppend(etLog, "no CDOL1 found in files, using an empty one");
-                                            applicationCrypto = getApplicationCrypto(nfc, new byte[0]);
-                                            writeToUiAppend(etLog, "getApplicationCryptoCommand length: " + applicationCrypto[0].length + " data: " + bytesToHex(applicationCrypto[0]));
-                                            if (applicationCrypto[1] != null) {
-                                                writeToUiAppend(etLog, "getApplicationCryptoResponse length: " + applicationCrypto[1].length + " data: " + bytesToHex(applicationCrypto[1]));
-                                                if (isPrettyPrintResponse)
-                                                    prettyPrintData(etLog, applicationCrypto[1]);
-                                            } else {
-                                                writeToUiAppend(etLog, "getApplicationCryptoResponse fails");
-                                            }
-                                        }
-
-                                        /**
-                                         * new code ends
-                                         */
-
-                                        /*
-                                        // old code
-                                        String pan_expirationDate = readPanFromFilesFromGpo(nfc, gpoRequestResponseOk);
-                                        String[] parts = pan_expirationDate.split("_");
-                                        writeToUiAppend(etLog, "");
-                                        printStepHeader(etLog, 7, "print PAN & expire date");
-                                        writeToUiAppend(etLog, "07 get PAN and Expiration date from tag 0x57 (Track 2 Equivalent Data)");
-                                        writeToUiAppend(etLog, "data for AID " + aidSelectedForAnalyze + " (" + aidSelectedForAnalyzeName + ")");
-                                        writeToUiAppend(etLog, "PAN: " + parts[0]);
-                                        writeToUiAppend(etLog, "Expiration date (YYMM): " + parts[1]);
-                                        writeToUiAppendNoExport(etData, "");
-                                        writeToUiAppendNoExport(etData, "data for AID " + aidSelectedForAnalyze + " (" + aidSelectedForAnalyzeName + ")");
-                                        writeToUiAppendNoExport(etData, "PAN: " + parts[0]);
-                                        writeToUiAppendNoExport(etData, "Expiration date (YYMM): " + parts[1]);
-                                        foundPan = parts[0];
-                                        // print single data
-                                        printSingleData(etLog, applicationTransactionCounter, pinTryCounter, lastOnlineATCRegister, logFormat);
-
-                                        // internal authentication
-                                        // probably not supported
-                                        writeToUiAppend(etLog, "");
-                                        writeToUiAppend(etLog, "get the internal authentication");
-                                        String internalAuthString = "0088000004E153F3E800";
-                                        byte[] internalAuthCommand = hexToBytes(internalAuthString);
-                                        writeToUiAppend(etLog, "internalAuthCommand: " + internalAuthCommand.length + " data: " + bytesToHex(internalAuthCommand));
-                                        byte[] internalAuthResponse = nfc.transceive(internalAuthCommand);
-                                        byte[] internalAuthResponseOk = new byte[0];
-                                        if (internalAuthResponse != null) {
-                                            internalAuthResponseOk = checkResponse(internalAuthResponse);
-                                            if (internalAuthResponseOk != null) {
-                                                writeToUiAppend(etLog, "internalAuthResponse: " + internalAuthResponseOk.length + " data: " + bytesToHex(internalAuthResponseOk));
-                                                prettyPrintData(etLog, internalAuthResponseOk);
-                                            }
-                                        } else {
-                                            writeToUiAppend(etLog, "internalAuthResponse failure");
-                                        }
-
-                                        writeToUiAppend(etLog, "");
-                                        writeToUiAppend(etLog, "get the application cryptogram");
-                                        // check that it was found in any file
-                                        writeToUiAppend(etLog, "### tag0x8cFound: " + bytesToHex(tag0x8cFound));
-                                        byte[] getApplicationCryptoCommand;
-                                        byte[] getApplicationCryptoResponse;
-                                        byte[] getApplicationCryptoResponseOk = new byte[0];
-                                        if (tag0x8cFound.length > 1) {
-                                            getApplicationCryptoCommand = getAppCryptoCommandFromCdol(tag0x8cFound);
-                                            writeToUiAppend(etLog, "getApplicationCryptoCommand length: " + getApplicationCryptoCommand.length + " data: " + bytesToHex(getApplicationCryptoCommand));
-                                            getApplicationCryptoResponse = nfc.transceive(getApplicationCryptoCommand);
-                                            if (getApplicationCryptoResponse != null) {
-                                                getApplicationCryptoResponseOk = checkResponse(getApplicationCryptoResponse);
-                                                if (getApplicationCryptoResponseOk != null) {
-                                                    writeToUiAppend(etLog, "getApplicationCryptoResponse length: " + getApplicationCryptoResponseOk.length + " data: " + bytesToHex(getApplicationCryptoResponseOk));
-                                                    if (isPrettyPrintResponse)
-                                                        prettyPrintData(etLog, getApplicationCryptoResponseOk);
-                                                } else {
-                                                    writeToUiAppend(etLog, "getApplicationCryptoResponse length: " + getApplicationCryptoResponse.length + " data: " + bytesToHex(getApplicationCryptoResponse));
-                                                }
-                                            } else {
-                                                writeToUiAppend(etLog, "getApplicationCryptoResponse fails");
-                                            }
-                                        } else {
-                                            // no cdol1 found
-                                            // work with an empty cdol1
-                                            writeToUiAppend(etLog, "no CDOL1 found in files, using an empty one");
-                                            getApplicationCryptoCommand = getAppCryptoCommandFromCdol(new byte[0]);
-                                            writeToUiAppend(etLog, "getApplicationCryptoCommand length: " + getApplicationCryptoCommand.length + " data: " + bytesToHex(getApplicationCryptoCommand));
-                                            getApplicationCryptoResponse = nfc.transceive(getApplicationCryptoCommand);
-                                            if (getApplicationCryptoResponse != null) {
-                                                getApplicationCryptoResponseOk = checkResponse(getApplicationCryptoResponse);
-                                                if (getApplicationCryptoResponseOk != null) {
-                                                    writeToUiAppend(etLog, "getApplicationCryptoResponse length: " + getApplicationCryptoResponseOk.length + " data: " + bytesToHex(getApplicationCryptoResponseOk));
-                                                    if (isPrettyPrintResponse)
-                                                        prettyPrintData(etLog, getApplicationCryptoResponseOk);
-                                                } else {
-                                                    writeToUiAppend(etLog, "getApplicationCryptoResponse failure");
-                                                }
-                                            } else {
-                                                writeToUiAppend(etLog, "getApplicationCryptoResponse failure");
-                                            }
-                                        }
-*/
-                                        // this is the visacard + girocard processing
-                                        String aidCard = aidSelectedForAnalyze;
-                                        String aidCardName = aidSelectedForAnalyzeName;
-                                        String selectAidCommandString = bytesToHex(selectAidCommand);
-                                        String selectAidResponseString = bytesToHex(selectAidResponseOk);
-                                        String gpoCommandString = bytesToHex(gpoRequestCommand);
-                                        String gpoResponseString = bytesToHex(gpoRequestResponseOk);
-                                        int checkFirstBytesGetProcessingOptions = 6;
-                                        String panFound = pan;
-                                        String expirationDateFound = expirationDate;
-                                        int numberOfFiles = filesInAfl.size();
-                                        String aflString = getAflFromGetProcessingOptionsResponse(gpoRequestResponseOk);
-                                        String applicationTransactionCounterString = "";
-                                        if (applicationTransactionCounter != null)
-                                            applicationTransactionCounterString = bytesToHex(applicationTransactionCounter);
-                                        String leftPinTryCounterString = "";
-                                        if (pinTryCounter != null)
-                                            leftPinTryCounterString = bytesToHex(pinTryCounter);
-                                        String lastOnlineATCRegisterString = "";
-                                        if (lastOnlineATCRegister != null)
-                                            lastOnlineATCRegisterString = bytesToHex(lastOnlineATCRegister);
-                                        String logFormatString = "";
-                                        if (logFormat != null)
-                                            logFormatString = bytesToHex(logFormat);
-                                        String internalAuthenticationCommandString = "";
-                                        if (internalAuthorization[0] != null)
-                                            internalAuthenticationCommandString = bytesToHex(internalAuthorization[0]);
-                                        String internalAuthenticationResponseString = "";
-                                        if (internalAuthorization[1] != null)
-                                            internalAuthenticationResponseString = bytesToHex(internalAuthorization[1]);
-                                        String applicationCryptogramCommandString = "";
-                                        if (applicationCrypto[0] != null)
-                                            applicationCryptogramCommandString = bytesToHex(applicationCrypto[0]);
-                                        String applicationCryptogramResponseString = "";
-                                        if (applicationCrypto[1] != null)
-                                            applicationCryptogramResponseString = bytesToHex(applicationCrypto[1]);
-
-                                        Aid aidForJson = new Aid(aidCard, aidCardName, selectAidCommandString, selectAidResponseString, gpoCommandString, gpoResponseString,
-                                                checkFirstBytesGetProcessingOptions, panFound, expirationDateFound, numberOfFiles, aflString,
-                                                applicationTransactionCounterString, leftPinTryCounterString, lastOnlineATCRegisterString, logFormatString,
-                                                internalAuthenticationCommandString, internalAuthenticationResponseString, applicationCryptogramCommandString,
-                                                applicationCryptogramResponseString);
-                                        for (int fileCount = 0; fileCount < filesInAfl.size(); fileCount++) {
-                                            FilesModel fm = filesInAfl.get(fileCount);
-                                            aidForJson.setFile(fileCount, fm);
-                                        }
-                                        aids.setAidEntry(aidForJson, aidNumber);
-
-                                        /**
-                                         * old code
-                                         */
-                                        /*
-                                        // export this aid
-                                        String aidCard = aidSelectedForAnalyze;
-                                        String aidCardName = aidSelectedForAnalyzeName;
-                                        String selectAidCommandString = bytesToHex(selectAidCommand);
-                                        String selectAidResponseString = bytesToHex(selectAidResponseOk);
-                                        String gpoCommandString = bytesToHex(gpoRequestCommand);
-                                        String gpoResponseString = bytesToHex(gpoRequestResponseOk);
-                                        int checkFirstBytesGetProcessingOptions = 6;
-                                        String panFoundInTrack2Data = "yes";
-                                        String panFoundInFiles = "no";
-                                        int numberOfFiles = 0;
-                                        String aflString = getAflFromGetProcessingOptionsResponse(gpoRequestResponseOk);
-                                        String applicationTransactionCounterString = "";
-                                        if (applicationTransactionCounter != null)
-                                            applicationTransactionCounterString = bytesToHex(applicationTransactionCounter);
-                                        String leftPinTryCounterString = "";
-                                        if (pinTryCounter != null)
-                                            leftPinTryCounterString = bytesToHex(pinTryCounter);
-                                        String lastOnlineATCRegisterString = "";
-                                        if (lastOnlineATCRegister != null)
-                                            lastOnlineATCRegisterString = bytesToHex(lastOnlineATCRegister);
-                                        String logFormatString = "";
-                                        if (logFormat != null)
-                                            logFormatString = bytesToHex(logFormat);
-                                        String internalAuthenticationCommandString = "";
-                                        if (internalAuthCommand != null)
-                                            internalAuthenticationCommandString = bytesToHex(internalAuthCommand);
-                                        String internalAuthenticationResponseString = "";
-                                        if (internalAuthResponseOk != null)
-                                            internalAuthenticationResponseString = bytesToHex(internalAuthResponseOk);
-                                        String applicationCryptogramCommandString = "";
-                                        if (getApplicationCryptoCommand != null)
-                                            applicationCryptogramCommandString = bytesToHex(getApplicationCryptoCommand);
-                                        String applicationCryptogramResponseString = "";
-                                        if (getApplicationCryptoResponseOk != null)
-                                            applicationCryptogramResponseString = bytesToHex(getApplicationCryptoResponseOk);
-
-                                        Aid aidForJson = new Aid(aidCard, aidCardName, selectAidCommandString, selectAidResponseString, gpoCommandString, gpoResponseString,
-                                                checkFirstBytesGetProcessingOptions, panFoundInTrack2Data, panFoundInFiles, numberOfFiles, aflString,
-                                                applicationTransactionCounterString, leftPinTryCounterString, lastOnlineATCRegisterString, logFormatString,
-                                                internalAuthenticationCommandString, internalAuthenticationResponseString, applicationCryptogramCommandString,
-                                                applicationCryptogramResponseString);
-                                        aids.setAidEntry(aidForJson, aidNumber);
-
-                                         */
-                                        // end of exporting
-                                    }
-                                }
-                            } else { // could not find a tag 0x9f38 in the selectAid response means there is no PDOL request available
+                                gpoRequestCommand = getGpoFromPdol(pdolValue); // advanced one, build it dynamically
+                            } else {
+                                // could not find a tag 0x9f38 in the selectAid response means there is no PDOL request available
                                 // instead we use an empty PDOL of length 0
                                 /**
                                  * MasterCard code
@@ -732,8 +353,6 @@ public class ExportEmulationDataActivity extends AppCompatActivity implements Nf
                                 writeToUiAppend(etLog, "No PDOL found in the selectAid response");
                                 writeToUiAppend(etLog, "try to request the get processing options (GPO) with an empty PDOL");
 
-                                printStepHeader(etLog, 5, "get the processing options");
-
                                 /**
                                  * simple code
                                  */
@@ -742,174 +361,96 @@ public class ExportEmulationDataActivity extends AppCompatActivity implements Nf
                                 /**
                                  * advanced code
                                  */
-                                byte[] gpoRequestCommand = getGpoFromPdol(new byte[0]); // empty PDOL
+                                gpoRequestCommand = getGpoFromPdol(new byte[0]); // empty PDOL
+                            }
+                            // from here the steps are equals
+                            writeToUiAppend(etLog, "");
+                            printStepHeader(etLog, 5, "get the processing options");
+                            writeToUiAppend(etLog, "05 get the processing options command length: " + gpoRequestCommand.length + " data: " + bytesToHex(gpoRequestCommand));
+                            byte[] gpoRequestResponse = nfc.transceive(gpoRequestCommand);
+                            byte[] gpoRequestResponseOk;
+                            if (!responseSendWithPdolFailure(gpoRequestResponse)) {
+                                byte[][] internalAuthorization = null;
+                                byte[][] applicationCrypto = null;
+                                String pan = "";
+                                String expirationDate = "";
+                                List<FilesModel> filesInAfl = new ArrayList<>();
+                                gpoRequestResponseOk = checkResponse(gpoRequestResponse);
+                                if (gpoRequestResponseOk != null) {
+                                    writeToUiAppend(etLog, "05 run GPO response length: " + gpoRequestResponseOk.length + " data: " + bytesToHex(gpoRequestResponseOk));
 
-                                writeToUiAppend(etLog, "05 get the processing options command length: " + gpoRequestCommand.length + " data: " + bytesToHex(gpoRequestCommand));
-                                byte[] gpoRequestResponse = nfc.transceive(gpoRequestCommand);
-                                if (!responseSendWithPdolFailure(gpoRequestResponse)) {
-                                    byte[] gpoRequestResponseOk = checkResponse(gpoRequestResponse);
-                                    byte[][] internalAuthorization = null;
-                                    byte[][] applicationCrypto = null;
-                                    String pan = "";
-                                    String expirationDate = "";
-                                    List<FilesModel> filesInAfl = new ArrayList<>();
-                                    if (gpoRequestResponseOk != null) {
-                                        writeToUiAppend(etLog, "05 select GPO response length: " + gpoRequestResponseOk.length + " data: " + bytesToHex(gpoRequestResponseOk));
+                                    // pretty print of response
+                                    if (isPrettyPrintResponse)
+                                        prettyPrintData(etLog, gpoRequestResponseOk);
 
-                                        // pretty print of response
-                                        if (isPrettyPrintResponse)
-                                            prettyPrintData(etLog, gpoRequestResponseOk);
+                                    writeToUiAppend(etLog, "");
+                                    printStepHeader(etLog, 6, "read files & search PAN");
+                                    writeToUiAppend(etLog, "06 read the files from card and search for tag 0x57 in each file");
 
-                                        // the template contains the tag 0x9F36 = Application Transaction Counter (ATC) !
-                                        // todo get the ATC from response
-
-                                        writeToUiAppend(etLog, "");
-                                        writeToUiAppend(etLog, "06 read the files from card and search for PAN in each file");
-                                        printStepHeader(etLog, 6, "read files & search PAN");
-
-                                        /**
-                                         * new code
-                                         */
-                                        // new - check for pan and afl and read files
-                                        writeToUiAppend(etLog, "");
-                                        writeToUiAppend(etLog, "*** new checks for pan and afl ***");
-                                        String pan_exp = checkForPanInResponse(gpoRequestResponseOk);
-                                        //pan = "";
-                                        //expirationDate = "";
-                                        if (pan_exp.equals("_")) {
-                                            writeToUiAppend(etLog, "no PAN was included in gpoRequestResponse");
+                                    // new - check for pan and afl and read files
+                                    writeToUiAppend(etLog, "");
+                                    writeToUiAppend(etLog, "*** new checks for pan and afl ***");
+                                    String pan_exp = checkForPanInResponse(gpoRequestResponseOk);
+                                    String[] panExpParts = pan_exp.split("_");
+                                    pan = "";
+                                    expirationDate = "";
+                                    if (pan_exp.equals("_")) {
+                                        writeToUiAppend(etLog, "no PAN was included in gpoRequestResponse");
+                                    } else {
+                                        foundPan = panExpParts[0];
+                                        pan = panExpParts[0];
+                                        expirationDate = panExpParts[1];
+                                        //writeToUiAppend(etLog, "PAN was included in gpoRequestResponse");
+                                        //writeToUiAppend(etLog, "PAN: " + panExpParts[0]);
+                                        //writeToUiAppend(etLog, "Expiration date (YYMM): " + panExpParts[1]);
+                                    }
+                                    // check for afl in response
+                                    List<byte[]> aflList = checkForAflInGpoResponse(gpoRequestResponseOk);
+                                    if (aflList.size() == 0) {
+                                        writeToUiAppend(etLog, "no AFL list found in gpoRequestResponse");
+                                    } else {
+                                        writeToUiAppend(etLog, "AFL list found with " + aflList.size() + " entries");
+                                        // now reading the files in afl list
+                                        filesInAfl = readAllFilesFromAfl(nfc, aflList);
+                                        int filesInAflSize = filesInAfl.size();
+                                        if (filesInAflSize == 0) {
+                                            writeToUiAppend(etLog, "no files read from AFL list");
                                         } else {
-                                            String[] panExpParts = pan_exp.split("_");
-                                            foundPan = panExpParts[0];
-                                            pan = panExpParts[0];
-                                            expirationDate = panExpParts[1];
-                                            //writeToUiAppend(etLog, "PAN was included in gpoRequestResponse");
-                                            //writeToUiAppend(etLog, "PAN: " + panExpParts[0]);
-                                            //writeToUiAppend(etLog, "Expiration date (YYMM): " + panExpParts[1]);
-                                        }
-                                        // check for afl in response
-                                        List<byte[]> aflList = checkForAflInGpoResponse(gpoRequestResponseOk);
-                                        if (aflList.size() == 0) {
-                                            writeToUiAppend(etLog, "no AFL list found in gpoRequestResponse");
-                                        } else {
-                                            writeToUiAppend(etLog, "AFL list found with " + aflList.size() + " entries");
-                                            // now reading the files in afl list
-                                            filesInAfl = readAllFilesFromAfl(nfc, aflList);
-                                            int filesInAflSize = filesInAfl.size();
-                                            if (filesInAflSize == 0) {
-                                                writeToUiAppend(etLog, "no files read from AFL list");
-                                            } else {
-                                                writeToUiAppend(etLog, "read files from AFL list has " + filesInAflSize + " entries");
-                                                for (int iFiles = 0; iFiles < filesInAflSize; iFiles++) {
-                                                    // show all contents
-                                                    FilesModel filesModel = filesInAfl.get(iFiles);
-                                                    writeToUiAppend(etLog, "");
-                                                    writeToUiAppend(etLog, "entry " + iFiles + "\n" + filesModel.dumpFilesModel());
-                                                    String panInFile = checkForPanInResponse(hexToBytes(filesModel.getContent()));
-                                                    if (!panInFile.equals("_")) {
-                                                        // there is a PAN in the string, here the short cutted version
-                                                        writeToUiAppend(etLog, "# PAN found in file " + filesModel.getAddressAfl() + " : " + panInFile);
-                                                        if (isPrettyPrintResponse)
-                                                            prettyPrintData(etLog, hexToBytes(filesModel.getContent()));
-                                                        String[] panExpParts = panInFile.split("_");
-                                                        foundPan = panExpParts[0];
-                                                        pan = panExpParts[0];
-                                                        expirationDate = panExpParts[1];
-                                                    }
+                                            writeToUiAppend(etLog, "read files from AFL list has " + filesInAflSize + " entries");
+                                            for (int iFiles = 0; iFiles < filesInAflSize; iFiles++) {
+                                                // show all contents
+                                                FilesModel filesModel = filesInAfl.get(iFiles);
+                                                writeToUiAppend(etLog, "");
+                                                writeToUiAppend(etLog, "entry " + iFiles + "\n" + filesModel.dumpFilesModel());
+                                                String panInFile = checkForPanInResponse(hexToBytes(filesModel.getContent()));
+                                                if (!panInFile.equals("_")) {
+                                                    // there is a PAN in the string, here the short cutted version
+                                                    writeToUiAppend(etLog, "# PAN found in file " + filesModel.getAddressAfl() + " : " + panInFile);
+                                                    if (isPrettyPrintResponse)
+                                                        prettyPrintData(etLog, hexToBytes(filesModel.getContent()));
+                                                    panExpParts = panInFile.split("_");
+                                                    foundPan = panExpParts[0];
+                                                    pan = panExpParts[0];
+                                                    expirationDate = panExpParts[1];
                                                 }
                                             }
-
                                         }
-                                        writeToUiAppend(etLog, "");
-                                        printStepHeader(etLog, 7, "print PAN & expire date");
-                                        writeToUiAppend(etLog, "07 get PAN and Expiration date from tag 0x57 (Track 2 Equivalent Data)");
-                                        writeToUiAppend(etLog, "data for AID " + aidSelectedForAnalyze + " (" + aidSelectedForAnalyzeName + ")");
-                                        writeToUiAppend(etLog, "PAN: " + pan);
-                                        writeToUiAppend(etLog, "Expiration date (YYMM): " + expirationDate);
-                                        writeToUiAppendNoExport(etData, "");
-                                        writeToUiAppendNoExport(etData, "data for AID " + aidSelectedForAnalyze + " (" + aidSelectedForAnalyzeName + ")");
-                                        writeToUiAppendNoExport(etData, "PAN: " + pan);
-                                        writeToUiAppendNoExport(etData, "Expiration date (YYMMDD): " + expirationDate);
-
-                                        // checks for get internal authorization and get application crypto
-                                        writeToUiAppend(etLog, "");
-                                        writeToUiAppend(etLog, "get the internal authentication");
-                                        internalAuthorization = getInternalAuthorization(nfc);
-                                        writeToUiAppend(etLog, "internalAuthCommand: " + internalAuthorization[0].length + " data: " + bytesToHex(internalAuthorization[0]));
-                                        if (internalAuthorization[1] == null) {
-                                            writeToUiAppend(etLog, "internalAuthResponse failure");
-                                        } else {
-                                            writeToUiAppend(etLog, "internalAuthResponse: " + internalAuthorization[1].length + " data: " + bytesToHex(internalAuthorization[1]));
-                                            if (isPrettyPrintResponse)
-                                                prettyPrintData(etLog, internalAuthorization[1]);
-                                        }
-
-                                        writeToUiAppend(etLog, "");
-                                        writeToUiAppend(etLog, "get the application cryptogram");
-                                        // check that it was found in any file
-                                        writeToUiAppend(etLog, "### tag0x8cFound: " + bytesToHex(tag0x8cFound));
-                                        //byte[] getApplicationCryptoCommand;
-                                        //byte[] getApplicationCryptoResponse;
-                                        //byte[] getApplicationCryptoResponseOk = null;
-                                        if (tag0x8cFound.length > 1) {
-                                            applicationCrypto = getApplicationCrypto(nfc, tag0x8cFound);
-                                            writeToUiAppend(etLog, "getApplicationCryptoCommand length: " + applicationCrypto[0].length + " data: " + bytesToHex(applicationCrypto[0]));
-                                            if (applicationCrypto[1] != null) {
-                                                writeToUiAppend(etLog, "getApplicationCryptoResponse length: " + applicationCrypto[1].length + " data: " + bytesToHex(applicationCrypto[1]));
-                                                if (isPrettyPrintResponse)
-                                                    prettyPrintData(etLog, applicationCrypto[1]);
-                                            } else {
-                                                writeToUiAppend(etLog, "getApplicationCryptoResponse fails");
-                                            }
-                                        } else {
-                                            writeToUiAppend(etLog, "no CDOL1 found in files, using an empty one");
-                                            applicationCrypto = getApplicationCrypto(nfc, new byte[0]);
-                                            writeToUiAppend(etLog, "getApplicationCryptoCommand length: " + applicationCrypto[0].length + " data: " + bytesToHex(applicationCrypto[0]));
-                                            if (applicationCrypto[1] != null) {
-                                                writeToUiAppend(etLog, "getApplicationCryptoResponse length: " + applicationCrypto[1].length + " data: " + bytesToHex(applicationCrypto[1]));
-                                                if (isPrettyPrintResponse)
-                                                    prettyPrintData(etLog, applicationCrypto[1]);
-                                            } else {
-                                                writeToUiAppend(etLog, "getApplicationCryptoResponse fails");
-                                            }
-                                        }
-
-                                        /**
-                                         * new code ends
-                                         */
-
-                                        /**
-                                         * old code
-                                         */
-/*
-                                        String pan_expirationDate = readPanFromFilesFromGpo(nfc, gpoRequestResponseOk);
-                                        String[] parts = pan_expirationDate.split("_");
-                                        writeToUiAppend(etLog, "");
-                                        printStepHeader(etLog, 7, "print PAN & expire date");
-                                        writeToUiAppend(etLog, "07 get PAN and Expiration date from tag 0x57 (Track 2 Equivalent Data)");
-                                        writeToUiAppend(etLog, "data for AID " + aidSelectedForAnalyze + " (" + aidSelectedForAnalyzeName + ")");
-                                        writeToUiAppend(etLog, "PAN: " + parts[0]);
-                                        writeToUiAppend(etLog, "Expiration date (YYMM): " + parts[1]);
-                                        writeToUiAppendNoExport(etData, "");
-                                        writeToUiAppendNoExport(etData, "data for AID " + aidSelectedForAnalyze + " (" + aidSelectedForAnalyzeName + ")");
-                                        writeToUiAppendNoExport(etData, "PAN: " + parts[0]);
-                                        writeToUiAppendNoExport(etData, "Expiration date (YYMMDD): " + parts[1]);
-                                        foundPan = parts[0];
-*/
-                                        /**
-                                         * old code ends
-                                         */
                                     }
-                                    // print single data
-                                    printSingleData(etLog, applicationTransactionCounter, pinTryCounter, lastOnlineATCRegister, logFormat);
+                                    writeToUiAppend(etLog, "");
+                                    printStepHeader(etLog, 7, "print PAN & expire date");
+                                    writeToUiAppend(etLog, "07 get PAN and Expiration date from tag 0x57 (Track 2 Equivalent Data)");
+                                    writeToUiAppend(etLog, "data for AID " + aidSelectedForAnalyze + " (" + aidSelectedForAnalyzeName + ")");
+                                    writeToUiAppend(etLog, "PAN: " + pan);
+                                    writeToUiAppend(etLog, "Expiration date (YYMM): " + expirationDate);
+                                    writeToUiAppendNoExport(etData, "");
+                                    writeToUiAppendNoExport(etData, "data for AID " + aidSelectedForAnalyze + " (" + aidSelectedForAnalyzeName + ")");
+                                    writeToUiAppendNoExport(etData, "PAN: " + pan);
+                                    writeToUiAppendNoExport(etData, "Expiration date (YYMMDD): " + expirationDate);
 
-/*
-                                    // code is now above
-                                    // internal authentication
-                                    // probably not supported
+                                    // checks for get internal authorization and get application crypto
                                     writeToUiAppend(etLog, "");
                                     writeToUiAppend(etLog, "get the internal authentication");
-                                    byte[][] internalAuthorization = getInternalAuthorization(nfc);
+                                    internalAuthorization = getInternalAuthorization(nfc);
                                     writeToUiAppend(etLog, "internalAuthCommand: " + internalAuthorization[0].length + " data: " + bytesToHex(internalAuthorization[0]));
                                     if (internalAuthorization[1] == null) {
                                         writeToUiAppend(etLog, "internalAuthResponse failure");
@@ -926,7 +467,6 @@ public class ExportEmulationDataActivity extends AppCompatActivity implements Nf
                                     //byte[] getApplicationCryptoCommand;
                                     //byte[] getApplicationCryptoResponse;
                                     //byte[] getApplicationCryptoResponseOk = null;
-                                    byte[][] applicationCrypto;
                                     if (tag0x8cFound.length > 1) {
                                         applicationCrypto = getApplicationCrypto(nfc, tag0x8cFound);
                                         writeToUiAppend(etLog, "getApplicationCryptoCommand length: " + applicationCrypto[0].length + " data: " + bytesToHex(applicationCrypto[0]));
@@ -949,11 +489,7 @@ public class ExportEmulationDataActivity extends AppCompatActivity implements Nf
                                             writeToUiAppend(etLog, "getApplicationCryptoResponse fails");
                                         }
                                     }
-
- */
-
-                                    // export this aid
-                                    // this is the mastercard processing
+                                    // this is the visacard + girocard processing
                                     String aidCard = aidSelectedForAnalyze;
                                     String aidCardName = aidSelectedForAnalyzeName;
                                     String selectAidCommandString = bytesToHex(selectAidCommand);
@@ -985,9 +521,6 @@ public class ExportEmulationDataActivity extends AppCompatActivity implements Nf
                                         internalAuthenticationResponseString = bytesToHex(internalAuthorization[1]);
                                     String applicationCryptogramCommandString = "";
                                     if (applicationCrypto[0] != null)
-
-                                        // todo check value in json ,seems to be too short
-
                                         applicationCryptogramCommandString = bytesToHex(applicationCrypto[0]);
                                     String applicationCryptogramResponseString = "";
                                     if (applicationCrypto[1] != null)
@@ -1004,12 +537,14 @@ public class ExportEmulationDataActivity extends AppCompatActivity implements Nf
                                     }
                                     aids.setAidEntry(aidForJson, aidNumber);
                                     // end of exporting
-
                                 }
                             }
+                            // print single data
+                            printSingleData(etLog, applicationTransactionCounter, pinTryCounter, lastOnlineATCRegister, logFormat);
                         }
                     }
                 }
+
                 // print the complete Log
                 writeToUiFinal(etLog);
                 setLoadingLayoutVisibility(false);
@@ -1242,8 +777,8 @@ public class ExportEmulationDataActivity extends AppCompatActivity implements Nf
 
     /**
      * searches for tag 0x8c = CDOL1
-     * @param berTlvs
-     * return the value of tag in global variable tag0x8cFound
+     *
+     * @param berTlvs return the value of tag in global variable tag0x8cFound
      */
     private void findTag0x8c(BerTlvs berTlvs) {
         BerTlv tag = berTlvs.find(new BerTag(0x8c));
