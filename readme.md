@@ -29,6 +29,14 @@ AndroidManifest.xml:
     
 ```
 
+PPSE (Paypass Payment System Environment)
+
+own answer: https://stackoverflow.com/questions/73519913/apdu-commands-to-get-data-from-nfc-tag-using-isodep
+
+For PAN extraction: https://www.openscdp.org/scripts/tutorial/emv/dda.html
+
+"Application PAN" Length: 10 - PAN (padded to the right with Hex 'F's)
+
 Curated list of AID: https://en.wikipedia.org/wiki/EMV
 
 old Card emulator project: https://web.archive.org/web/20160415031900/http://developer.android.com/samples/CardEmulation/index.html

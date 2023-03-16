@@ -703,7 +703,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                                 BerTlv tag5a = tlvsAfl.find(new BerTag(0x5a));
                                 if (tag5a != null) {
                                     byte[] tag5aBytes = tag5a.getBytesValue();
-                                    pan = bytesToHex(tag5aBytes);
+                                    pan = removeTrailingF(bytesToHex(tag5aBytes));
                                     Log.e(TAG, "found tag 0x5A PAN: " + pan);
                                 }
                                 BerTlv tag5f24 = tlvsAfl.find(new BerTag(0x5f, 0x24));
@@ -732,6 +732,22 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
             } // for (int i = 0; i < tag94BytesListLength; i++) { // = number of records belong to this afl
         }
         return pan + "_" + expirationDate;
+    }
+
+    /**
+     * remove all trailing 0xF's trailing in the 10 length fiel tag 0x5a = PAN
+     * PAN is padded with 'F'
+     * @param input
+     * @return
+     */
+    private String removeTrailingF(String input) {
+        int index;
+        for (index = input.length() - 1; index >= 0; index--) {
+            if (input.charAt(index) != 'f') {
+                break;
+            }
+        }
+        return input.substring(0, index + 1);
     }
 
     //
@@ -1095,6 +1111,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                         //Yes button clicked
                         // search for cleartext PAN in exportString
                         int numberSubstrings = substring_rec(exportString, foundPan);
+                        // todo: set anonymized PAN to leength of foundPan
                         exportString = exportString.replaceAll(foundPan, ANONYMIZED_PAN);
                         numberSubstrings = substring_rec(exportString, foundPan);
                         // as the prettyPrint prints a byte array with a blank after each byte we have to search for these occurrences as well
