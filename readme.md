@@ -57,6 +57,135 @@ https://github.com/Mohamdaoui/SmartCardReader (Kotlin)
 
 https://developer.visa.com/identity/user/register
 
+https://stackoverflow.com/questions/35881046/get-processing-options-response with Template 1:
+```plaintext
+GET PROCESSING OPTIONS
+According to "EMV Book 3 - Application Specification", Tag 0x80 Format 1 reply for 
+GET PROCESSING OPTIONS contained:
+x82: Application Interchange Profile (AIP),
+x94: Application File Locator (AFL).
+Please keep in mind that Tag 0x80 formats are different for different APDU Commands.
+Your APDU Data reply with EMV TLV Tag 0x80 Format 1 data contains (2 bytes) with AIP and AFL with 
+4 Records (4 bytes each, 16 bytes in total):
+
+I/System.out: 80 12 -- Response Message Template Format 1
+I/System.out:       18 00 08 01 01 00 08 03 03 00 08 05 05 00 10 02 02 00 (BINARY)
+                 12 = dec 18 total length
+                 02 = dec 02 AIP length
+                 10 = dec 16 AFL length = 4 AFL blocks 
+               AIP: 18 00
+               AFL:       08 01 01 00 
+                                      08 03 03 00 
+                                                  08 05 05 00 
+                                                              10 02 02 00
+```
+
+Google Wallet infos (https://stackoverflow.com/a/23359247/8166854):
+```plaintext
+The response to the GET PROCESSING OPTIONS command indicates the following Application Interchange Profile (AIP):
+
+82 Application Interchange Profile
+    0000
+Google Wallet is basically a MasterCard (EMV contactless kernel 2), so decoding the AIP according to the rules of Kernel 2 results in the following:
+
+Byte 1, b7 = 0: no SDA supported
+        b6 = 0: no DDA supported
+        b5 = 0: no cardholder verification supported
+        b4 = 0: no terminal risk management to be performed
+        b3 = 0: no issuer authentication supported
+        b2 = 0: no on-device cardholder verification supported
+        b1 = 0: no CDA supported
+Byte 2, b8 = 0: no EMV mode supported
+The important part is byte 2, bit 8: It indicates that your card does not support EMV mode. Hence, your card/Google Wallet is a PayPass card that supports only Mag-Stripe mode. Therefore, you cannot authenticate transactions using GENERATE AC. Instead, you can only let the card generate dynamic card verification codes (CVC3) using COMPUTE CRYPTOGRAPHIC CHECKSUM:
+
+byte[] computeCC = new byte[] {
+    (byte)0x80, // CLA = proprietary
+    (byte)0x2A, // INS = COMPUTE CRYPTOGRAPHIC CHECKSUM
+    (byte)0x8E, // P1
+    (byte)0x80, // P2
+    (byte)0x04, // Lc
+    (byte)0xWW, (byte)0xXX, (byte)0xYY, (byte)0xZZ, // Unpredicatable Number (numeric)
+    (byte)0x00, // Le
+};
+response = isoDep.transceive(computeCC);
+Note that the data field of the COMPUTE CRYPTOGRAPHIC CHECKSUM command must be filled with values according to the UDOL (in case there is no UDOL, the default UDOL is 9F6A04, indicating the unpredictable number, numeric).
+
+The unpredictable number (numeric) is a BCD coded number in the range that is defined by the mag-stripe data file (see the AFL). In the past, for Google Wallet, this was a value between 0 and 99 (i.e. WW='00', XX='00', YY='00', ZZ='00'..'99').
+
+UPDATE:
+
+The data read from the card decodes as follows:
+
+70 7c
+  9f6c 02    Mag-stripe application version number = Version 1
+    00 01
+  9f62 06    Track 1 bit map for CVC3
+    00 00 00 00 00 38
+  9f63 06    Track 1 bit map for UN and ATC
+    00 00 00 00 03 c6
+  56 29      Track 1 data
+    42         ISO/IEC 7813 structure "B" format
+    35333936 XXXXXXXX 31XXXX39 XXXXXXXX    PAN (ASCII)
+    5e         Field separator "^"
+    202f       Cardholder name " /" (empty, see MC requirements)
+    5e         Field separator "^"
+    31343037   Expiry date "14"/"07"
+    313031     Service code "101"
+    34303130303030303030303030    Track 1 discretionary data
+  9f64 01    Track 1 number of ATC digits
+    04
+  9f65 02    Track 2 bit map for CVC3
+    00 38
+  9f66 02    Track 2 bit map for UN and ATC
+    03 c6
+  9f6b 13    Track 2 data
+    5396 XXXX 1XX9 XXXX    PAN (BCD)
+    d          Field separator
+    1407       Expiry date
+    101        Service code
+    4010000000000    Track 2 discretionary data
+    f          Padding
+  9f67 01      Track 2 number of ATC digits
+    04
+  9f69 0f      UDOL
+    9f6a 04      Unpredictable number (numeric)
+    9f7e 01      Mobile support indicator
+    9f02 06      Amount authorized (numeric)
+    5f2a 02      Transaction currency code
+    9f1a 02      Terminal country code
+So the card does provide a UDOL. Therefore, the COMPUTE CRYPTOGRAPHIC CHECKSUM command has to be adapted accordingly:
+
+byte[] computeCC = new byte[] {
+    (byte)0x80, // CLA = proprietary
+    (byte)0x2A, // INS = COMPUTE CRYPTOGRAPHIC CHECKSUM
+    (byte)0x8E, // P1
+    (byte)0x80, // P2
+    (byte)0x0F, // Lc
+    // 9f6a 04      Unpredictable number (numeric)
+    (byte)0x00, (byte)0x00, (byte)0x00, (byte)0x12, // two digits according to UN/ATC bit map and number of ATC digits: 6 - 4 = 2
+    // 9f7e 01      Mobile support indicator
+    (byte)0x00, // no offline PIN required, no mobile support
+    // 9f02 06      Amount authorized (numeric)
+    (byte)0x00, (byte)0x00, (byte)0x00, (byte)0x00, (byte)0x01, (byte)0x00, // 1.00
+    // 5f2a 02      Transaction currency code
+    (byte)0x09, (byte)0x78, // Euro
+    // 9f1a 02      Terminal country code
+    (byte)0x00, (byte)0x40, // Austria
+    (byte)0x00, // Le
+};
+response = isoDep.transceive(computeCC);
+Share
+Edit
+Follow
+Flag
+edited May 4, 2014 at 13:31
+answered Apr 29, 2014 at 8:20
+Michael Roland's user avatar
+Michael Roland
+```
+
+
+
 Overview of complete readings and found PAN + Expiration Date
 ...
 MC Lloyds: SFI 2 REC 1

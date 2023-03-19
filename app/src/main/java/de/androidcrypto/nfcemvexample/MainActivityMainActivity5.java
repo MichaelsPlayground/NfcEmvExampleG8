@@ -1,6 +1,5 @@
 package de.androidcrypto.nfcemvexample;
 
-import static de.androidcrypto.nfcemvexample.BinaryUtils.byteToInt;
 import static de.androidcrypto.nfcemvexample.BinaryUtils.bytesToHex;
 import static de.androidcrypto.nfcemvexample.BinaryUtils.hexToBytes;
 import static de.androidcrypto.nfcemvexample.BinaryUtils.intToByteArrayV4;
@@ -45,8 +44,6 @@ import com.payneteasy.tlv.BerTlv;
 import com.payneteasy.tlv.BerTlvParser;
 import com.payneteasy.tlv.BerTlvs;
 
-import org.apache.commons.lang3.ArrayUtils;
-
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
@@ -63,7 +60,7 @@ import de.androidcrypto.nfcemvexample.nfccreditcards.PdolUtil;
 import de.androidcrypto.nfcemvexample.paymentcardgenerator.CardType;
 import de.androidcrypto.nfcemvexample.paymentcardgenerator.PaymentCardGeneratorImpl;
 
-public class MainActivity extends AppCompatActivity implements NfcAdapter.ReaderCallback {
+public class MainActivityMainActivity5 extends AppCompatActivity implements NfcAdapter.ReaderCallback {
 
     private final String TAG = "NfcCreditCardAct";
 
@@ -163,12 +160,12 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
     }
 
     private void playPing() {
-        MediaPlayer mp = MediaPlayer.create(MainActivity.this, R.raw.single_ping);
+        MediaPlayer mp = MediaPlayer.create(MainActivityMainActivity5.this, R.raw.single_ping);
         mp.start();
     }
 
     private void playDoublePing() {
-        MediaPlayer mp = MediaPlayer.create(MainActivity.this, R.raw.double_ping);
+        MediaPlayer mp = MediaPlayer.create(MainActivityMainActivity5.this, R.raw.double_ping);
         mp.start();
     }
 
@@ -664,26 +661,14 @@ List<Afl> listAfl = extractAfl(data);
         // search for tag 0x94 = AFL
         BerTlvs tlvsGpo02 = parser.parse(getProcessingOptions);
         BerTlv tag94 = tlvsGpo02.find(new BerTag(0x94));
-        // template 2
         if (tag94 != null) {
             aflBytes = tag94.getBytesValue();
-        }
-        // template 1
-        BerTlv tag80 = tlvsGpo02.find(new BerTag(0x80));
-        if (tag80 != null) {
-            byte[] dataTemp = tag80.getBytesValue();
-            dataTemp = ArrayUtils.subarray(dataTemp, 2, dataTemp.length);
-            if (dataTemp != null) {
-                aflBytes = dataTemp.clone();
-            }
-        }
-        if (aflBytes != null) {
 
+            byte[] tag94Bytes = tag94.getBytesValue();
             //writeToUiAppend(etLog, "AFL data: " + bytesToHex(tag94Bytes));
             //System.out.println("AFL data: " + bytesToHex(tag94Bytes));
             // split array by 4 bytes
-            //List<byte[]> tag94BytesList = divideArray(tag94Bytes, 4);
-            List<byte[]> tag94BytesList = divideArray(aflBytes, 4);
+            List<byte[]> tag94BytesList = divideArray(tag94Bytes, 4);
             int tag94BytesListLength = tag94BytesList.size();
             //writeToUiAppend(etLog, "tag94Bytes divided into " + tag94BytesListLength + " arrays");
             writeToUiAppend(etLog, "");
@@ -1091,31 +1076,6 @@ List<Afl> listAfl = extractAfl(data);
         String tagLength2d = bytesToHex(intToByteArrayV4(valueOfTagSum)); // length value
         String constructedGetAcCommandString = "80AE8000" + tagLength2d + constructedGetAcString + "00";
         return hexToBytes(constructedGetAcCommandString);
-/* amex:
-I/System.out: getApplicationCryptoResponse length: 20 data: 8012800005d116c2f20f228b7b06590203a00000
-I/System.out: ------------------------------------
-I/System.out: 80 12 -- Response Message Template Format 1
-I/System.out:       80 00 05 D1 16 C2 F2 0F 22 8B 7B 06 59 02 03 A0
-I/System.out:       00 00 (BINARY)
-I/System.out: ------------------------------------
-see: https://stackoverflow.com/a/35892602/8166854
- */
-/* amex:
- - DATA:
-  - x80:
-     tag: "80"
-     len: "12" #   // 18
-   - val:  # Template, Response Message Format 1.
-    - x9F27:  # EMV, Cryptogram Information Data (CID)
-       val: "80" # Cryptogram Information Data (CID).
-       # 10______ - bits 8-7, ARQC
-       # _____000 - bits 3-1 (Reason/Advice/Referral Code), No information given
-     + x9F36: "0001" # EMV, Application Transaction Counter (ATC)
-     + x9F26: "0102030405060708" # EMV, Cryptogram, Application
-     + x9F10: "06010A03A40000" # EMV, Issuer Application Data (IAD)
-
- */
-
     }
 
     /**
@@ -1193,7 +1153,7 @@ see: https://stackoverflow.com/a/35892602/8166854
             }
         };
         final String selectedFolderString = "Do you want to anonymize the export data (recommended) ?";
-        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivityMainActivity5.this);
         builder.setTitle("ANONYMIZE EXPORT STRING ?");
         builder.setMessage(selectedFolderString).setPositiveButton(android.R.string.yes, dialogClickListener)
                 .setNegativeButton(android.R.string.no, dialogClickListener).show();
@@ -1510,7 +1470,7 @@ see: https://stackoverflow.com/a/35892602/8166854
         mFileReaderActivity.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
             @Override
             public boolean onMenuItemClick(@NonNull MenuItem menuItem) {
-                Intent intent = new Intent(MainActivity.this, FileReaderActivity.class);
+                Intent intent = new Intent(MainActivityMainActivity5.this, FileReaderActivity.class);
                 startActivity(intent);
                 return false;
             }
@@ -1520,7 +1480,7 @@ see: https://stackoverflow.com/a/35892602/8166854
         mExportEmulationDataActivity.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
             @Override
             public boolean onMenuItemClick(@NonNull MenuItem menuItem) {
-                Intent intent = new Intent(MainActivity.this, ExportEmulationDataActivity.class);
+                Intent intent = new Intent(MainActivityMainActivity5.this, ExportEmulationDataActivity.class);
                 startActivity(intent);
                 return false;
             }
@@ -1530,7 +1490,7 @@ see: https://stackoverflow.com/a/35892602/8166854
         mViewEmulationDataActivity.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
             @Override
             public boolean onMenuItemClick(@NonNull MenuItem menuItem) {
-                Intent intent = new Intent(MainActivity.this, ViewEmulationDataActivity.class);
+                Intent intent = new Intent(MainActivityMainActivity5.this, ViewEmulationDataActivity.class);
                 startActivity(intent);
                 return false;
             }
