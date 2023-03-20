@@ -36,6 +36,10 @@
             android:name=".ViewEmulationDataActivity"
             android:exported="false">
         </activity>
+        <activity
+            android:name=".ExtendedReadActivity"
+            android:exported="false">
+        </activity>
     </application>
 
     <!-- for sending an email intent -->

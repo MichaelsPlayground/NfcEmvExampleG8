@@ -17,7 +17,8 @@ public class AidValues {
     private final AidTag tMasterCard = setTag(hexToBytes("A0000000041010"), "MasterCard");
     private final AidTag tMasterCard2 = setTag(hexToBytes("A0000000043060"), "Maestro (Debit)");
     private final AidTag tMasterCard3 = setTag(hexToBytes("A000000004306001"), "Maestro (Debit)");
-    private final AidTag tAmexco = setTag(hexToBytes("A000000025010801"), "American Express");
+    private final AidTag tAmexco = setTag(hexToBytes("A0000000250108"), "American Express");
+    private final AidTag tAmexco2 = setTag(hexToBytes("A000000025010801"), "American Express");
     private final AidTag tZka = setTag(hexToBytes("A00000005945430100"), "Zentraler Kreditausschuss (ZKA) Girocard Electronic Cash");
     private final AidTag tEaps = setTag(hexToBytes("A0000003591010028001"), "Euro Alliance of Payment Schemes s.c.r.l. – EAPS Girocard EAPS");
     private final AidTag tZkaAtm = setTag(hexToBytes("D27600002547410100"), "ZKA Girocard ATM");

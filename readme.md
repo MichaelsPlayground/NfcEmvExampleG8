@@ -184,7 +184,43 @@ Michael Roland's user avatar
 Michael Roland
 ```
 
+## Extended analyzing of the card
 
+article series by Ahmed Hemdan Farghaly:
+
+EMV Application Specification, a closer look...:
+https://www.linkedin.com/pulse/emv-application-specification-closer-look-ahmed-hemdan-farghaly/
+
+EMV Application Specification :: Application selection:
+https://www.linkedin.com/pulse/emv-application-specification-selection-ahmed-hemdan-farghaly
+
+EMV Application Specification :: 
+Initiate Application Process: https://www.linkedin.com/pulse/emv-application-specification-initiate-process-ahmed-hemdan-farghaly
+
+EMV Application Specification :: Read Application Data: 
+https://www.linkedin.com/pulse/emv-application-specification-read-data-ahmed-hemdan-farghaly
+
+EMV Application Specification :: Offline Data Authentication (ODA) Part 1:  
+https://www.linkedin.com/pulse/emv-application-specification-offline-data-oda-part-farghaly/
+
+EMV Application Specification :: Offline Data Authentication (ODA) Part 2:  
+https://www.linkedin.com/pulse/emv-application-specification-offline-data-oda-part-farghaly-1f
+
+EMV Application Specification :: Initiate Application Process: 
+https://www.linkedin.com/pulse/emv-application-specification-initiate-process-ahmed-hemdan-farghaly?trk=article-ssr-frontend-pulse_more-articles_related-content-card
+
+EMV Key Management (Karthick Chandrasekar):
+https://www.linkedin.com/pulse/emv-key-management-karthick-chandrasekar
+
+EMV Concept - Offline Data Authentication| How an Static Data Authentication Works | SDA |  
+Application of Cryptography in Cards & Payments (Sivasailam Sivagnanam): 
+https://www.linkedin.com/pulse/emv-concept-offline-data-authentication-how-static-sivasailam
+
+Everything EMV (PIN etc) (Binoy Baby):
+https://www.linkedin.com/pulse/cards-payments-101-everything-emv-binoy-baby
+
+John Zweng Android EMV key test: 
+https://github.com/johnzweng/android-emv-key-test
 
 Overview of complete readings and found PAN + Expiration Date
 ...

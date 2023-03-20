@@ -41,6 +41,11 @@
         app:showAsAction="never"/>
 
     <item
+        android:id="@+id/action_activity_extended_read"
+        android:title="Extended read activity"
+        app:showAsAction="never"/>
+
+    <item
         android:id="@+id/action_export_mail"
         android:title="Export Mail"
         app:showAsAction="never"/>
