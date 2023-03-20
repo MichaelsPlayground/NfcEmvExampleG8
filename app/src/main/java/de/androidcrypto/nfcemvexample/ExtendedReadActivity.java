@@ -49,6 +49,13 @@ import org.apache.commons.lang3.ArrayUtils;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.NoSuchAlgorithmException;
+import java.security.interfaces.RSAPrivateCrtKey;
+import java.security.interfaces.RSAPublicKey;
+import java.security.spec.RSAKeyGenParameterSpec;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -61,6 +68,9 @@ import de.androidcrypto.nfcemvexample.nfccreditcards.DolValues;
 import de.androidcrypto.nfcemvexample.nfccreditcards.PdolUtil;
 import de.androidcrypto.nfcemvexample.paymentcardgenerator.CardType;
 import de.androidcrypto.nfcemvexample.paymentcardgenerator.PaymentCardGeneratorImpl;
+import de.androidcrypto.nfcemvexample.sasc.CA;
+import de.androidcrypto.nfcemvexample.sasc.IssuerPublicKeyCertificate;
+import de.androidcrypto.nfcemvexample.sasc.Util;
 
 public class ExtendedReadActivity extends AppCompatActivity implements NfcAdapter.ReaderCallback {
 
@@ -249,6 +259,9 @@ public class ExtendedReadActivity extends AppCompatActivity implements NfcAdapte
                         writeToUiAppend(etLog, "application Id (AID): " + bytesToHex(tlv4fBytes));
                     }
 
+
+
+
                     // step 03: iterating through aidList by selecting AID
                     for (int aidNumber = 0; aidNumber < tag4fList.size(); aidNumber++) {
                         byte[] aidSelected = aidList.get(aidNumber);
@@ -276,12 +289,53 @@ public class ExtendedReadActivity extends AppCompatActivity implements NfcAdapte
                             return;
                         }
 
+                        System.out.println("*#*#*# some stuff");
+                        writeToUiAppend(etLog, "*** generate RSA keypair ***");
+                        System.out.println("*** generate RSA keypair ***");
+                        generateRsaKeyPair();
+                        try {
+                            System.out.println("IssuerPublicKeyCertificate start: ");
+                            IssuerPublicKeyCertificate.main(null);
+                            System.out.println("IssuerPublicKeyCertificate individual start: ");
+                            /*
+                            data from Visa comd m:
+                            PAN is 4871 7800 8277 0574 Exp 07/25 A000000003
+
+                            SFI: 2 Record: 1
+                            7081fb9081f85ab54faf4ad810b3cca4ed42c38e1e768fca3187ed1be4196c6779c4633cbe88751889c12b05e10ee87cb198518793ff61e87534f66850e96239b76648429eced4cc207608d0d2a932dd9e8c4bb0d139c4eca59e1ef5f4708f72d80dc5b66c45f4566c91b55384dfdeabb55faa622c6764cc9fb4c4900b6ab2cec5abad9057e2cf63a881bb4ec2a5d96634d7c11366eb908a168d33aa3c544822fc83e74c104b9275b2ef1cf41375b404a260bbf8fb3d4452af3d0630bb1ec2a01676ba588ae7820727622a6d9df5c93a3ce807d54b79ae007c3d401f8787dc3e235e8b9ae6b1b9279328cb1ca94105434010f15eb07f487f4d5c94f4a5a7
+                            90 Issuer Public Key Certificate
+                            5AB54FAF4AD810B3CCA4ED42C38E1E768FCA3187ED1BE4196C6779C4633CBE88751889C12B05E10EE87CB198518793FF61E87534F66850E96239B76648429ECED4CC207608D0D2A932DD9E8C4BB0D139C4ECA59E1EF5F4708F72D80DC5B66C45F4566C91B55384DFDEABB55FAA622C6764CC9FB4C4900B6AB2CEC5ABAD9057E2CF63A881BB4EC2A5D96634D7C11366EB908A168D33AA3C544822FC83E74C104B9275B2EF1CF41375B404A260BBF8FB3D4452AF3D0630BB1EC2A01676BA588AE7820727622A6D9DF5C93A3CE807D54B79AE007C3D401F8787DC3E235E8B9AE6B1B9279328CB1CA94105434010F15EB07F487F4D5C94F4A5A7
+
+                            SFI: 2 Record: 2
+                            70078f01099f320103
+                            8F Certification Authority Public Key Index
+                            09
+                            9F32 Issuer Public Key Exponent
+                            03
+
+                             */
+                            byte[] rid = Util.fromHexString("a0 00 00 00 03"); // visa
+                            //byte[] mod = Util.fromHexString("BE9E1FA5E9A803852999C4AB432DB28600DCD9DAB76DFAAA47355A0FE37B1508AC6BF38860D3C6C2E5B12A3CAAF2A7005A7241EBAA7771112C74CF9A0634652FBCA0E5980C54A64761EA101A114E0F0B5572ADD57D010B7C9C887E104CA4EE1272DA66D997B9A90B5A6D624AB6C57E73C8F919000EB5F684898EF8C3DBEFB330C62660BED88EA78E909AFF05F6DA627B");
+                            byte[] mod = Util.fromHexString("5AB54FAF4AD810B3CCA4ED42C38E1E768FCA3187ED1BE4196C6779C4633CBE88751889C12B05E10EE87CB198518793FF61E87534F66850E96239B76648429ECED4CC207608D0D2A932DD9E8C4BB0D139C4ECA59E1EF5F4708F72D80DC5B66C45F4566C91B55384DFDEABB55FAA622C6764CC9FB4C4900B6AB2CEC5ABAD9057E2CF63A881BB4EC2A5D96634D7C11366EB908A168D33AA3C544822FC83E74C104B9275B2EF1CF41375B404A260BBF8FB3D4452AF3D0630BB1EC2A01676BA588AE7820727622A6D9DF5C93A3CE807D54B79AE007C3D401F8787DC3E235E8B9AE6B1B9279328CB1CA94105434010F15EB07F487F4D5C94F4A5A7");
+                            // 5AB54FAF4AD810B3CCA4ED42C38E1E768FCA3187ED1BE4196C6779C4633CBE88751889C12B05E10EE87CB198518793FF61E87534F66850E96239B76648429ECED4CC207608D0D2A932DD9E8C4BB0D139C4ECA59E1EF5F4708F72D80DC5B66C45F4566C91B55384DFDEABB55FAA622C6764CC9FB4C4900B6AB2CEC5ABAD9057E2CF63A881BB4EC2A5D96634D7C11366EB908A168D33AA3C544822FC83E74C104B9275B2EF1CF41375B404A260BBF8FB3D4452AF3D0630BB1EC2A01676BA588AE7820727622A6D9DF5C93A3CE807D54B79AE007C3D401F8787DC3E235E8B9AE6B1B9279328CB1CA94105434010F15EB07F487F4D5C94F4A5A7
+                            byte[] chksum = CA.calculateCAPublicKeyCheckSum(rid, Util.intToByteArray(9), mod, new byte[]{0x03});
+                            System.out.println("chkSum: " + Util.prettyPrintHexNoWrap(chksum));
+
+                            System.out.println("IssuerPublicKeyCertificate end");
+                        } catch (Exception e) {
+                            throw new RuntimeException(e);
+                        }
+
+
                         byte[] selectAidResponseOk = checkResponse(selectAidResponse);
                         if (selectAidResponseOk != null) {
                             writeToUiAppend(etLog, "03 select AID response length " + selectAidResponseOk.length + " data: " + bytesToHex(selectAidResponseOk));
                             // pretty print of response
                             if (isPrettyPrintResponse)
                                 prettyPrintData(etLog, selectAidResponseOk);
+
+
+
 
 /*
 data from MasterCard AAB:
@@ -574,6 +628,57 @@ List<Afl> listAfl = extractAfl(data);
             v.vibrate(200);
         }
     }
+
+    /**
+     * section for some rsa stuff
+     */
+
+    private void generateRsaKeyPair() {
+        // https://stackoverflow.com/a/31848282/8166854
+        // this will generate a RSA keypair with 1408 bits key length and exponent 65537
+        // other key length could be 1152
+        System.out.println("### generateRsaKeyPair ###");
+        KeyPairGenerator keyGen = null;
+        try {
+            keyGen = KeyPairGenerator.getInstance("RSA");
+            keyGen.initialize(1408);
+            KeyPair keyPair = keyGen.generateKeyPair();
+            RSAPublicKey publicKey = (RSAPublicKey) keyPair.getPublic();
+            RSAPrivateCrtKey privateKey = (RSAPrivateCrtKey) keyPair.getPrivate();
+            System.out.println("Public Modulus: " + BinaryUtils.bytesToHex(publicKey.getModulus().toByteArray()));
+            System.out.println("Public Exponent: " + BinaryUtils.bytesToHex(publicKey.getPublicExponent().toByteArray()));
+            System.out.println("Private Modulus: " + BinaryUtils.bytesToHex(privateKey.getModulus().toByteArray()));
+            System.out.println("Private Private Exponent: " + BinaryUtils.bytesToHex(privateKey.getPrivateExponent().toByteArray()));
+            System.out.println("Private Prime Exponent DP : " + BinaryUtils.bytesToHex(privateKey.getPrimeExponentP().toByteArray())); // d mod (p-1)
+            System.out.println("Private Prime Exponent DQ: " + BinaryUtils.bytesToHex(privateKey.getPrimeExponentQ().toByteArray())); // d mod (q-1)
+            System.out.println("Private Prime P: " + BinaryUtils.bytesToHex(privateKey.getPrimeP().toByteArray())); // P
+            System.out.println("Private Prime Q: " + BinaryUtils.bytesToHex(privateKey.getPrimeQ().toByteArray())); // Q
+            System.out.println("Private Coefficient PQ : " + BinaryUtils.bytesToHex(privateKey.getCrtCoefficient().toByteArray()));  // PQ
+
+            // key generation with exponent 3
+            RSAKeyGenParameterSpec keyGenParameterSpec =
+                    new RSAKeyGenParameterSpec(1408, RSAKeyGenParameterSpec.F0);
+            KeyPairGenerator keyGen2 = KeyPairGenerator.getInstance("RSA");
+            keyGen2.initialize(keyGenParameterSpec);
+            KeyPair keyPair2 = keyGen2.generateKeyPair();
+            RSAPublicKey publicKey2 = (RSAPublicKey) keyPair2.getPublic();
+            RSAPrivateCrtKey privateKey2 = (RSAPrivateCrtKey) keyPair2.getPrivate();
+            System.out.println("Public Modulus: " + BinaryUtils.bytesToHex(publicKey2.getModulus().toByteArray()));
+            System.out.println("Public Exponent: " + BinaryUtils.bytesToHex(publicKey2.getPublicExponent().toByteArray()));
+            System.out.println("Private Modulus: " + BinaryUtils.bytesToHex(privateKey2.getModulus().toByteArray()));
+            System.out.println("Private Private Exponent: " + BinaryUtils.bytesToHex(privateKey2.getPrivateExponent().toByteArray()));
+            System.out.println("Private Prime Exponent DP : " + BinaryUtils.bytesToHex(privateKey2.getPrimeExponentP().toByteArray())); // d mod (p-1)
+            System.out.println("Private Prime Exponent DQ: " + BinaryUtils.bytesToHex(privateKey2.getPrimeExponentQ().toByteArray())); // d mod (q-1)
+            System.out.println("Private Prime P: " + BinaryUtils.bytesToHex(privateKey2.getPrimeP().toByteArray())); // P
+            System.out.println("Private Prime Q: " + BinaryUtils.bytesToHex(privateKey2.getPrimeQ().toByteArray())); // Q
+            System.out.println("Private Coefficient PQ : " + BinaryUtils.bytesToHex(privateKey2.getCrtCoefficient().toByteArray()));  // PQ
+        } catch (NoSuchAlgorithmException | InvalidAlgorithmParameterException e) {
+            throw new RuntimeException(e);
+        }
+
+
+    }
+
 
     /**
      * checks if a pan is included in response
@@ -873,6 +978,7 @@ List<Afl> listAfl = extractAfl(data);
     /**
      * remove all trailing 0xF's trailing in the 10 length fiel tag 0x5a = PAN
      * PAN is padded with 'F'
+     *
      * @param input
      * @return
      */

@@ -27,7 +27,7 @@ import java.util.Arrays;
  *
  * @author sasc
  */
-public class ICCPublicKeyCertificate {
+public class ICCPublicKeyCertificateOrg {
 
     private EMVApplication application;
     private IssuerPublicKeyCertificate issuerPublicKeyCert;
@@ -43,7 +43,7 @@ public class ICCPublicKeyCertificate {
     private byte[] hash = new byte[20];
     private boolean validationPerformed = false;
 
-    public ICCPublicKeyCertificate(EMVApplication application, IssuerPublicKeyCertificate issuerPublicKeyCert) {
+    public ICCPublicKeyCertificateOrg(EMVApplication application, IssuerPublicKeyCertificate issuerPublicKeyCert) {
         this.application = application;
         this.issuerPublicKeyCert = issuerPublicKeyCert;
         this.iccPublicKey = new ICCPublicKey();
@@ -273,7 +273,7 @@ public class ICCPublicKeyCertificate {
         issuerPKCert.getIssuerPublicKey().setExponent(new byte[]{0x03});
         issuerPKCert.getIssuerPublicKey().setRemainder(Util.fromHexString(" REMAINDER "));
 
-        ICCPublicKeyCertificate iccPKCert = new ICCPublicKeyCertificate(app, issuerPKCert);
+        ICCPublicKeyCertificateOrg iccPKCert = new ICCPublicKeyCertificateOrg(app, issuerPKCert);
         iccPKCert.setSignedBytes(Util.fromHexString(" SIGNED BYTES HERE "));
 
         iccPKCert.getICCPublicKey().setExponent(new byte[]{0x03});
