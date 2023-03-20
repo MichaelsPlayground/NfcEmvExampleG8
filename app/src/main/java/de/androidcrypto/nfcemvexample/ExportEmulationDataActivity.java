@@ -46,6 +46,8 @@ import com.payneteasy.tlv.BerTlv;
 import com.payneteasy.tlv.BerTlvParser;
 import com.payneteasy.tlv.BerTlvs;
 
+import org.apache.commons.lang3.ArrayUtils;
+
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
@@ -664,7 +666,7 @@ public class ExportEmulationDataActivity extends AppCompatActivity implements Nf
         if (tag5a != null) {
             Log.d(TAG, "found tag 0x5a Application Primary Account Number (PAN)");
             byte[] tag5aBytes = tag5a.getBytesValue();
-            pan = bytesToHex(tag5aBytes);
+            pan = removeTrailingF(bytesToHex(tag5aBytes));
         }
         // search for expiration date
         BerTlv tag5f24 = tlvs.find(new BerTag(0x5f, 0x24));
@@ -677,7 +679,30 @@ public class ExportEmulationDataActivity extends AppCompatActivity implements Nf
     }
 
     /**
-     * checks that a tag 0x94 Application File Locator (AFL) is available in gpoResponse
+     * remove all trailing 0xF's trailing in the 10 length fiel tag 0x5a = PAN
+     * PAN is padded with 'F'
+     * @param input
+     * @return
+     */
+    private String removeTrailingF(String input) {
+        int index;
+        for (index = input.length() - 1; index >= 0; index--) {
+            if (input.charAt(index) != 'f') {
+                break;
+            }
+        }
+        return input.substring(0, index + 1);
+    }
+
+    /**
+     * gpoResponse can be a tag 77 Response Message Template Format 2
+     * (found with my Visa-, Master- and German Giro-Cards)
+     * or a tag 80 Response Message Template Format 1
+     * (found with my American Express card)
+     *
+     * First we check if a tag 0x94 Application File Locator (AFL) is available in gpoResponse
+     * if there is no tag 0x94 we check for a tag 0x80 Response Message Template Format 1
+     * and get the AFL data by a hard-coded sequence
      *
      * @param gpoResponse
      * @return the list with afl entries (each of 4 byte)
@@ -687,13 +712,28 @@ public class ExportEmulationDataActivity extends AppCompatActivity implements Nf
         List<byte[]> aflList = new ArrayList<>();
         BerTlvParser parser = new BerTlvParser();
         BerTlvs tlvs = parser.parse(gpoResponse);
+        byte[] aflBytes = null;
         // search for tag 0x94 Application File Locator (AFL)
         BerTlv tag94 = tlvs.find(new BerTag(0x94));
         if (tag94 != null) {
+            // it is a template 2
             Log.d(TAG, "found tag 0x94 Application File Locator (AFL)");
-            byte[] tag94Bytes = tag94.getBytesValue();
+            aflBytes = tag94.getBytesValue();
+        }
+        BerTlv tag80 = tlvs.find(new BerTag(0x80));
+        if (tag80 != null) {
+            // it is a template 1
+            Log.d(TAG, "found the AFL in tag 0x80 Response Message Template Format 1");
+            byte[] dataTemp = tag80.getBytesValue();
+            // first 2 bytes are AIP, followed by xx AFL bytes
+            dataTemp = ArrayUtils.subarray(dataTemp, 2, dataTemp.length);
+            if (dataTemp != null) {
+                aflBytes = dataTemp.clone();
+            }
+        }
+        if (aflBytes != null) {
             // split array by 4 bytes
-            List<byte[]> tag94BytesList = divideArray(tag94Bytes, 4);
+            List<byte[]> tag94BytesList = divideArray(aflBytes, 4);
             aflList.addAll(tag94BytesList);
             /*
             for (int i = 0; i < tag94BytesList.size(); i++) {
@@ -701,7 +741,7 @@ public class ExportEmulationDataActivity extends AppCompatActivity implements Nf
             }
              */
         } else {
-            Log.d(TAG, "found NO tag 0x94 Application File Locator (AFL)");
+            Log.d(TAG, "found NO tag 0x94 Application File Locator (AFL) or tag 0x80 Response Message Template Format 1");
         }
         return aflList;
     }
