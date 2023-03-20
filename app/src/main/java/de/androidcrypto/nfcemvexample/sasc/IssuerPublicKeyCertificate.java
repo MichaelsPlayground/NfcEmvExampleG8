@@ -26,6 +26,7 @@ import java.util.Arrays;
 /**
  *
  * @author sasc
+ * source: https://github.com/maciejsszmigiero/javaemvreader/blob/master/src/main/java/sasc/emv/IssuerPublicKeyCertificate.java
  */
 public class IssuerPublicKeyCertificate {
 

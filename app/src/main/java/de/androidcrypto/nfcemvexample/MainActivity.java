@@ -62,6 +62,8 @@ import de.androidcrypto.nfcemvexample.nfccreditcards.DolValues;
 import de.androidcrypto.nfcemvexample.nfccreditcards.PdolUtil;
 import de.androidcrypto.nfcemvexample.paymentcardgenerator.CardType;
 import de.androidcrypto.nfcemvexample.paymentcardgenerator.PaymentCardGeneratorImpl;
+import de.androidcrypto.nfcemvexample.sasc.CA;
+import de.androidcrypto.nfcemvexample.sasc.IssuerPublicKeyCertificate;
 
 public class MainActivity extends AppCompatActivity implements NfcAdapter.ReaderCallback {
 
@@ -462,11 +464,13 @@ List<Afl> listAfl = extractAfl(data);
                                         }
                                     } // get application crypto
                                     if (getApplicationCryptoResponseOk != null) {
-                                        // todo check for template
-                                        String applicationCryptoResponseString = dumpApplicationCryptoResponseMessageTemplate1(getApplicationCryptoResponseOk);
-                                        writeToUiAppend(etLog, "getApplicationCrypto:\n" + applicationCryptoResponseString);
+                                        if (isPrettyPrintResponse) {
+                                            String applicationCryptoResponseString = dumpApplicationCryptoResponseMessageTemplate1(getApplicationCryptoResponseOk);
+                                            writeToUiAppend(etLog, "Response Message Template Format 1 applicationCrypto:\n" + applicationCryptoResponseString);
+                                        }
                                     }
                                     /*
+                                    https://stackoverflow.com/a/35892602/8166854
                                     if response is tag 0x80 Response Message Template Format 1
                                     - x9F27:  # EMV, Cryptogram Information Data (CID)
                                         val: "80" # Cryptogram Information Data (CID).
@@ -484,6 +488,19 @@ List<Afl> listAfl = extractAfl(data);
                         }
                     }
                 }
+                // todo ### decrypts the IssuerPublicKeyCertificate
+                try {
+                    IssuerPublicKeyCertificate.main(null);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+                try {
+                    CA.main(null);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+
+
                 // print the complete Log
                 writeToUiFinal(etLog);
                 setLoadingLayoutVisibility(false);
@@ -526,6 +543,7 @@ List<Afl> listAfl = extractAfl(data);
             return "";
         }
         /*
+                                    https://stackoverflow.com/a/35892602/8166854
                                     if response is tag 0x80 Response Message Template Format 1
                                     - x9F27:  # EMV, Cryptogram Information Data (CID)
                                         val: "80" # Cryptogram Information Data (CID).

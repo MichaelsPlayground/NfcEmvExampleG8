@@ -264,9 +264,6 @@ public class ICCPublicKeyCertificate {
         StaticDataAuthenticationTagList staticDataAuthTagList = new StaticDataAuthenticationTagList(new byte[]{(byte)0x82});
         app.setStaticDataAuthenticationTagList(staticDataAuthTagList);
 
-
-
-
         IssuerPublicKeyCertificate issuerPKCert = new IssuerPublicKeyCertificate(CA.getCA(Util.fromHexString("A0 00 00 00 03")));
 
         issuerPKCert.setSignedBytes(Util.fromHexString(" SIGNED BYTES HERE "));

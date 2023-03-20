@@ -47,4 +47,10 @@ dependencies {
     implementation 'com.github.devnied.emvnfccard:library:3.0.1'
     // needed for Json handling
     implementation 'com.google.code.gson:gson:2.9.1'
+
+    // for sasc's decrypt IssuerPublicKeyCertificate
+    // home: http://nanoxml.cyberelf.be/
+    // https://mvnrepository.com/artifact/be.cyberelf.nanoxml/lite
+    implementation group: 'be.cyberelf.nanoxml', name: 'lite', version: '2.2.3'
+
 }
