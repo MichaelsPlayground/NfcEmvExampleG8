@@ -36,6 +36,22 @@ public class BinaryUtils {
     }
 
     /**
+     * converts a byte array to a hex encoded string
+     * @param bytes
+     * @return hex encoded string
+     */
+    public static String bytesToHexNpe(byte[] bytes) {
+        if (bytes != null) {
+            StringBuffer result = new StringBuffer();
+            for (byte b : bytes)
+                result.append(Integer.toString((b & 0xff) + 0x100, 16).substring(1));
+            return result.toString();
+        } else {
+            return "";
+        }
+    }
+
+    /**
      * converts a byte array to a decimal value string
      * @param bytes
      * @return a string with decimal values

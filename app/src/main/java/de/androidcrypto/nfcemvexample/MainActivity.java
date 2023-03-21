@@ -1630,6 +1630,16 @@ see: https://stackoverflow.com/a/35892602/8166854
             }
         });
 
+        MenuItem mCryptoStuffActivity = menu.findItem(R.id.action_activity_crypto);
+        mCryptoStuffActivity.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
+            @Override
+            public boolean onMenuItemClick(@NonNull MenuItem menuItem) {
+                Intent intent = new Intent(MainActivity.this, CryptoStuffActivity.class);
+                startActivity(intent);
+                return false;
+            }
+        });
+
         MenuItem mExportMail = menu.findItem(R.id.action_export_mail);
         mExportMail.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
             @Override

@@ -46,6 +46,11 @@
         app:showAsAction="never"/>
 
     <item
+        android:id="@+id/action_activity_crypto"
+        android:title="Crypto stuff activity"
+        app:showAsAction="never"/>
+
+    <item
         android:id="@+id/action_export_mail"
         android:title="Export Mail"
         app:showAsAction="never"/>
