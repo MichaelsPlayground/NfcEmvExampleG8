@@ -12,7 +12,16 @@ public class DolValues {
 
     private List<DolTag> dolList = new ArrayList<>();
     // used in PDOL
-    private final DolTag t9f66 = setTag(new byte[]{(byte) 0x9f, (byte) 0x66}, "Terminal Transaction Qualifiers", hexBlankToBytes("A0 00 00 00")); // runs on all my cards
+    //private final DolTag t9f66 = setTag(new byte[]{(byte) 0x9f, (byte) 0x66}, "Terminal Transaction Qualifiers", hexBlankToBytes("A0 00 00 00")); // runs on all my cards
+    // test for visa comd, seems to be the better option ()
+    private final DolTag t9f66 = setTag(new byte[]{(byte) 0x9f, (byte) 0x66}, "Terminal Transaction Qualifiers", hexBlankToBytes("B7 60 40 00")); // runs on all my cards
+/*
+https://stackoverflow.com/a/68996365/8166854
+Your Terminal Transaction Qualifier byte 1 bit 1 is set to zero, meaning "Offline Data Authentication for Online Authorizations
+not supported". Try setting it to 1: B6 60 40 00 --> B7 60 40 00.
+I was having the same issue and this was enough to receive an AFL.
+ */
+
     //private final DolTag t9f66 = setTag(new byte[]{(byte) 0x9f, (byte) 0x66}, "Terminal Transaction Qualifiers", hexBlankToBytes("F0 20 40 00")); // this fails on DKB debit card
     private final DolTag t9f02 = setTag(new byte[]{(byte) 0x9f, (byte) 0x02}, "Transaction Amount", hexBlankToBytes("00 00 00 00 10 00")); // 00 00 00 00 10 00
     private final DolTag t9f03 = setTag(new byte[]{(byte) 0x9f, (byte) 0x03}, "Amount, Other (Numeric)", hexBlankToBytes("00 00 00 00 00 00"));

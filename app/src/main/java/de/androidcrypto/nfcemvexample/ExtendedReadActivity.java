@@ -667,6 +667,14 @@ List<Afl> listAfl = extractAfl(data);
                                         writeToUiAppend(etLog, "--- tag nr " + i + " ---");
                                         writeToUiAppend(etLog, tsList.get(i).dump());
                                     }
+
+                                    // here we are starting the crypto stuff and try to decrypt some data from the card
+                                    // we do need the content of some tags:
+
+
+
+
+
                                 }
                             } else {
                                 // we do not need this path
