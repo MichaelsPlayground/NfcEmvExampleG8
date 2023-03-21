@@ -116,9 +116,14 @@ SHA-1
                 CA visaCa = CA.getCA(visaRid);
                 IssuerPublicKeyCertificate visaCert = new IssuerPublicKeyCertificate(visaCa);
                 visaCert.setCAPublicKeyIndex(9);
-                visaCert.setSignedBytes();
-                IssuerPublicKey issuerPublicKey = new IssuerPublicKey();
-                issuerPublicKey.setModulus();
+
+                byte[] recoverdIssuerPublicKey = Util.performRSA(tag90_IssuerPublicKeyCertificate, new byte[]{(byte) 0x03}, visaCa.getPublicKey(9).getModulus());
+                writeToUiAppend(tv1, "recoveredIssuerPublicKey: " + bytesToHexNpe(recoverdIssuerPublicKey));
+
+
+                //visaCert.setSignedBytes();
+                //IssuerPublicKey issuerPublicKey = new IssuerPublicKey();
+                //issuerPublicKey.setModulus();
 
 
                 writeToUiAppend(tv1, "==============================");
