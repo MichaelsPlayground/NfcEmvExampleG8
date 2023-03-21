@@ -21,6 +21,9 @@ import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
+import de.androidcrypto.nfcemvexample.johnzweng.EmvKeyReader;
+import de.androidcrypto.nfcemvexample.johnzweng.EmvParsingException;
+import de.androidcrypto.nfcemvexample.johnzweng.IssuerIccPublicKey;
 import de.androidcrypto.nfcemvexample.sasc.CA;
 import de.androidcrypto.nfcemvexample.sasc.ICCPublicKeyCertificate;
 import de.androidcrypto.nfcemvexample.sasc.IssuerPublicKey;
@@ -124,7 +127,14 @@ SHA-1
 6a02487178ff12280431ef0101b001bf19e3eb0d7cd72b45a02661ea4ab87e7a60cb7ab45fd170f5e9a650aee5154124b64e85bd3444c76fddb28f9e30c1304761713773fa2d5ea05be757cfacb2df7b80e8acbd585ec5e1606f3fc91241245f9d929e7e06790d996245eccbab1a37933268e31c622f9d1a486f6ba5340ceec7b794dc0f3303b5de4662efdcfc92f6953eab65a86bb4c8d58d3308c88b5329e2a10d6bec4465c485e5b0a223d87538b10ed755891767f5f4f86068f65de4f1bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb786706bd50c5618f7f69d42326d6966877ed609fbc
  */
 
-
+                // see package johnzweng
+                EmvKeyReader emvKeyReader = new EmvKeyReader();
+                try {
+                    EmvKeyReader.RecoveredIssuerPublicKey issuerPublicKeyParsed = emvKeyReader.parseIssuerPublicKey(caPublicKeyVisa09Exponent, caPublicKeyVisa09Modulus, tag90_IssuerPublicKeyCertificate, null, tag9f32_IssuerPublicKeyExponent);
+                    emvKeyReader.
+                } catch (EmvParsingException e) {
+                    throw new RuntimeException(e);
+                }
 
 
                 /*
@@ -274,9 +284,8 @@ SHA-1
     }
 
     public static byte[] performRSA(byte[] dataBytes, byte[] expBytes, byte[] modBytes) {
-
+        // source: https://github.com/sasc999/javaemvreader/blob/master/src/main/java/sasc/util/Util.java
         int inBytesLength = dataBytes.length;
-
         if (expBytes[0] >= (byte) 0x80) {
             //Prepend 0x00 to modulus
             byte[] tmp = new byte[expBytes.length + 1];
@@ -284,7 +293,6 @@ SHA-1
             System.arraycopy(expBytes, 0, tmp, 1, expBytes.length);
             expBytes = tmp;
         }
-
         if (modBytes[0] >= (byte) 0x80) {
             //Prepend 0x00 to modulus
             byte[] tmp = new byte[modBytes.length + 1];
@@ -292,7 +300,6 @@ SHA-1
             System.arraycopy(modBytes, 0, tmp, 1, modBytes.length);
             modBytes = tmp;
         }
-
         if (dataBytes[0] >= (byte) 0x80) {
             //Prepend 0x00 to signed data to avoid that the most significant bit is interpreted as the "signed" bit
             byte[] tmp = new byte[dataBytes.length + 1];
@@ -300,20 +307,16 @@ SHA-1
             System.arraycopy(dataBytes, 0, tmp, 1, dataBytes.length);
             dataBytes = tmp;
         }
-
         BigInteger exp = new BigInteger(expBytes);
         BigInteger mod = new BigInteger(modBytes);
         BigInteger data = new BigInteger(dataBytes);
-
         byte[] result = data.modPow(exp, mod).toByteArray();
-
         if (result.length == (inBytesLength+1) && result[0] == (byte)0x00) {
             //Remove 0x00 from beginning of array
             byte[] tmp = new byte[inBytesLength];
             System.arraycopy(result, 1, tmp, 0, inBytesLength);
             result = tmp;
         }
-
         return result;
     }
 

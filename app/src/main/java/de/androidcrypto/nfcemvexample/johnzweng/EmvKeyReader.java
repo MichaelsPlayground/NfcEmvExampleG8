@@ -198,7 +198,7 @@ public class EmvKeyReader {
      * Hash Result                           20    Hash of the Issuer Public Key and its related information
      * Recovered Data Trailer                1     Hex value 'BC' b
      */
-    private class RecoveredIssuerPublicKey {
+    public class RecoveredIssuerPublicKey {
         int recoveredDataHeader;
         int certificateFormat;
         byte[] issuerIdentifier;
@@ -224,6 +224,12 @@ public class EmvKeyReader {
             sb.append("Issuer Public Key Algorithm Indicator: ").append(issuerPubKeyAlgoIndicator).append("\n");
             sb.append("Issuer Public Key Length: ").append(issuerPublicKeyLength).append("\n");
             sb.append("Issuer Public Key Exponent Length: ").append(issuerPublicKeyExponentLength).append("\n");
+            sb.append("Leftmost Digits of the Issuer Public Key: ").append(bytesToHexNpe(leftMostPubKeyDigits)).append("\n");
+            sb.append("Optional padding: ").append(bytesToHexNpe(optionalPadding)).append("\n");
+            sb.append("Hash Result : ").append(bytesToHexNpe(hashResult)).append("\n");
+            sb.append("dataTrailer: ").append(dataTrailer).append("\n");
+            return sb.toString();
+
         }
         /*
          * Field Name                         Length   Description
