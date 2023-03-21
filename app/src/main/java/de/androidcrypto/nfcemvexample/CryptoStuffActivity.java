@@ -1,9 +1,11 @@
 package de.androidcrypto.nfcemvexample;
 
+import static de.androidcrypto.nfcemvexample.BinaryUtils.bytesToHexNpe;
 import static de.androidcrypto.nfcemvexample.BinaryUtils.hexToBytes;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -14,6 +16,14 @@ import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+
+import de.androidcrypto.nfcemvexample.sasc.CA;
+import de.androidcrypto.nfcemvexample.sasc.ICCPublicKeyCertificate;
+import de.androidcrypto.nfcemvexample.sasc.IssuerPublicKey;
+import de.androidcrypto.nfcemvexample.sasc.IssuerPublicKeyCertificate;
+import de.androidcrypto.nfcemvexample.sasc.Record;
+import de.androidcrypto.nfcemvexample.sasc.StaticDataAuthenticationTagList;
+import de.androidcrypto.nfcemvexample.sasc.Util;
 
 public class CryptoStuffActivity extends AppCompatActivity {
 
@@ -56,6 +66,23 @@ public class CryptoStuffActivity extends AppCompatActivity {
             public void onClick(View view) {
                 Log.i(TAG, "btn2Decrypt");
 
+                // list of CA Public Keys
+                // https://www.eftlab.co.uk/knowledge-base/list-of-ca-public-keys
+/*
+Visa key Exponent 3, public key index: 09, RID: A000000003, Key length: 1984, valid 31.12.2028
+Modulus:
+9D912248DE0A4E39C1A7DDE3F6D2588992C1A4095AFBD1824D1BA74847F2BC4926D2EFD904B4B54954CD189A54C5D1179654F8F9B0D2AB5F0357EB642FEDA95D3912C6576945FAB897E7062CAA44A4AA06B8FE6E3DBA18AF6AE3738E30429EE9BE03427C9D64F695FA8CAB4BFE376853EA34AD1D76BFCAD15908C077FFE6DC5521ECEF5D278A96E26F57359FFAEDA19434B937F1AD999DC5C41EB11935B44C18100E857F431A4A5A6BB65114F174C2D7B59FDF237D6BB1DD0916E644D709DED56481477C75D95CDD68254615F7740EC07F330AC5D67BCD75BF23D28A140826C026DBDE971A37CD3EF9B8DF644AC385010501EFC6509D7A41
+SHA-1
+1FF80A40173F52D7D27E0F26A146A1C8CCB29046
+
+ */
+
+                byte[] caPublicKeyVisa09Modulus = hexToBytes("9D912248DE0A4E39C1A7DDE3F6D2588992C1A4095AFBD1824D1BA74847F2BC4926D2EFD904B4B54954CD189A54C5D1179654F8F9B0D2AB5F0357EB642FEDA95D3912C6576945FAB897E7062CAA44A4AA06B8FE6E3DBA18AF6AE3738E30429EE9BE03427C9D64F695FA8CAB4BFE376853EA34AD1D76BFCAD15908C077FFE6DC5521ECEF5D278A96E26F57359FFAEDA19434B937F1AD999DC5C41EB11935B44C18100E857F431A4A5A6BB65114F174C2D7B59FDF237D6BB1DD0916E644D709DED56481477C75D95CDD68254615F7740EC07F330AC5D67BCD75BF23D28A140826C026DBDE971A37CD3EF9B8DF644AC385010501EFC6509D7A41");
+                byte[] caPublicKeyVisa09Sha1 = hexToBytes("1FF80A40173F52D7D27E0F26A146A1C8CCB29046");
+                byte[] visaRid = hexToBytes("A000000003");
+                byte[] visaChksum = CA.calculateCAPublicKeyCheckSum(visaRid, Util.intToByteArray(9), caPublicKeyVisa09Modulus, new byte[]{0x03});
+                writeToUiAppend(tv1, "visaChksum: " + bytesToHexNpe(visaChksum));
+
                 // here we are starting the crypto stuff and try to decrypt some data from the card
                 // we do need the content of some tags:
                 // these tags are available on Visa comd M
@@ -81,6 +108,50 @@ public class CryptoStuffActivity extends AppCompatActivity {
                 tag9f10_IssuerApplicationData = hexToBytes("06011203a00000");
                 tag9f26_ApplicationCryptogram = hexToBytes("bffdfe76b1b8fc4e");
 
+                // Retrieval of Issuer Public Key
+                writeToUiAppend(tv1, "==============================");
+                writeToUiAppend(tv1, "Retrieval of Issuer Public Key");
+
+                CA.initFromFile("/certificationauthorities_test.xml");
+                CA visaCa = CA.getCA(visaRid);
+                IssuerPublicKeyCertificate visaCert = new IssuerPublicKeyCertificate(visaCa);
+                visaCert.setCAPublicKeyIndex(9);
+                visaCert.setSignedBytes();
+                IssuerPublicKey issuerPublicKey = new IssuerPublicKey();
+                issuerPublicKey.setModulus();
+
+
+                writeToUiAppend(tv1, "==============================");
+                byte[] rid = Util.fromHexString("a0 00 00 00 03"); // visa
+                byte[] mod = Util.fromHexString("BE9E1FA5E9A803852999C4AB432DB28600DCD9DAB76DFAAA47355A0FE37B1508AC6BF38860D3C6C2E5B12A3CAAF2A7005A7241EBAA7771112C74CF9A0634652FBCA0E5980C54A64761EA101A114E0F0B5572ADD57D010B7C9C887E104CA4EE1272DA66D997B9A90B5A6D624AB6C57E73C8F919000EB5F684898EF8C3DBEFB330C62660BED88EA78E909AFF05F6DA627B");
+                byte[] chksum = CA.calculateCAPublicKeyCheckSum(rid, Util.intToByteArray(149), mod, new byte[]{0x03});
+                System.out.println(Util.prettyPrintHexNoWrap(chksum));
+                writeToUiAppend(tv1, "chksum: " + Util.prettyPrintHexNoWrap(chksum));
+                CA.initFromFile("/certificationauthorities_test.xml");
+                CA ca = CA.getCA(rid);
+                IssuerPublicKeyCertificate cert = new IssuerPublicKeyCertificate(ca);
+                cert.setCAPublicKeyIndex(149);
+                String signedBytesStr = "8b 39 01 f6 25 30 48 a8 b2 cb 08 97 4a 42 45 d9" +
+                        "0e 1f 0c 4a 2a 69 bc a4 69 61 5a 71 db 21 ee 7b" +
+                        "3a a9 42 00 cf ae dc d6 f0 a7 d9 ad 0b f7 92 13" +
+                        "b6 a4 18 d7 a4 9d 23 4e 5c 97 15 c9 14 0d 87 94" +
+                        "0f 2e 04 d6 97 1f 4a 20 4c 92 7a 45 5d 4f 8f c0" +
+                        "d6 40 2a 79 a1 ce 05 aa 3a 52 68 67 32 98 53 f5" +
+                        "ac 2f eb 3c 6f 59 ff 6c 45 3a 72 45 e3 9d 73 45" +
+                        "14 61 72 57 95 ed 73 09 70 99 96 3b 82 eb f7 20" +
+                        "3c 1f 78 a5 29 14 0c 18 2d bb e6 b4 2a e0 0c 02";
+                byte[] signedBytes = Util.fromHexString(signedBytesStr);
+                cert.setSignedBytes(signedBytes);
+
+                String remainderStr = "33 f5 e4 44 7d 4a 32 e5 93 6e 5a 13 39 32 9b b4 e8 dd 8b f0 04 4c e4 42 8e 24 d0 86 6f ae fd 23 48 80 9d 71";
+                cert.getIssuerPublicKey().setExponent(new byte[]{0x03});
+                cert.getIssuerPublicKey().setRemainder(Util.fromHexString(remainderStr));
+
+                System.out.println(cert.toString());
+                writeToUiAppend(tv1, "cert:\n" + cert.toString());
+
+                // now with own data
+                // rid is already visa
 
 
 
@@ -91,6 +162,58 @@ public class CryptoStuffActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 Log.i(TAG, "btn3");
+                //EMVApplication app = new EMVApplication();
+
+                //EMVUtil.parseProcessingOpts(Util.fromHexString("80 0e 3c 00 08 02 02 00 10 01 01 00 18 01 03 01"), app);
+
+                //System.out.println(app.getApplicationFileLocator());
+
+                byte[] appRecord = Util.fromHexString("70 56 5f 25 03 12 08 01 5f 24 03 15 08 31 5a 08"
+                        +"46 92 98 20 36 76 95 49 5f 34 01 01 9f 07 02 ff"
+                        +"80 8e 14 00 00 00 00 00 00 00 00 02 01 44 03 01"
+                        +"03 02 03 1e 03 1f 00 9f 0d 05 b8 60 ac 88 00 9f"
+                        +"0e 05 00 10 00 00 00 9f 0f 05 b8 68 bc 98 00 5f"
+                        +"28 02 06 42 9f 4a 01 82");
+
+                //EMVUtil.printResponse(appRecord, true);
+
+                Record record = new Record(appRecord, 1, true);
+                //app.getApplicationFileLocator().getApplicationElementaryFiles().get(2).setRecord(1, record);
+
+                StaticDataAuthenticationTagList staticDataAuthTagList = new StaticDataAuthenticationTagList(new byte[]{(byte)0x82});
+                //app.setStaticDataAuthenticationTagList(staticDataAuthTagList);
+
+                IssuerPublicKeyCertificate issuerPKCert = new IssuerPublicKeyCertificate(CA.getCA(Util.fromHexString("A0 00 00 00 03")));
+
+                String signedBytesStr = "8b 39 01 f6 25 30 48 a8 b2 cb 08 97 4a 42 45 d9" +
+                        "0e 1f 0c 4a 2a 69 bc a4 69 61 5a 71 db 21 ee 7b" +
+                        "3a a9 42 00 cf ae dc d6 f0 a7 d9 ad 0b f7 92 13" +
+                        "b6 a4 18 d7 a4 9d 23 4e 5c 97 15 c9 14 0d 87 94" +
+                        "0f 2e 04 d6 97 1f 4a 20 4c 92 7a 45 5d 4f 8f c0" +
+                        "d6 40 2a 79 a1 ce 05 aa 3a 52 68 67 32 98 53 f5" +
+                        "ac 2f eb 3c 6f 59 ff 6c 45 3a 72 45 e3 9d 73 45" +
+                        "14 61 72 57 95 ed 73 09 70 99 96 3b 82 eb f7 20" +
+                        "3c 1f 78 a5 29 14 0c 18 2d bb e6 b4 2a e0 0c 02";
+
+                issuerPKCert.setSignedBytes(Util.fromHexString(signedBytesStr));
+                //issuerPKCert.setSignedBytes(Util.fromHexString(" SIGNED BYTES HERE "));
+
+                issuerPKCert.setCAPublicKeyIndex(7);
+
+                issuerPKCert.getIssuerPublicKey().setExponent(new byte[]{0x03});
+                String remainderStr = "33 f5 e4 44 7d 4a 32 e5 93 6e 5a 13 39 32 9b b4 e8 dd 8b f0 04 4c e4 42 8e 24 d0 86 6f ae fd 23 48 80 9d 71";
+                issuerPKCert.getIssuerPublicKey().setRemainder(Util.fromHexString(remainderStr));
+
+                byte[] offlineDataAuthenticationRecords = new byte[0];
+
+                ICCPublicKeyCertificate iccPKCert = new ICCPublicKeyCertificate(offlineDataAuthenticationRecords, issuerPKCert);
+                //iccPKCert.setSignedBytes(Util.fromHexString(" SIGNED BYTES HERE "));
+                iccPKCert.setSignedBytes(Util.fromHexString(signedBytesStr));
+
+                iccPKCert.getICCPublicKey().setExponent(new byte[]{0x03});
+
+                writeToUiAppend(tv1, "iccPKCert:\n" + iccPKCert);
+                //System.out.println(iccPKCert);
 
             }
         });
@@ -129,6 +252,21 @@ public class CryptoStuffActivity extends AppCompatActivity {
     }
 
 
+    // special version, needs a boolean variable in class header: boolean debugPrint = true;
+    // if true this method will print the output additionally to the console
+    // this version does not append the string to the exportString
+    private void writeToUiAppend(TextView textView, String message) {
+        runOnUiThread(() -> {
+            if (TextUtils.isEmpty(textView.getText().toString())) {
+                textView.setText(message);
+            } else {
+                String newString = textView.getText().toString() + "\n" + message;
+                textView.setText(newString);
+            }
+            System.out.println(message);
+        });
+    }
+
     /**
      * section for OptionsMenu
      */
@@ -137,67 +275,7 @@ public class CryptoStuffActivity extends AppCompatActivity {
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.menu_activity_main, menu);
 
-        MenuItem mOpenFile = menu.findItem(R.id.action_open_file);
-        mOpenFile.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
-            @Override
-            public boolean onMenuItemClick(MenuItem item) {
-                Log.i(TAG, "mOpenFile");
-                //Intent i = new Intent(MainActivity.this, AddEntryActivity.class);
-                //startActivity(i);
-                //readResult.setText("");
-                //dumpFileName = "";
-                //dumpExportString = "";
-                //openFileFromExternalSharedStorage();
-                return false;
-            }
-        });
-
-        MenuItem mPlusTextSize = menu.findItem(R.id.action_plus_text_size);
-        mPlusTextSize.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
-            @Override
-            public boolean onMenuItemClick(MenuItem item) {
-                Log.i(TAG, "mPlusTextSize");
-                /*
-                //int textSizeInDp = sharedPreferences.getInt(TEXT_SIZE, defaultTextSizeInDp) + 1;
-                //readResult.setTextSize(coverPixelToDP(textSizeInDp));
-                System.out.println("textSizeInDp: " + textSizeInDp);
-                try {
-                    sharedPreferences.edit().putInt(TEXT_SIZE, textSizeInDp).apply();
-                } catch (Exception e) {
-                    writeToUiToast("Error on size storage: " + e.getMessage());
-                    return false;
-                }
-
-                 */
-                return false;
-            }
-        });
-
-        MenuItem mMinusTextSize = menu.findItem(R.id.action_minus_text_size);
-        mMinusTextSize.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
-            @Override
-            public boolean onMenuItemClick(MenuItem item) {
-                Log.i(TAG, "mMinusTextSize");
-                /*
-                int textSizeInDp = sharedPreferences.getInt(TEXT_SIZE, defaultTextSizeInDp) - 1;
-                if (textSizeInDp < MINIMUM_TEXT_SIZE_IN_DP) {
-                    writeToUiToast("You cannot decrease text size any further");
-                    return false;
-                }
-                readResult.setTextSize(coverPixelToDP(textSizeInDp));
-                try {
-                    sharedPreferences.edit().putInt(TEXT_SIZE, textSizeInDp).apply();
-                } catch (Exception e) {
-                    writeToUiToast("Error on size storage: " + e.getMessage());
-                    return false;
-                }
-
-                 */
-                return false;
-            }
-        });
-
-        MenuItem mExportDumpFile = menu.findItem(R.id.action_export_dump_file);
+        MenuItem mExportDumpFile = menu.findItem(R.id.action_export_text_file);
         mExportDumpFile.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
             @Override
             public boolean onMenuItemClick(MenuItem item) {
@@ -207,7 +285,7 @@ public class CryptoStuffActivity extends AppCompatActivity {
             }
         });
 
-        MenuItem mMailDumpFile = menu.findItem(R.id.action_mail_dump_file);
+        MenuItem mMailDumpFile = menu.findItem(R.id.action_export_mail);
         mMailDumpFile.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
             @Override
             public boolean onMenuItemClick(MenuItem item) {
