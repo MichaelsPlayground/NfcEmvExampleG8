@@ -17,6 +17,10 @@ import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
+import java.math.BigInteger;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+
 import de.androidcrypto.nfcemvexample.sasc.CA;
 import de.androidcrypto.nfcemvexample.sasc.ICCPublicKeyCertificate;
 import de.androidcrypto.nfcemvexample.sasc.IssuerPublicKey;
@@ -78,6 +82,7 @@ SHA-1
  */
 
                 byte[] caPublicKeyVisa09Modulus = hexToBytes("9D912248DE0A4E39C1A7DDE3F6D2588992C1A4095AFBD1824D1BA74847F2BC4926D2EFD904B4B54954CD189A54C5D1179654F8F9B0D2AB5F0357EB642FEDA95D3912C6576945FAB897E7062CAA44A4AA06B8FE6E3DBA18AF6AE3738E30429EE9BE03427C9D64F695FA8CAB4BFE376853EA34AD1D76BFCAD15908C077FFE6DC5521ECEF5D278A96E26F57359FFAEDA19434B937F1AD999DC5C41EB11935B44C18100E857F431A4A5A6BB65114F174C2D7B59FDF237D6BB1DD0916E644D709DED56481477C75D95CDD68254615F7740EC07F330AC5D67BCD75BF23D28A140826C026DBDE971A37CD3EF9B8DF644AC385010501EFC6509D7A41");
+                byte[] caPublicKeyVisa09Exponent = hexToBytes(("03"));
                 byte[] caPublicKeyVisa09Sha1 = hexToBytes("1FF80A40173F52D7D27E0F26A146A1C8CCB29046");
                 byte[] visaRid = hexToBytes("A000000003");
                 byte[] visaChksum = CA.calculateCAPublicKeyCheckSum(visaRid, Util.intToByteArray(9), caPublicKeyVisa09Modulus, new byte[]{0x03});
@@ -112,6 +117,17 @@ SHA-1
                 writeToUiAppend(tv1, "==============================");
                 writeToUiAppend(tv1, "Retrieval of Issuer Public Key");
 
+                writeToUiAppend(tv1, "IssuerPublicKeyCertificate: " + bytesToHexNpe(tag90_IssuerPublicKeyCertificate));
+                byte[] issuerPublicKey = performRSA(tag90_IssuerPublicKeyCertificate, caPublicKeyVisa09Exponent, caPublicKeyVisa09Modulus);
+                writeToUiAppend(tv1, "decrypted: " + bytesToHexNpe(issuerPublicKey));
+/*
+6a02487178ff12280431ef0101b001bf19e3eb0d7cd72b45a02661ea4ab87e7a60cb7ab45fd170f5e9a650aee5154124b64e85bd3444c76fddb28f9e30c1304761713773fa2d5ea05be757cfacb2df7b80e8acbd585ec5e1606f3fc91241245f9d929e7e06790d996245eccbab1a37933268e31c622f9d1a486f6ba5340ceec7b794dc0f3303b5de4662efdcfc92f6953eab65a86bb4c8d58d3308c88b5329e2a10d6bec4465c485e5b0a223d87538b10ed755891767f5f4f86068f65de4f1bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb786706bd50c5618f7f69d42326d6966877ed609fbc
+ */
+
+
+
+
+                /*
                 CA.initFromFile("/certificationauthorities_test.xml");
                 CA visaCa = CA.getCA(visaRid);
                 IssuerPublicKeyCertificate visaCert = new IssuerPublicKeyCertificate(visaCa);
@@ -119,6 +135,7 @@ SHA-1
 
                 byte[] recoverdIssuerPublicKey = Util.performRSA(tag90_IssuerPublicKeyCertificate, new byte[]{(byte) 0x03}, visaCa.getPublicKey(9).getModulus());
                 writeToUiAppend(tv1, "recoveredIssuerPublicKey: " + bytesToHexNpe(recoverdIssuerPublicKey));
+*/
 
 
                 //visaCert.setSignedBytes();
@@ -254,6 +271,55 @@ SHA-1
 
             }
         });
+    }
+
+    public static byte[] performRSA(byte[] dataBytes, byte[] expBytes, byte[] modBytes) {
+
+        int inBytesLength = dataBytes.length;
+
+        if (expBytes[0] >= (byte) 0x80) {
+            //Prepend 0x00 to modulus
+            byte[] tmp = new byte[expBytes.length + 1];
+            tmp[0] = (byte) 0x00;
+            System.arraycopy(expBytes, 0, tmp, 1, expBytes.length);
+            expBytes = tmp;
+        }
+
+        if (modBytes[0] >= (byte) 0x80) {
+            //Prepend 0x00 to modulus
+            byte[] tmp = new byte[modBytes.length + 1];
+            tmp[0] = (byte) 0x00;
+            System.arraycopy(modBytes, 0, tmp, 1, modBytes.length);
+            modBytes = tmp;
+        }
+
+        if (dataBytes[0] >= (byte) 0x80) {
+            //Prepend 0x00 to signed data to avoid that the most significant bit is interpreted as the "signed" bit
+            byte[] tmp = new byte[dataBytes.length + 1];
+            tmp[0] = (byte) 0x00;
+            System.arraycopy(dataBytes, 0, tmp, 1, dataBytes.length);
+            dataBytes = tmp;
+        }
+
+        BigInteger exp = new BigInteger(expBytes);
+        BigInteger mod = new BigInteger(modBytes);
+        BigInteger data = new BigInteger(dataBytes);
+
+        byte[] result = data.modPow(exp, mod).toByteArray();
+
+        if (result.length == (inBytesLength+1) && result[0] == (byte)0x00) {
+            //Remove 0x00 from beginning of array
+            byte[] tmp = new byte[inBytesLength];
+            System.arraycopy(result, 1, tmp, 0, inBytesLength);
+            result = tmp;
+        }
+
+        return result;
+    }
+
+    public static byte[] calculateSHA1(byte[] data) throws NoSuchAlgorithmException {
+        MessageDigest sha1 = MessageDigest.getInstance("SHA-1");
+        return sha1.digest(data);
     }
 
 
