@@ -222,6 +222,8 @@ https://www.linkedin.com/pulse/cards-payments-101-everything-emv-binoy-baby
 John Zweng Android EMV key test: 
 https://github.com/johnzweng/android-emv-key-test
 
+Payment Card Tools (e.g. CVM List or Terminal Transaction Qualifiers): https://paymentcardtools.com/emv-tag-decoders/ttq
+
 Overview of complete readings and found PAN + Expiration Date
 ...
 MC Lloyds: SFI 2 REC 1
