@@ -55,7 +55,7 @@
                 android:textSize="18sp"
                 android:background="@drawable/round_rect_shape_red"
                 android:textStyle="bold"
-                android:text="Warning: this activity tries to read 496 sectors of the card - that will last about a minute. Please LAY the phone on the card and don't move it before the double ping sounds." />
+                android:text="Warning: this activity tries to read 496 sectors of the card - that will last about a minute.\n\nPlease LAY the phone on the card and don't move it before the double ping sounds.\n\nOnly not empty records are shown and exported." />
 
             <com.google.android.material.divider.MaterialDivider
                 android:layout_width="match_parent"
@@ -95,7 +95,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:checked="false"
+            android:checked="true"
             android:clickable="true"
             android:text="pretty print the response data"
             android:textSize="18sp" />

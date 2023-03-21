@@ -69,7 +69,7 @@ public class FileReaderActivity extends AppCompatActivity implements NfcAdapter.
     boolean debugPrint = true; // if set to true the writeToUi method will print to console
     String outputString = ""; // used for the UI output in etLog
     String outputDataString = ""; // used for the UI output in etData
-    boolean isPrettyPrintResponse = false; // default
+    boolean isPrettyPrintResponse = true; // default
     String aidSelectedForAnalyze = "";
     String aidSelectedForAnalyzeName = "";
 
@@ -353,8 +353,10 @@ public class FileReaderActivity extends AppCompatActivity implements NfcAdapter.
                     if (readResult != null) {
                         sb.append(bytesToHex(readResult)).append("\n");
                         // pretty print of response
-                        if (isPrettyPrintResponse)
+                        if (isPrettyPrintResponse) {
                             sb.append(prettyPrintDataToString(readResult)).append("\n");
+                            //sb.append(TlvUtil.prettyPrintAPDUResponse(readResult)).append("\n");
+                        }
                     } else {
                         sb.append("NULL").append("\n");
                     }
