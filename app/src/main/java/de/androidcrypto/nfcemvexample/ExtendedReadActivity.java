@@ -36,6 +36,7 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
+import com.github.devnied.emvnfccard.enums.TagValueTypeEnum;
 import com.github.devnied.emvnfccard.iso7816emv.TagAndLength;
 import com.github.devnied.emvnfccard.utils.TlvUtil;
 import com.google.android.material.switchmaterial.SwitchMaterial;
@@ -63,6 +64,9 @@ import java.util.List;
 import de.androidcrypto.nfcemvexample.cardvalidation.CardValidationResult;
 import de.androidcrypto.nfcemvexample.cardvalidation.RegexCardValidator;
 import de.androidcrypto.nfcemvexample.emulate.FilesModel;
+import de.androidcrypto.nfcemvexample.extended.TagListParser;
+import de.androidcrypto.nfcemvexample.extended.TagNameValue;
+import de.androidcrypto.nfcemvexample.extended.TagSet;
 import de.androidcrypto.nfcemvexample.nfccreditcards.AidValues;
 import de.androidcrypto.nfcemvexample.nfccreditcards.DolValues;
 import de.androidcrypto.nfcemvexample.nfccreditcards.PdolUtil;
@@ -92,6 +96,8 @@ public class ExtendedReadActivity extends AppCompatActivity implements NfcAdapte
     String aidSelectedForAnalyzeName = "";
     // there vars are filled during reading of files from AFL
     byte[] tag0x8cFound = new byte[0]; // tag 0x8c = CDOL1
+
+    List<TagSet> tsList = new ArrayList<>(); // holds the tags found during reading
 
     String outputString = ""; // used for the UI output
     // exporting the data
@@ -204,6 +210,8 @@ public class ExtendedReadActivity extends AppCompatActivity implements NfcAdapte
 
             try {
                 nfc.connect();
+                tsList = new ArrayList<>(); // holds the tags found during reading
+
                 writeToUiAppend(etLog, "try to read a payment card with PPSE");
                 //byte[] command;
                 writeToUiAppend(etLog, "");
@@ -219,6 +227,7 @@ public class ExtendedReadActivity extends AppCompatActivity implements NfcAdapte
                     writeToUiAppend(etLog, "01 selecting PPSE is not allowed on card");
                     writeToUiAppend(etLog, "");
                     writeToUiAppend(etLog, "The card is not a credit card, reading aborted");
+                    writeToUiFinal(etLog);
                     setLoadingLayoutVisibility(false);
                     try {
                         nfc.close();
@@ -232,6 +241,45 @@ public class ExtendedReadActivity extends AppCompatActivity implements NfcAdapte
                     // pretty print of response
                     if (isPrettyPrintResponse) prettyPrintData(etLog, selectPpseResponseOk);
 
+                    // extended
+                    tsList.addAll(getTagSetFromResponse(selectPpseResponseOk, "selectPpse"));
+                    /* old
+                    List<TagAndLength> selectPpseTags = com.github.devnied.emvnfccard.utils.TlvUtil.parseTagAndLength(selectPpseResponseOk);
+                    int selectPpseTagsSize = selectPpseTags.size();
+                    writeToUiAppend(etLog, "selectPpseTagsSize: " + selectPpseTagsSize);
+                    for (int i = 0; i < selectPpseTagsSize; i++) {
+                        TagAndLength selectPpseTag = selectPpseTags.get(i);
+                        writeToUiAppend(etLog, "selectPpseTag " + i + ": " + selectPpseTag.toString());
+                        byte[] eTag = selectPpseTag.getTag().getTagBytes();
+                        String eTagName = selectPpseTag.getTag().getName();
+                        //String eTagName = selectPpseTag.getTag().getDescription();
+                        byte[] eTagValue = selectPpseTag.getBytes();
+                        TagValueTypeEnum eTagValueType = selectPpseTag.getTag().getTagValueType();
+                        String eTagFound = "selectPpse";
+                        TagSet eTagSet = new TagSet(eTag, eTagName, eTagValue, eTagValueType.toString(), eTagFound);
+                        writeToUiAppend(etLog, "--- tag nr " + i + " ---");
+                        writeToUiAppend(etLog, eTagSet.dump());
+                    }
+
+                    List<TagNameValue> selectPpseResponseParsed =  TagListParser.parseRespond(selectPpseResponseOk);
+                    int selectPpseResponseParsedSize = selectPpseResponseParsed.size();
+                    writeToUiAppend(etLog, "selectPpseResponseParsedSize: " + selectPpseResponseParsedSize);
+                    for (int i = 0; i < selectPpseResponseParsedSize; i++) {
+                        TagNameValue selectPpseParsedTag = selectPpseResponseParsed.get(i);
+                        writeToUiAppend(etLog, "selectPpseResponseParsed " + i + ": " + selectPpseResponseParsed.toString());
+                        byte[] eTag = selectPpseParsedTag.getTagBytes();
+                        String eTagName = selectPpseParsedTag.getTagName();
+                        //String eTagName = selectPpseTag.getTag().getDescription();
+                        byte[] eTagValue = selectPpseParsedTag.getTagValueBytes();
+                        String eTagValueType = selectPpseParsedTag.getTagValueType();
+                        //TagValueTypeEnum eTagValueType = selectPpseParsedTag.getTagValueType();
+                        String eTagFound = "selectPpse";
+                        TagSet eTagSet = new TagSet(eTag, eTagName, eTagValue, eTagValueType, eTagFound);
+                        writeToUiAppend(etLog, "--- tag nr " + i + " ---");
+                        writeToUiAppend(etLog, eTagSet.dump());
+                    }
+                     */
+
                     writeToUiAppend(etLog, "");
                     printStepHeader(etLog, 2, "search applications on card");
                     writeToUiAppend(etLog, "02 analyze select PPSE response and search for tag 0x4F (applications on card)");
@@ -242,6 +290,7 @@ public class ExtendedReadActivity extends AppCompatActivity implements NfcAdapte
                     List<BerTlv> tag4fList = tlv4Fs.findAll(new BerTag(0x4F));
                     if (tag4fList.size() < 1) {
                         writeToUiAppend(etLog, "there is no tag 0x4F available, stopping here");
+                        writeToUiFinal(etLog);
                         setLoadingLayoutVisibility(false);
                         try {
                             nfc.close();
@@ -334,8 +383,8 @@ public class ExtendedReadActivity extends AppCompatActivity implements NfcAdapte
                             if (isPrettyPrintResponse)
                                 prettyPrintData(etLog, selectAidResponseOk);
 
-
-
+                            // extended
+                            tsList.addAll(getTagSetFromResponse(selectAidResponseOk, "selectAid " + aidSelectedForAnalyze));
 
 /*
 data from MasterCard AAB:
@@ -501,6 +550,9 @@ SFI: 2 Record: 3
                                     if (isPrettyPrintResponse)
                                         prettyPrintData(etLog, gpoRequestResponseOk);
 
+                                    // extended
+                                    tsList.addAll(getTagSetFromResponse(gpoRequestResponseOk, "get processing options"));
+
                                     /**
                                      * response can be a tag 77 Response Message Template Format 2
                                      * (found with my Visa-, Master- and German Giro-Cards)
@@ -562,12 +614,13 @@ List<Afl> listAfl = extractAfl(data);
                                     writeToUiAppend(etLog, "get the application cryptogram");
                                     // check that it was found in any file
                                     writeToUiAppend(etLog, "### tag0x8cFound: " + bytesToHex(tag0x8cFound));
+                                    byte[] getApplicationCryptoResponseOk = null;
                                     if (tag0x8cFound.length > 1) {
                                         byte[] getApplicationCryptoCommand = getAppCryptoCommandFromCdol(tag0x8cFound);
                                         writeToUiAppend(etLog, "getApplicationCryptoCommand length: " + getApplicationCryptoCommand.length + " data: " + bytesToHex(getApplicationCryptoCommand));
                                         byte[] getApplicationCryptoResponse = nfc.transceive(getApplicationCryptoCommand);
                                         if (getApplicationCryptoResponse != null) {
-                                            byte[] getApplicationCryptoResponseOk = checkResponse(getApplicationCryptoResponse);
+                                            getApplicationCryptoResponseOk = checkResponse(getApplicationCryptoResponse);
                                             if (getApplicationCryptoResponseOk != null) {
                                                 writeToUiAppend(etLog, "getApplicationCryptoResponse length: " + getApplicationCryptoResponseOk.length + " data: " + bytesToHex(getApplicationCryptoResponseOk));
                                                 if (isPrettyPrintResponse)
@@ -586,7 +639,7 @@ List<Afl> listAfl = extractAfl(data);
                                         writeToUiAppend(etLog, "getApplicationCryptoCommand length: " + getApplicationCryptoCommand.length + " data: " + bytesToHex(getApplicationCryptoCommand));
                                         byte[] getApplicationCryptoResponse = nfc.transceive(getApplicationCryptoCommand);
                                         if (getApplicationCryptoResponse != null) {
-                                            byte[] getApplicationCryptoResponseOk = checkResponse(getApplicationCryptoResponse);
+                                            getApplicationCryptoResponseOk = checkResponse(getApplicationCryptoResponse);
                                             if (getApplicationCryptoResponseOk != null) {
                                                 writeToUiAppend(etLog, "getApplicationCryptoResponse length: " + getApplicationCryptoResponseOk.length + " data: " + bytesToHex(getApplicationCryptoResponseOk));
                                                 if (isPrettyPrintResponse)
@@ -597,6 +650,22 @@ List<Afl> listAfl = extractAfl(data);
                                         } else {
                                             writeToUiAppend(etLog, "getApplicationCryptoResponse failure");
                                         }
+                                    }
+
+                                    // extended
+                                    // a single value:
+                                    if (applicationTransactionCounter != null) {
+                                        TagSet tsAtc = new TagSet(new byte[]{(byte) 0x9f, (byte) 0x36}, "ATC", applicationTransactionCounter, "Binary", "directRead");
+                                        tsList.add(tsAtc);
+                                    }
+                                    // ApplicationCryptoResponse
+                                    if (getApplicationCryptoResponseOk != null) {
+                                        tsList.addAll(getTagSetFromResponse(getApplicationCryptoResponseOk, "getApplicationCrypto"));
+                                    }
+                                    writeToUiAppend(etLog, "---- tagSet list ----");
+                                    for (int i = 0; i < tsList.size(); i++) {
+                                        writeToUiAppend(etLog, "--- tag nr " + i + " ---");
+                                        writeToUiAppend(etLog, tsList.get(i).dump());
                                     }
                                 }
                             } else {
@@ -611,11 +680,17 @@ List<Afl> listAfl = extractAfl(data);
                 setLoadingLayoutVisibility(false);
             } catch (IOException e) {
                 Log.e(TAG, "IsoDep Error on connecting to card: " + e.getMessage());
+                writeToUiFinal(etLog);
+                setLoadingLayoutVisibility(false);
+
                 //throw new RuntimeException(e);
             }
             try {
                 nfc.close();
             } catch (IOException e) {
+                writeToUiFinal(etLog);
+                setLoadingLayoutVisibility(false);
+
                 //throw new RuntimeException(e);
             }
 
@@ -628,6 +703,34 @@ List<Afl> listAfl = extractAfl(data);
             v.vibrate(200);
         }
     }
+
+    /**
+     * section for getting the tags from read responses
+     */
+
+    private List<TagSet> getTagSetFromResponse(@NonNull byte[] data, @NonNull String tagsFound) {
+        List<TagSet> tagsSet = new ArrayList<>();
+        List<TagNameValue> parsedTags = TagListParser.parseRespond(data);
+        int parsedTagsSize = parsedTags.size();
+        //writeToUiAppend(etLog, "selectPpseResponseParsedSize: " + selectPpseResponseParsedSize);
+        for (int i = 0; i < parsedTagsSize; i++) {
+            TagNameValue parsedTag = parsedTags.get(i);
+            //writeToUiAppend(etLog, "selectPpseResponseParsed " + i + ": " + selectPpseResponseParsed.toString());
+            byte[] eTag = parsedTag.getTagBytes();
+            String eTagName = parsedTag.getTagName();
+            //String eTagName = selectPpseTag.getTag().getDescription();
+            byte[] eTagValue = parsedTag.getTagValueBytes();
+            String eTagValueType = parsedTag.getTagValueType();
+            //TagValueTypeEnum eTagValueType = selectPpseParsedTag.getTagValueType();
+            //String eTagFound = "selectPpse";
+            TagSet tagSet = new TagSet(eTag, eTagName, eTagValue, eTagValueType, tagsFound);
+            tagsSet.add(tagSet);
+            //writeToUiAppend(etLog, "--- tag nr " + i + " ---");
+            //writeToUiAppend(etLog, eTagSet.dump());
+        }
+        return tagsSet;
+    }
+
 
     /**
      * section for some rsa stuff
@@ -921,6 +1024,10 @@ List<Afl> listAfl = extractAfl(data);
                         //writeToUiAppend(etLog, "readRecordCommand length: " + cmd.length + " data: " + bytesToHex(cmd));
                         byte[] resultReadRecordOk = checkResponse(resultReadRecord);
                         if (resultReadRecordOk != null) {
+
+                            // extended
+                            tsList.addAll(getTagSetFromResponse(resultReadRecordOk, "read file from AFL " + "SFI: " + String.format("%02X", sfiOrg) + " REC: " + String.format("%02d", iRecords)));
+
                             //writeToUiAppend(etLog, "data from AFL " + bytesToHex(tag94BytesListEntry)); // given wrong output for second or third files in multiple records
                             writeToUiAppend(etLog, "data from AFL was: " + bytesToHex(tag94BytesListEntry));
                             writeToUiAppend(etLog, "data from AFL " + "SFI: " + String.format("%02X", sfiOrg) + " REC: " + String.format("%02d", iRecords));
