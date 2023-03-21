@@ -121,8 +121,8 @@ SHA-1
                 writeToUiAppend(tv1, "Retrieval of Issuer Public Key");
 
                 writeToUiAppend(tv1, "IssuerPublicKeyCertificate: " + bytesToHexNpe(tag90_IssuerPublicKeyCertificate));
-                byte[] issuerPublicKey = performRSA(tag90_IssuerPublicKeyCertificate, caPublicKeyVisa09Exponent, caPublicKeyVisa09Modulus);
-                writeToUiAppend(tv1, "decrypted: " + bytesToHexNpe(issuerPublicKey));
+                byte[] recoveredIssuerPublicKey = performRSA(tag90_IssuerPublicKeyCertificate, caPublicKeyVisa09Exponent, caPublicKeyVisa09Modulus);
+                writeToUiAppend(tv1, "decrypted: " + bytesToHexNpe(recoveredIssuerPublicKey));
 /*
 6a02487178ff12280431ef0101b001bf19e3eb0d7cd72b45a02661ea4ab87e7a60cb7ab45fd170f5e9a650aee5154124b64e85bd3444c76fddb28f9e30c1304761713773fa2d5ea05be757cfacb2df7b80e8acbd585ec5e1606f3fc91241245f9d929e7e06790d996245eccbab1a37933268e31c622f9d1a486f6ba5340ceec7b794dc0f3303b5de4662efdcfc92f6953eab65a86bb4c8d58d3308c88b5329e2a10d6bec4465c485e5b0a223d87538b10ed755891767f5f4f86068f65de4f1bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb786706bd50c5618f7f69d42326d6966877ed609fbc
  */
@@ -130,11 +130,13 @@ SHA-1
                 // see package johnzweng
                 EmvKeyReader emvKeyReader = new EmvKeyReader();
                 try {
-                    EmvKeyReader.RecoveredIssuerPublicKey issuerPublicKeyParsed = emvKeyReader.parseIssuerPublicKey(caPublicKeyVisa09Exponent, caPublicKeyVisa09Modulus, tag90_IssuerPublicKeyCertificate, null, tag9f32_IssuerPublicKeyExponent);
-                    emvKeyReader.
+                    EmvKeyReader.RecoveredIssuerPublicKey recoveredIssuerPublicKeyParsed = emvKeyReader.parseIssuerPublicKeyCert(recoveredIssuerPublicKey, caPublicKeyVisa09Modulus.length);
+                    writeToUiAppend(tv1, "parsed recovered Issuer Public Key\n" + recoveredIssuerPublicKeyParsed.dump());
                 } catch (EmvParsingException e) {
                     throw new RuntimeException(e);
                 }
+
+                // next step: Terminal decrypt ICC public key certificate using the issuer public key
 
 
                 /*
@@ -152,7 +154,7 @@ SHA-1
                 //IssuerPublicKey issuerPublicKey = new IssuerPublicKey();
                 //issuerPublicKey.setModulus();
 
-
+/*
                 writeToUiAppend(tv1, "==============================");
                 byte[] rid = Util.fromHexString("a0 00 00 00 03"); // visa
                 byte[] mod = Util.fromHexString("BE9E1FA5E9A803852999C4AB432DB28600DCD9DAB76DFAAA47355A0FE37B1508AC6BF38860D3C6C2E5B12A3CAAF2A7005A7241EBAA7771112C74CF9A0634652FBCA0E5980C54A64761EA101A114E0F0B5572ADD57D010B7C9C887E104CA4EE1272DA66D997B9A90B5A6D624AB6C57E73C8F919000EB5F684898EF8C3DBEFB330C62660BED88EA78E909AFF05F6DA627B");
@@ -184,7 +186,7 @@ SHA-1
 
                 // now with own data
                 // rid is already visa
-
+*/
 
 
             }

@@ -231,27 +231,43 @@ public class EmvKeyReader {
             return sb.toString();
 
         }
-        /*
-         * Field Name                         Length   Description
-         * Recovered Data Header                 1     Hex value '6A'
-         * Certificate Format                    1     Hex value '02'
-         * Issuer Identifier                     4     Leftmost 3-8 digits from the PAN (padded to the right with
-         * Hex 'F's)
-         * Certificate Expiration Date           2     MMYY after which this certificate is invalid (BCD format)
-         * Certificate Serial Number             3     Binary number unique to this certificate assigned by the CA
-         * Hash Algorithm Indicator              1     Identifies the hash algorithm used to produce the Hash Result
-         * in the digital signature scheme (only 0x01 = SHA-1 allowed)
-         * Issuer Public Key Algorithm Indicator 1     Identifies the digital signature algorithm
-         * (only 0x01 = RSA allowed)
-         * Issuer Public Key Length              1     length of the Issuer Public Key Modulus in bytes
-         * Issuer Public Key Exponent Length     1     length of the Issuer Public Key Exponent in bytes
-         * Issuer Public Key or Leftmost
-         * Digits of the Issuer Public Key    nCA–36   If nI ≤ nCA – 36, consists of the full Issuer Public Key padded
-         * to the right with nCA–36–nI bytes of value 'BB' If nI > nCA – 36,
-         * consists of the nCA – 36 most significant bytes of the Issuer Public Key
-         * Hash Result                           20    Hash of the Issuer Public Key and its related information
-         * Recovered Data Trailer                1     Hex value 'BC' b
-         */
+        // todo dump should look like this:
+/*
+CA PK Modulus:
+BE9E1FA5E9A803852999C4AB432DB28600DCD9DAB76DFAAA47355A0FE37B1508AC6BF38860D3C6C2E5B12A3CAAF2A7005A7241EBAA7771112C74CF9A0634652FBCA0E5980C54A64761EA101A114E0F0B5572ADD57D010B7C9C887E104CA4EE1272DA66D997B9A90B5A6D624AB6C57E73C8F919000EB5F684898EF8C3DBEFB330C62660BED88EA78E909AFF05F6DA627B
+ Issuer's Public Key Certificate:
+7F4C6034C33BF35BAFFF53F51C0F8A2B32C8FDE1D033DDB69DCA85C5B4797BD2F55BE970C026B75B76E9C17E8564111FDEB97B26E350F59F6C63C30B0BD80E33123DF73CF8F87B28D54D28E4D6284F44E6E61AD95826474EBF6C28796B9B222DF14194A539E92DB185D86D8EDDD8AA01ECBE93E0EC3F87383D879534FE0BD397D7D59FC6E37012258B894400EE715338
+ ----------------------------------------
+ Recovered Data:                6A02457896FF12170314EF01019001E04E4FC478A42241068E2C9CFDEE9D7450F48F812FA66CEFB8ECBE31DD3C26C3B8A3891B77C1AA2A5A7448B869B7213D36C341E9B71302ADF478F67537032C080186C44034B1801D7644B6EEFAEA566D7336A8C83F42B7992F28BF5EA6B9D14C05870AD4DBD8CDAB8771F65F83D800B353B11E1805C7E4529F261C16A38DE756BC
+ Data Header:                   6A
+ Data Format:                   02
+ Issuer Identifier:             457896FF
+ Certificate Expiration Date:           1217
+ Certificate Serial Number:         0314EF
+ Hash Algorithm Indicator:          01
+ Issuer Public Key Algorithm Indicator:     01
+ Issuer Public Key Length:          90
+ Issuer Public Key Exponent Length:     01
+ Issuer Public Key:             E04E4FC478A42241068E2C9CFDEE9D7450F48F812FA66CEFB8ECBE31DD3C26C3B8A3891B77C1AA2A5A7448B869B7213D36C341E9B71302ADF478F67537032C080186C44034B1801D7644B6EEFAEA566D7336A8C83F42B7992F28BF5EA6B9D14C05870AD4DBD8CDAB8771F65F
+ Hash Result:                   83D800B353B11E1805C7E4529F261C16A38DE756
+ Data Trailer:                  BC
+
+actual output:
+I/System.out: parsed recovered Issuer Public Key
+I/System.out: Recovered Data Header: 106
+I/System.out: Certificate Format: 2
+I/System.out: Issuer Identifier : 487178ff
+I/System.out: Certificate Expiration Date: 1228
+I/System.out: Certificate Serial Number: 0431ef
+I/System.out: Hash Algorithm Indicator1
+I/System.out: Issuer Public Key Algorithm Indicator: 1
+I/System.out: Issuer Public Key Length: 176
+I/System.out: Issuer Public Key Exponent Length: 1
+I/System.out: Leftmost Digits of the Issuer Public Key: bf19e3eb0d7cd72b45a02661ea4ab87e7a60cb7ab45fd170f5e9a650aee5154124b64e85bd3444c76fddb28f9e30c1304761713773fa2d5ea05be757cfacb2df7b80e8acbd585ec5e1606f3fc91241245f9d929e7e06790d996245eccbab1a37933268e31c622f9d1a486f6ba5340ceec7b794dc0f3303b5de4662efdcfc92f6953eab65a86bb4c8d58d3308c88b5329e2a10d6bec4465c485e5b0a223d87538b10ed755891767f5f4f86068f65de4f1
+I/System.out: Optional padding: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+I/System.out: Hash Result : 786706bd50c5618f7f69d42326d6966877ed609f
+I/System.out: dataTrailer: 188
+ */
     }
 
 
@@ -263,12 +279,13 @@ public class EmvKeyReader {
      * @return parsed data
      * @throws EmvParsingException
      */
-    private RecoveredIssuerPublicKey parseIssuerPublicKeyCert(byte[] recoveredBytes, int caModulusLength)
+    public RecoveredIssuerPublicKey parseIssuerPublicKeyCert(byte[] recoveredBytes, int caModulusLength)
             throws EmvParsingException {
         RecoveredIssuerPublicKey r = new RecoveredIssuerPublicKey();
         BitUtils bits = new BitUtils(recoveredBytes);
 
         r.recoveredDataHeader = bits.getNextInteger(8);
+        System.out.println("*** r.recoveredDataHeader: " + r.recoveredDataHeader);
         if (r.recoveredDataHeader != 0x6a) {
             throw new EmvParsingException("Certificate started with incorrect header: "
                     + Integer.toHexString(r.recoveredDataHeader));

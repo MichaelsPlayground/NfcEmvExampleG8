@@ -54,6 +54,7 @@
           android:layout_height="wrap_content"
           android:ems="10"
           android:inputType="textPersonName"
+          android:visibility="gone"
           android:text="EditText 1" />
 
       <com.google.android.material.divider.MaterialDivider
