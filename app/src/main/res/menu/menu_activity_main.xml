@@ -51,6 +51,11 @@
         app:showAsAction="never"/>
 
     <item
+        android:id="@+id/action_activity_minimalistic_reader"
+        android:title="Minimalistic reader activity"
+        app:showAsAction="never"/>
+
+    <item
         android:id="@+id/action_export_mail"
         android:title="Export Mail"
         app:showAsAction="never"/>

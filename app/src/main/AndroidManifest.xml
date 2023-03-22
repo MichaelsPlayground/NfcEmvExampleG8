@@ -50,6 +50,9 @@
         <activity
             android:name=".CryptoStuffActivity"
             android:exported="false" />
+        <activity
+            android:name=".MinimalisticReaderActivity"
+            android:exported="false" />
     </application>
 
 </manifest>
