@@ -600,13 +600,21 @@ List<Afl> listAfl = extractAfl(data);
                                     // probably not supported
                                     writeToUiAppend(etLog, "");
                                     writeToUiAppend(etLog, "get the internal authentication");
-                                    String internalAuthString = "0088000004E153F3E800";
+                                    String internalAuthHeader = "00880000";
+                                    String randomNumberLength = "04";
+                                    String randomNumber = "01020304";
+                                    String internalAuthTrailer = "00";
+                                    String internalAuthString = internalAuthHeader + randomNumberLength + randomNumber + internalAuthTrailer;
+                                    //String internalAuthString = "0088000004E153F3E800";
                                     byte[] internalAuthCommand = hexToBytes(internalAuthString);
                                     writeToUiAppend(etLog, "internalAuthCommand: " + internalAuthCommand.length + " data: " + bytesToHex(internalAuthCommand));
                                     byte[] internalAuthResponse = nfc.transceive(internalAuthCommand);
                                     if (internalAuthResponse != null) {
                                         writeToUiAppend(etLog, "internalAuthResponse: " + internalAuthResponse.length + " data: " + bytesToHex(internalAuthResponse));
                                         prettyPrintData(etLog, internalAuthResponse);
+                                        // extended
+                                        // check response for tags, esp. tag 0x9f4b Signed Dynamic Application Data
+                                        tsList.addAll(getTagSetFromResponse(internalAuthResponse, "internal authentication"));
                                     } else {
                                         writeToUiAppend(etLog, "internalAuthResponse failure");
                                     }
@@ -626,6 +634,9 @@ List<Afl> listAfl = extractAfl(data);
                                                 writeToUiAppend(etLog, "getApplicationCryptoResponse length: " + getApplicationCryptoResponseOk.length + " data: " + bytesToHex(getApplicationCryptoResponseOk));
                                                 if (isPrettyPrintResponse)
                                                     prettyPrintData(etLog, getApplicationCryptoResponseOk);
+                                                // extended
+                                                // check response for tags, esp. tag 0x9f4b Signed Dynamic Application Data
+                                                tsList.addAll(getTagSetFromResponse(getApplicationCryptoResponseOk, "application cryptogram"));
                                             } else {
                                                 writeToUiAppend(etLog, "getApplicationCryptoResponse length: " + getApplicationCryptoResponse.length + " data: " + bytesToHex(getApplicationCryptoResponse));
                                             }
@@ -645,6 +656,7 @@ List<Afl> listAfl = extractAfl(data);
                                                 writeToUiAppend(etLog, "getApplicationCryptoResponse length: " + getApplicationCryptoResponseOk.length + " data: " + bytesToHex(getApplicationCryptoResponseOk));
                                                 if (isPrettyPrintResponse)
                                                     prettyPrintData(etLog, getApplicationCryptoResponseOk);
+                                                tsList.addAll(getTagSetFromResponse(getApplicationCryptoResponseOk, "application cryptogram"));
                                             } else {
                                                 writeToUiAppend(etLog, "getApplicationCryptoResponse failure");
                                             }
@@ -675,34 +687,43 @@ List<Afl> listAfl = extractAfl(data);
                                     byte[] tag90_IssuerPublicKeyCertificate;
                                     byte[] tag8f_CertificationAuthorityPublicKeyIndex;
                                     byte[] tag9f32_IssuerPublicKeyExponent;
+                                    byte[] tag92_IssuerPublicKeyRemainder;
                                     byte[] tag9f46_IccPublicKeyCertificate;
                                     byte[] tag9f47_IccPublicKeyExponent;
+                                    byte[] tag9f48_IccPublicKeyRemainder;
                                     byte[] tag9f4a_StaticDataAuthenticationTagList;
                                     byte[] tag9f69_Udol;
                                     byte[] tag9f4b_SignedDynamicApplicationData;
                                     byte[] tag9f10_IssuerApplicationData;
                                     byte[] tag9f26_ApplicationCryptogram;
                                     // todo null check ?
+                                    // todo 9F2F Integrated Circuit Card (ICC) PIN Encipherment Public Key Remainder Remaining digits of the ICC PIN Encipherment Public Key Modulus
                                     tag90_IssuerPublicKeyCertificate = getTagValueFromList(tsList, new byte[]{(byte) 0x90});
                                     tag8f_CertificationAuthorityPublicKeyIndex = getTagValueFromList(tsList, new byte[]{(byte) 0x8f});
                                     tag9f32_IssuerPublicKeyExponent = getTagValueFromList(tsList, new byte[]{(byte) 0x9f, (byte) 0x32});
+                                    tag92_IssuerPublicKeyRemainder = getTagValueFromList(tsList, new byte[]{(byte) 0x92});
                                     tag9f46_IccPublicKeyCertificate = getTagValueFromList(tsList, new byte[]{(byte) 0x9f, (byte) 0x46});
                                     tag9f47_IccPublicKeyExponent = getTagValueFromList(tsList, new byte[]{(byte) 0x9f, (byte) 0x47});
+                                    tag9f48_IccPublicKeyRemainder = getTagValueFromList(tsList, new byte[]{(byte) 0x9f, (byte) 0x48});
                                     tag9f4a_StaticDataAuthenticationTagList = getTagValueFromList(tsList, new byte[]{(byte) 0x9f, (byte) 0x4a});
                                     tag9f69_Udol = getTagValueFromList(tsList, new byte[]{(byte) 0x9f, (byte) 0x69});
-                                    tag9f4b_SignedDynamicApplicationData = getTagValueFromList(tsList, new byte[]{(byte) 0x9f, (byte) 0x64b});
+                                    tag9f4b_SignedDynamicApplicationData = getTagValueFromList(tsList, new byte[]{(byte) 0x9f, (byte) 0x4b});
                                     tag9f10_IssuerApplicationData = getTagValueFromList(tsList, new byte[]{(byte) 0x9f, (byte) 0x10});
                                     tag9f26_ApplicationCryptogram = getTagValueFromList(tsList, new byte[]{(byte) 0x9f, (byte) 0x26});
-                                    writeToUiAppend(etLog, "tag90_IssuerPublicKeyCertificate = hexToBytes(" + bytesToHexNpe(tag90_IssuerPublicKeyCertificate) + ");");
-                                    writeToUiAppend(etLog, "tag8f_CertificationAuthorityPublicKeyIndex = hexToBytes(" + bytesToHexNpe(tag8f_CertificationAuthorityPublicKeyIndex) + ");");
-                                    writeToUiAppend(etLog, "tag9f32_IssuerPublicKeyExponent = hexToBytes(" + bytesToHexNpe(tag9f32_IssuerPublicKeyExponent) + ");");
-                                    writeToUiAppend(etLog, "tag9f46_IccPublicKeyCertificate = hexToBytes(" + bytesToHexNpe(tag9f46_IccPublicKeyCertificate) + ");");
-                                    writeToUiAppend(etLog, "tag9f47_IccPublicKeyExponent = hexToBytes(" + bytesToHexNpe(tag9f47_IccPublicKeyExponent) + ");");
-                                    writeToUiAppend(etLog, "tag9f4a_StaticDataAuthenticationTagList = hexToBytes(" + bytesToHexNpe(tag9f4a_StaticDataAuthenticationTagList) + ");");
-                                    writeToUiAppend(etLog, "tag9f69_Udol = hexToBytes(" + bytesToHexNpe(tag9f69_Udol) + ");");
-                                    writeToUiAppend(etLog, "tag9f4b_SignedDynamicApplicationData = hexToBytes(" + bytesToHexNpe(tag9f4b_SignedDynamicApplicationData) + ");");
-                                    writeToUiAppend(etLog, "tag9f10_IssuerApplicationData = hexToBytes(" + bytesToHexNpe(tag9f10_IssuerApplicationData) + ");");
-                                    writeToUiAppend(etLog, "tag9f26_ApplicationCryptogram = hexToBytes(" + bytesToHexNpe(tag9f26_ApplicationCryptogram) + ");");
+
+                                    // note: the output looks strange but it is for a copy & paste to manually transfer the data to CryptoStuffActivity
+                                    writeToUiAppend(etLog, "tag90_IssuerPublicKeyCertificate = hexToBytes(\"" + bytesToHexNpe(tag90_IssuerPublicKeyCertificate) + "\");");
+                                    writeToUiAppend(etLog, "tag8f_CertificationAuthorityPublicKeyIndex = hexToBytes(\"" + bytesToHexNpe(tag8f_CertificationAuthorityPublicKeyIndex) + "\");");
+                                    writeToUiAppend(etLog, "tag9f32_IssuerPublicKeyExponent = hexToBytes(\"" + bytesToHexNpe(tag9f32_IssuerPublicKeyExponent) + "\");");
+                                    writeToUiAppend(etLog, "tag92_IssuerPublicKeyRemainder = hexToBytes(\"" + bytesToHexNpe(tag92_IssuerPublicKeyRemainder) + "\");");
+                                    writeToUiAppend(etLog, "tag9f46_IccPublicKeyCertificate = hexToBytes(\"" + bytesToHexNpe(tag9f46_IccPublicKeyCertificate) + "\");");
+                                    writeToUiAppend(etLog, "tag9f47_IccPublicKeyExponent = hexToBytes(\"" + bytesToHexNpe(tag9f47_IccPublicKeyExponent) + "\");");
+                                    writeToUiAppend(etLog, "tag9f48_IccPublicKeyRemainder = hexToBytes(\"" + bytesToHexNpe(tag9f48_IccPublicKeyRemainder) + "\");");
+                                    writeToUiAppend(etLog, "tag9f4a_StaticDataAuthenticationTagList = hexToBytes(\"" + bytesToHexNpe(tag9f4a_StaticDataAuthenticationTagList) + "\");");
+                                    writeToUiAppend(etLog, "tag9f69_Udol = hexToBytes(\"" + bytesToHexNpe(tag9f69_Udol) + "\");");
+                                    writeToUiAppend(etLog, "tag9f4b_SignedDynamicApplicationData = hexToBytes(\"" + bytesToHexNpe(tag9f4b_SignedDynamicApplicationData) + "\");");
+                                    writeToUiAppend(etLog, "tag9f10_IssuerApplicationData = hexToBytes(\"" + bytesToHexNpe(tag9f10_IssuerApplicationData) + "\");");
+                                    writeToUiAppend(etLog, "tag9f26_ApplicationCryptogram = hexToBytes(\"" + bytesToHexNpe(tag9f26_ApplicationCryptogram) + "\");");
  /*
  result visa comd m
 tag90_IssuerPublicKeyCertificate = hexToBytes("5ab54faf4ad810b3cca4ed42c38e1e768fca3187ed1be4196c6779c4633cbe88751889c12b05e10ee87cb198518793ff61e87534f66850e96239b76648429eced4cc207608d0d2a932dd9e8c4bb0d139c4eca59e1ef5f4708f72d80dc5b66c45f4566c91b55384dfdeabb55faa622c6764cc9fb4c4900b6ab2cec5abad9057e2cf63a881bb4ec2a5d96634d7c11366eb908a168d33aa3c544822fc83e74c104b9275b2ef1cf41375b404a260bbf8fb3d4452af3d0630bb1ec2a01676ba588ae7820727622a6d9df5c93a3ce807d54b79ae007c3d401f8787dc3e235e8b9ae6b1b9279328cb1ca94105434010f15eb07f487f4d5c94f4a5a7");

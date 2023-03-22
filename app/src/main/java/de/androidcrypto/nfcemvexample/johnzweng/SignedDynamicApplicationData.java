@@ -1,11 +1,14 @@
 package de.androidcrypto.nfcemvexample.johnzweng;
 
-// written by AndroidCrypto
-
 import static de.androidcrypto.nfcemvexample.StringUtils.fillTrimRight;
 
 import java.math.BigInteger;
 import java.util.Arrays;
+
+/**
+ * This is just a service class that takes the Signed Dynamic Application Data retrieved from the card
+ * and provides a human readable print (dump) of the data
+ */
 
 public class SignedDynamicApplicationData {
 
@@ -22,6 +25,38 @@ public class SignedDynamicApplicationData {
     public SignedDynamicApplicationData(byte[] recoveredBytes) {
         this.recoveredBytes = recoveredBytes;
         parseData();
+    }
+
+    public byte[] getRecoveredDataHeader() {
+        return recoveredDataHeader;
+    }
+
+    public byte[] getSignedDataFormat() {
+        return signedDataFormat;
+    }
+
+    public byte[] getHashAlgorithmIndicator() {
+        return hashAlgorithmIndicator;
+    }
+
+    public byte[] getIccDynamicDataLength() {
+        return iccDynamicDataLength;
+    }
+
+    public byte[] getIccDynamicData() {
+        return iccDynamicData;
+    }
+
+    public byte[] getPadPattern() {
+        return padPattern;
+    }
+
+    public byte[] getHashResult() {
+        return hashResult;
+    }
+
+    public byte[] getRecoveredDataTrailer() {
+        return recoveredDataTrailer;
     }
 
     private void parseData() {
@@ -43,7 +78,7 @@ public class SignedDynamicApplicationData {
         // length of padPattern = 94 ?
         // end is dataLength - 20 - 1 - 1 iccDynamicDataLength = 106, end is
         int dynamicDataEnd = dataLength - 22;
-        padPattern = Arrays.copyOfRange(recoveredBytes, totalLength, dynamicDataEnd);
+        padPattern = Arrays.copyOfRange(recoveredBytes, totalLength, dynamicDataEnd + 1);
         totalLength = dynamicDataEnd + 1;
         hashResult = Arrays.copyOfRange(recoveredBytes, totalLength, totalLength + 20);
         recoveredDataTrailer = Arrays.copyOfRange(recoveredBytes, dataLength - 1, dataLength);

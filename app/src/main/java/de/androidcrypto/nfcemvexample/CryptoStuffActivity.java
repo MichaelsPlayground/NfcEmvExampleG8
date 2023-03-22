@@ -3,6 +3,7 @@ package de.androidcrypto.nfcemvexample;
 import static de.androidcrypto.nfcemvexample.BinaryUtils.bytesToHexNpe;
 import static de.androidcrypto.nfcemvexample.BinaryUtils.hexToBytes;
 import static de.androidcrypto.nfcemvexample.johnzweng.EmvKeyReader.concatenateModulus;
+import static de.androidcrypto.nfcemvexample.johnzweng.EmvUtils.calculateSHA1;
 
 import android.content.Intent;
 import android.os.Bundle;
@@ -18,9 +19,11 @@ import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
+import java.io.ByteArrayOutputStream;
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
 
 import de.androidcrypto.nfcemvexample.johnzweng.EmvKeyReader;
 import de.androidcrypto.nfcemvexample.johnzweng.EmvParsingException;
@@ -200,7 +203,7 @@ public IssuerIccPublicKey parseIccPublicKey(byte[] issuerPublicKeyExponent, byte
                 }
 
                 writeToUiAppend(tv1, "==============================");
-                writeToUiAppend(tv1, "Validate the ICC Public Key");
+                writeToUiAppend(tv1, "Validate the ICC Public Key (will fail !!)");
                 try {
                     boolean iccPublicKeyIsValid = emvKeyReader.validateIccPublicKey(tag9f32_IssuerPublicKeyExponent, recoveredIssuerPublicKeyParsed.getLeftMostPubKeyDigits(), tag9f46_IccPublicKeyCertificate, null, tag9f47_IccPublicKeyExponent);
                     writeToUiAppend(tv1, "the decrypted ICC Public Key is valid: " + iccPublicKeyIsValid);
@@ -220,6 +223,20 @@ public IssuerIccPublicKey parseIccPublicKey(byte[] issuerPublicKeyExponent, byte
                 writeToUiAppend(tv1, "decrypted: " + bytesToHexNpe(recoveredSignedDynamicApplicationData));
                 SignedDynamicApplicationData signedDynamicApplicationData = new SignedDynamicApplicationData(recoveredSignedDynamicApplicationData);
                 writeToUiAppend(tv1, "parsed SignedDynamicApplicationData\n" + signedDynamicApplicationData.dump());
+
+                // validate the SignedDynamicApplicationData
+                //Step 5: Concatenation of Signed Data Format, Hash Algorithm Indicator,
+                //        ICC Dynamic Data Length, ICC Dynamic Data, Pad Pattern, random number
+                writeToUiAppend(tv1, "==============================");
+                writeToUiAppend(tv1, "validate the SignedDynamicApplicationData");
+                try {
+                    boolean isSignedDynamicApplicationDataValid = validateSignedDynamicApplicationData(signedDynamicApplicationData);
+                    writeToUiAppend(tv1, "isSignedDynamicApplicationDataValid: " + isSignedDynamicApplicationDataValid);
+                } catch (EmvParsingException e) {
+                    throw new RuntimeException(e);
+                } catch (NoSuchAlgorithmException e) {
+                    throw new RuntimeException(e);
+                }
 
 /*
 Signed Dynamic Application Data
@@ -261,18 +278,18 @@ decrypted: 48e26a471054d1ae93d86ab9daaa30a8036d47997e0b556101e950462f67cbc8b9203
                 //System.out.println(app.getApplicationFileLocator());
 
                 byte[] appRecord = Util.fromHexString("70 56 5f 25 03 12 08 01 5f 24 03 15 08 31 5a 08"
-                        +"46 92 98 20 36 76 95 49 5f 34 01 01 9f 07 02 ff"
-                        +"80 8e 14 00 00 00 00 00 00 00 00 02 01 44 03 01"
-                        +"03 02 03 1e 03 1f 00 9f 0d 05 b8 60 ac 88 00 9f"
-                        +"0e 05 00 10 00 00 00 9f 0f 05 b8 68 bc 98 00 5f"
-                        +"28 02 06 42 9f 4a 01 82");
+                        + "46 92 98 20 36 76 95 49 5f 34 01 01 9f 07 02 ff"
+                        + "80 8e 14 00 00 00 00 00 00 00 00 02 01 44 03 01"
+                        + "03 02 03 1e 03 1f 00 9f 0d 05 b8 60 ac 88 00 9f"
+                        + "0e 05 00 10 00 00 00 9f 0f 05 b8 68 bc 98 00 5f"
+                        + "28 02 06 42 9f 4a 01 82");
 
                 //EMVUtil.printResponse(appRecord, true);
 
                 Record record = new Record(appRecord, 1, true);
                 //app.getApplicationFileLocator().getApplicationElementaryFiles().get(2).setRecord(1, record);
 
-                StaticDataAuthenticationTagList staticDataAuthTagList = new StaticDataAuthenticationTagList(new byte[]{(byte)0x82});
+                StaticDataAuthenticationTagList staticDataAuthTagList = new StaticDataAuthenticationTagList(new byte[]{(byte) 0x82});
                 //app.setStaticDataAuthenticationTagList(staticDataAuthTagList);
 
                 IssuerPublicKeyCertificate issuerPKCert = new IssuerPublicKeyCertificate(CA.getCA(Util.fromHexString("A0 00 00 00 03")));
@@ -315,33 +332,216 @@ decrypted: 48e26a471054d1ae93d86ab9daaa30a8036d47997e0b556101e950462f67cbc8b9203
             public void onClick(View view) {
                 Log.i(TAG, "btn4");
 
-            }
-        });
+                // https://www.eftlab.co.uk/knowledge-base/list-of-ca-public-keys
+                byte[] caPublicKeyMc05Modulus = hexToBytes("B8048ABC30C90D976336543E3FD7091C8FE4800DF820ED55E7E94813ED00555B573FECA3D84AF6131A651D66CFF4284FB13B635EDD0EE40176D8BF04B7FD1C7BACF9AC7327DFAA8AA72D10DB3B8E70B2DDD811CB4196525EA386ACC33C0D9D4575916469C4E4F53E8E1C912CC618CB22DDE7C3568E90022E6BBA770202E4522A2DD623D180E215BD1D1507FE3DC90CA310D27B3EFCCD8F83DE3052CAD1E48938C68D095AAC91B5F37E28BB49EC7ED597");
+                byte[] caPublicKeyMc05Exponent = hexToBytes(("03"));
+                byte[] caPublicKeyVisa09Sha1 = hexToBytes("EBFA0D5D06D8CE702DA3EAE890701D45E274C845");
+                byte[] mcRid = hexToBytes("A000000004");
 
-        btn5.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Log.i(TAG, "btn5");
+                // here we are starting the crypto stuff and try to decrypt some data from the card
+                // we do need the content of some tags:
+                // these tags are available on Visa comd M
+                byte[] tag90_IssuerPublicKeyCertificate;
+                byte[] tag8f_CertificationAuthorityPublicKeyIndex;
+                byte[] tag9f32_IssuerPublicKeyExponent;
+                byte[] tag92_IssuerPublicKeyRemainder;
+                byte[] tag9f46_IccPublicKeyCertificate;
+                byte[] tag9f47_IccPublicKeyExponent;
+                byte[] tag9f48_IccPublicKeyRemainder;
+                byte[] tag9f4a_StaticDataAuthenticationTagList;
+                byte[] tag9f69_Udol;
+                byte[] tag9f4b_SignedDynamicApplicationData;
+                byte[] tag9f10_IssuerApplicationData;
+                byte[] tag9f26_ApplicationCryptogram;
 
-            }
-        });
+                // data from MasterCard AAB
+                tag90_IssuerPublicKeyCertificate = hexToBytes("04cc60769cabe557a9f2d83c7c73f8b177dbf69288e332f151fba10027301bb9a18203ba421bda9c2cc8186b975885523bf6707f287a5e88f0f6cd79a076319c1404fcdd1f4fa011f7219e1bf74e07b25e781d6af017a9404df9fd805b05b76874663ea88515018b2cb6140dc001a998016d28c4af8e49dfcc7d9cee314e72ae0d993b52cae91a5b5c76b0b33e7ac14a7294b59213ca0c50463cfb8b040bb8ac953631b80fa85a698b00228b5ff44223");
+                tag8f_CertificationAuthorityPublicKeyIndex = hexToBytes("05");
+                tag9f32_IssuerPublicKeyExponent = hexToBytes("03");
+                tag92_IssuerPublicKeyRemainder = hexToBytes("abfd2ebc115c3796e382be7e9863b92c266ccabc8bd014923024c80563234e8a11710a01");
+                tag9f46_IccPublicKeyCertificate = hexToBytes("3cada902afb40289fbdfea01950c498191442c1b48234dcaff66bca63cbf821a3121fa808e4275a4e894b154c1874bddb00f16276e92c73c04468253b373f1e6a9a89e2705b4670682d0adff05617a21d7684031a1cdb438e66cd98d591dc376398c8aab4f137a2226122990d9b2b4c72ded6495d637338fefa893ae7fb4eb845f8ec2e260d2385a780f9fda64b3639a9547adad806f78c9bc9f17f9d4c5b26474b9ba03892a754ffdf24df04c702f86");
+                tag9f47_IccPublicKeyExponent = hexToBytes("03");
+                tag9f4a_StaticDataAuthenticationTagList = hexToBytes("82");
+                tag9f69_Udol = hexToBytes("");
+                tag9f4b_SignedDynamicApplicationData = hexToBytes("6d7b7d1c95d45442537104ff16574386cdf4509e6b3a5eb0fa6ca5fab1508f571362cebb9257e9e7c978bf314d1689ff521a82eefb915c9930aaf1c575647c42703547df26b40ea9444775dc274a4fd212f95fcdcf4b7357740d58c1726547e51055118274e3e13bad1cea5516b2b945ca5ba5ab2948aff0e1230baa2c8dd013");
+                tag9f10_IssuerApplicationData = hexToBytes("0110a08003240000000000000000000000ff");
+                tag9f26_ApplicationCryptogram = hexToBytes("2b71adccea8e0046");
 
-        btn6.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Log.i(TAG, "btn 6");
+                EmvKeyReader emvKeyReader = new EmvKeyReader();
 
-            }
-        });
+                writeToUiAppend(tv1, "==============================");
+                writeToUiAppend(tv1, "Retrieval of Issuer Public Key by johnzweng");
+                // this is the johnzweng method to decrypt
+                IssuerIccPublicKeyNew issuerIccPublicKeyNew;
+                try {
+                    //issuerIccPublicKeyNew = emvKeyReader.parseIssuerPublicKeyNew(caPublicKeyMc05Exponent, caPublicKeyMc05Modulus, tag90_IssuerPublicKeyCertificate, tag92_IssuerPublicKeyRemainder, tag9f32_IssuerPublicKeyExponent);
+                    issuerIccPublicKeyNew = emvKeyReader.parseIssuerPublicKeyNew(caPublicKeyMc05Exponent, caPublicKeyMc05Modulus, tag90_IssuerPublicKeyCertificate, null, tag9f32_IssuerPublicKeyExponent);
+                    writeToUiAppend(tv1, "decrypted the tag90_IssuerPublicKeyCertificate to the public key");
+                    writeToUiAppend(tv1, "issuerIccPublicKey recovered: " + bytesToHexNpe(issuerIccPublicKeyNew.getRecoveredBytes()));
+                } catch (EmvParsingException e) {
+                    throw new RuntimeException(e);
+                }
 
-        btn7.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Log.i(TAG, "btn 7");
+                EmvKeyReader.RecoveredIssuerPublicKey recoveredIssuerPublicKeyParsed;
+                try {
+                    recoveredIssuerPublicKeyParsed = emvKeyReader.parseIssuerPublicKeyCert(issuerIccPublicKeyNew.getRecoveredBytes(), caPublicKeyMc05Modulus.length);
+                    writeToUiAppend(tv1, "parsed recovered Issuer Public Key\n" + recoveredIssuerPublicKeyParsed.dump());
+                } catch (EmvParsingException e) {
+                    throw new RuntimeException(e);
+                }
+
+                writeToUiAppend(tv1, "==============================");
+                writeToUiAppend(tv1, "Validate the Issuer Public Key");
+                try {
+                    boolean issuerPublicKeyIsValid = emvKeyReader.validateIssuerPublicKey(caPublicKeyMc05Exponent, caPublicKeyMc05Modulus, tag90_IssuerPublicKeyCertificate, tag92_IssuerPublicKeyRemainder, tag9f32_IssuerPublicKeyExponent);
+                    writeToUiAppend(tv1, "the decrypted Issuer Public Key is valid: " + issuerPublicKeyIsValid);
+                } catch (EmvParsingException e) {
+                    throw new RuntimeException(e);
+                }
+
+
+                // manual decryption
+                // Retrieval of Issuer Public Key
+                writeToUiAppend(tv1, "==============================");
+                writeToUiAppend(tv1, "Manual Retrieval of Issuer Public Key");
+
+                writeToUiAppend(tv1, "IssuerPublicKeyCertificate: " + bytesToHexNpe(tag90_IssuerPublicKeyCertificate));
+                byte[] recoveredIssuerPublicKey = performRSA(tag90_IssuerPublicKeyCertificate, caPublicKeyMc05Exponent, caPublicKeyMc05Modulus);
+                writeToUiAppend(tv1, "decrypted: " + bytesToHexNpe(recoveredIssuerPublicKey));
+
+                writeToUiAppend(tv1, "==============================");
+                writeToUiAppend(tv1, "Manual Retrieval of ICC Public Key");
+
+                writeToUiAppend(tv1, "IccPublicKeyCertificate: " + bytesToHexNpe(tag9f46_IccPublicKeyCertificate));
+                byte[] fullModulus = concatenateModulus(recoveredIssuerPublicKeyParsed.getLeftMostPubKeyDigits(), tag92_IssuerPublicKeyRemainder);
+                //byte[] recoveredIccPublicKeyManual = performRSA(tag9f46_IccPublicKeyCertificate, tag9f47_IccPublicKeyExponent, recoveredIssuerPublicKeyParsed.getLeftMostPubKeyDigits());
+                byte[] recoveredIccPublicKeyManual = performRSA(tag9f46_IccPublicKeyCertificate, tag9f47_IccPublicKeyExponent, fullModulus);
+                writeToUiAppend(tv1, "decrypted: " + bytesToHexNpe(recoveredIccPublicKeyManual));
+
+
+                writeToUiAppend(tv1, "==============================");
+                writeToUiAppend(tv1, "Retrieval of ICC Public Key by johnzweng");
+                IssuerIccPublicKeyNew issuerIccPublicKey2New;
+                try {
+                    //issuerIccPublicKey2New = emvKeyReader.parseIccPublicKeyNew(tag9f32_IssuerPublicKeyExponent, recoveredIssuerPublicKeyParsed.getLeftMostPubKeyDigits(), tag9f46_IccPublicKeyCertificate, tag92_IssuerPublicKeyRemainder, tag9f47_IccPublicKeyExponent);
+                    issuerIccPublicKey2New = emvKeyReader.parseIccPublicKeyNew(tag9f32_IssuerPublicKeyExponent, fullModulus, tag9f46_IccPublicKeyCertificate, null, tag9f47_IccPublicKeyExponent);
+                    writeToUiAppend(tv1, "decrypted the IccPublicKeyCertificate to the public key");
+                    writeToUiAppend(tv1, "iccPublicKey recovered: " + bytesToHexNpe(issuerIccPublicKey2New.getRecoveredBytes()));
+                } catch (EmvParsingException e) {
+                    throw new RuntimeException(e);
+                }
+
+                EmvKeyReader.RecoveredIccPublicKey recoveredIccPublicKey;
+                try {
+                    recoveredIccPublicKey = emvKeyReader.parseIccPublicKeyCert(issuerIccPublicKey2New.getRecoveredBytes(), recoveredIssuerPublicKeyParsed.getIssuerPublicKeyLength());
+                    writeToUiAppend(tv1, "parsed recovered ICC Public Key\n" + recoveredIccPublicKey.dump());
+                } catch (EmvParsingException e) {
+                    throw new RuntimeException(e);
+                }
+
+                writeToUiAppend(tv1, "==============================");
+                writeToUiAppend(tv1, "Validate the ICC Public Key (will fail !!)");
+                try {
+                    boolean iccPublicKeyIsValid = emvKeyReader.validateIccPublicKey(tag9f32_IssuerPublicKeyExponent, fullModulus, tag9f46_IccPublicKeyCertificate, null, tag9f47_IccPublicKeyExponent);
+                    //boolean iccPublicKeyIsValid = emvKeyReader.validateIccPublicKey(tag9f32_IssuerPublicKeyExponent, recoveredIssuerPublicKeyParsed.getLeftMostPubKeyDigits(), tag9f46_IccPublicKeyCertificate, null, tag9f47_IccPublicKeyExponent);
+                    writeToUiAppend(tv1, "the decrypted ICC Public Key is valid: " + iccPublicKeyIsValid);
+                } catch (EmvParsingException e) {
+                    throw new RuntimeException(e);
+                }
+
+                // now 2 ways
+                // a) ask the card with an internal auth command and decrypt the response - or -
+                // b) you already received Signed Dynamic Data as shown here and decrypt these
+
+                // way ask the card with an internal auth command and decrypt the response
+                writeToUiAppend(tv1, "==============================");
+                writeToUiAppend(tv1, "decrypting the SignedDynamicApplicationData with the ICC public key");
+                //byte[] fullKeyModulus = concatenateModulus(recoveredIssuerPublicKeyParsed.getLeftMostPubKeyDigits(), recoveredIssuerPublicKeyParsed.getOptionalPadding());
+                byte[] recoveredSignedDynamicApplicationData = performRSA(tag9f4b_SignedDynamicApplicationData, tag9f47_IccPublicKeyExponent, recoveredIccPublicKey.getLeftMostPubKeyDigits());
+                writeToUiAppend(tv1, "decrypted: " + bytesToHexNpe(recoveredSignedDynamicApplicationData));
+                SignedDynamicApplicationData signedDynamicApplicationData = new SignedDynamicApplicationData(recoveredSignedDynamicApplicationData);
+                writeToUiAppend(tv1, "parsed SignedDynamicApplicationData\n" + signedDynamicApplicationData.dump());
+
+                // validate the SignedDynamicApplicationData
+                //Step 5: Concatenation of Signed Data Format, Hash Algorithm Indicator,
+                //        ICC Dynamic Data Length, ICC Dynamic Data, Pad Pattern, random number
+                writeToUiAppend(tv1, "==============================");
+                writeToUiAppend(tv1, "validate the SignedDynamicApplicationData");
+                try {
+                    boolean isSignedDynamicApplicationDataValid = validateSignedDynamicApplicationData(signedDynamicApplicationData);
+                    writeToUiAppend(tv1, "isSignedDynamicApplicationDataValid: " + isSignedDynamicApplicationDataValid);
+                } catch (EmvParsingException e) {
+                    throw new RuntimeException(e);
+                } catch (NoSuchAlgorithmException e) {
+                    throw new RuntimeException(e);
+                }
 
             }
         });
     }
+
+    /**
+     * Check if cert is valid and if the calculated hash matches the hash in the certificate
+     *
+     * @param sDAD
+     * @return true if validation is successful, false otherwise
+     * @throws EmvParsingException, NoSuchAlgorithmException
+     */
+    public boolean validateSignedDynamicApplicationData(SignedDynamicApplicationData sDAD) throws EmvParsingException, NoSuchAlgorithmException {
+        // Concatenation of Signed Data Format, Hash Algorithm Indicator,
+        //        ICC Dynamic Data Length, ICC Dynamic Data, Pad Pattern, random number
+
+        //String sDADOrg = "6a05010908d89a8ab98969d82abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb1cd1cdd6d05915423ed517767c2160015ac87c19bc";
+        //String sDDANew = "05010908d89a8ab98969d82abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+        //String randomNumberString = "01020304";
+        //String sDDAcomplete = sDDANew + randomNumberString;
+        //byte[] sDDAcompleteByte = hexToBytes(sDDAcomplete);
+
+        ByteArrayOutputStream hashStream = new ByteArrayOutputStream();
+        // calculate our own hash for comparison:
+        //hashStream.write((byte) 5);
+        //hashStream.write((byte) 1);
+        //hashStream.write((byte) 9);
+        hashStream.write(sDAD.getSignedDataFormat(), 0, sDAD.getSignedDataFormat().length);
+        hashStream.write(sDAD.getHashAlgorithmIndicator(), 0, sDAD.getHashAlgorithmIndicator().length);
+        hashStream.write(sDAD.getIccDynamicDataLength(), 0, sDAD.getIccDynamicDataLength().length);
+        hashStream.write(sDAD.getIccDynamicData(), 0, sDAD.getIccDynamicData().length);
+        hashStream.write(sDAD.getPadPattern(), 0, sDAD.getPadPattern().length);
+        // todo get the used random number from authentication command
+        // todo here the fixed number
+        byte[] randomNumber = hexToBytes("E153F3E8");
+        // first version E153F3E8
+        // second version 01020304 // mastercard
+        hashStream.write(randomNumber, 0, randomNumber.length);
+        // calculate hash:
+        writeToUiAppend(tv1, "*********************");
+        byte[] hashStreamByte = hashStream.toByteArray();
+        writeToUiAppend(tv1, "hashStreamByte:\n" + bytesToHexNpe(hashStreamByte));
+        //writeToUiAppend(tv1, "sDDAcomplete B:\n" + bytesToHexNpe(sDDAcompleteByte));
+        //byte[] calculatedHash = calculateSHA1(hashStream.toByteArray());
+        byte[] calculatedHash = calculateSHA1(hashStreamByte);
+        writeToUiAppend(tv1, "calculatedHash: " + bytesToHexNpe(calculatedHash));
+        //byte[] calculatedHash2 = calculateSHA1(sDDAcompleteByte);
+        //writeToUiAppend(tv1, "calculatedHas2: " + bytesToHexNpe(calculatedHash2));
+        // hashStream.write((byte) 5);.. 16db31...
+        // ashStream.write(sDAD.getSignedDataFormat.. 6db31...
+        writeToUiAppend(tv1, "hashResult:     " + bytesToHexNpe(sDAD.getHashResult()));
+        writeToUiAppend(tv1, "*********************");
+        // compare it with value in cert:
+        return Arrays.equals(calculatedHash, sDAD.getHashResult());
+    }
+
+    /**
+     * decrypts the encrypted data from the card
+     * tag 0x90   - IssuerPublicKeyCertificate
+     * tag 0x9f46 - IccPublicKeyCertificate
+     * tag 0x9f4b - SignedDynamicApplicationData
+     *
+     * @param dataBytes ciphertext
+     * @param expBytes  exponent of parent certificate
+     * @param modBytes  modulus of parent certificate
+     * @return decrypted data
+     */
 
     public static byte[] performRSA(byte[] dataBytes, byte[] expBytes, byte[] modBytes) {
         // source: https://github.com/sasc999/javaemvreader/blob/master/src/main/java/sasc/util/Util.java
@@ -371,7 +571,7 @@ decrypted: 48e26a471054d1ae93d86ab9daaa30a8036d47997e0b556101e950462f67cbc8b9203
         BigInteger mod = new BigInteger(modBytes);
         BigInteger data = new BigInteger(dataBytes);
         byte[] result = data.modPow(exp, mod).toByteArray();
-        if (result.length == (inBytesLength+1) && result[0] == (byte)0x00) {
+        if (result.length == (inBytesLength + 1) && result[0] == (byte) 0x00) {
             //Remove 0x00 from beginning of array
             byte[] tmp = new byte[inBytesLength];
             System.arraycopy(result, 1, tmp, 0, inBytesLength);
@@ -386,9 +586,7 @@ decrypted: 48e26a471054d1ae93d86ab9daaa30a8036d47997e0b556101e950462f67cbc8b9203
     }
 
 
-    // special version, needs a boolean variable in class header: boolean debugPrint = true;
-    // if true this method will print the output additionally to the console
-    // this version does not append the string to the exportString
+    // this method will print the output additionally to the console
     private void writeToUiAppend(TextView textView, String message) {
         runOnUiThread(() -> {
             if (TextUtils.isEmpty(textView.getText().toString())) {
