@@ -1,5 +1,6 @@
 package de.androidcrypto.nfcemvexample.johnzweng;
 
+import static de.androidcrypto.nfcemvexample.StringUtils.fillTrimRight;
 import static de.androidcrypto.nfcemvexample.johnzweng.EmvUtils.calculateSHA1;
 import static de.androidcrypto.nfcemvexample.johnzweng.EmvUtils.getUnsignedBytes;
 
@@ -30,7 +31,8 @@ public class EmvKeyReader {
      * Parse the issuer public key.
      * See EMV (v4.3) Book 2, table 13 for Issuer public key certificate format.
      *
-     * @param caPublicKey          Global card scheme (i.e. Mastercard, VISA, ..) CA public key
+     * @param caPublicKeyExponent  Global card scheme (i.e. Mastercard, VISA, ..) CA public key Exponent
+     * @param caPublicKeyModulus   Global card scheme (i.e. Mastercard, VISA, ..) CA public key Modulus
      * @param publicKeyCertificate issuer public key certificate as read from card
      * @param remainder            remaining modulus bytes as read from card
      * @param publicKeyExponent    public key exponent as read from card
@@ -55,10 +57,30 @@ public class EmvKeyReader {
                 publicKeyCertificate, expirationDate);
     }
 
+    public IssuerIccPublicKeyNew parseIssuerPublicKeyNew(byte[] caPublicKeyExponent, byte[] caPublicKeyModulus, byte[] publicKeyCertificate,
+                                                   byte[] remainder, byte[] publicKeyExponent)
+            throws EmvParsingException {
+
+        byte[] recoveredBytes = calculateRSA(publicKeyCertificate, caPublicKeyExponent,
+                caPublicKeyModulus);
+        final RecoveredIssuerPublicKey cert = this.parseIssuerPublicKeyCert(recoveredBytes,
+                caPublicKeyModulus.length);
+        Date expirationDate = parseDate(cert.certExpirationDate);
+        if (cert.issuerPublicKeyExponentLength != publicKeyExponent.length) {
+            throw new EmvParsingException(String.format("Issuer public key exponent has incorrect length. Should be %d"
+                    + " but we got %d.", cert.issuerPublicKeyExponentLength, publicKeyExponent.length));
+        }
+
+        return new IssuerIccPublicKeyNew(new BigInteger(1, publicKeyExponent),
+                new BigInteger(1, concatenateModulus(cert.leftMostPubKeyDigits, remainder)),
+                publicKeyCertificate, expirationDate, recoveredBytes);
+    }
+
     /**
      * Check if cert is valid and if the calculated hash matches the hash in the certificate
      *
-     * @param caPublicKey          used public key of card-system Root CA
+     * @param caPublicKeyExponent  used public key Exponent of card-system Root CA
+     * @param caPublicKeyModulus   used public key Modulus of card-system Root CA
      * @param publicKeyCertificate issuer public key cert as read from card
      * @param remainingBytes       remaining bytes of issuer public key as read from card
      * @param publicKeyExponent    exponent of issuer public key as read from card
@@ -100,13 +122,14 @@ public class EmvKeyReader {
      * Parse the issuer public key.
      * See EMV (v4.3) Book 2, table 13 for Issuer public key certificate format.
      *
-     * @param issuerPublicKey         public key of card issuer
+     * @param issuerPublicKeyExponent public key Exponent of card issuer
+     * @param issuerPublicKeyModulus  public key Modulus of card issuer
      * @param iccPublicKeyCertificate ICC public key certificate as read from card
      * @param iccRemainder            ICC remaining modulus bytes as read from card
      * @param iccPublicKeyExponent    ICC public key exponent as read from card
      * @return the ICC public key
      */
-    public IssuerIccPublicKey parseIccPublicKey(byte[] issuerPublicKeyExponent, byte[] issuerPublicKeyModulus, byte[] iccPublicKeyCertificate,
+    public IssuerIccPublicKey parseIccPublicKey2(byte[] issuerPublicKeyExponent, byte[] issuerPublicKeyModulus, byte[] iccPublicKeyCertificate,
                                                 byte[] iccRemainder, byte[] iccPublicKeyExponent)
             throws EmvParsingException {
         byte[] recoveredBytes = calculateRSA(iccPublicKeyCertificate, issuerPublicKeyExponent,
@@ -125,10 +148,40 @@ public class EmvKeyReader {
     }
 
     /**
+     * Parse the issuer public key.
+     * See EMV (v4.3) Book 2, table 13 for Issuer public key certificate format.
+     *
+     * @param issuerPublicKeyExponent public key Exponent of card issuer
+     * @param issuerPublicKeyModulus  public key Modulus of card issuer
+     * @param iccPublicKeyCertificate ICC public key certificate as read from card
+     * @param iccRemainder            ICC remaining modulus bytes as read from card
+     * @param iccPublicKeyExponent    ICC public key exponent as read from card
+     * @return the ICC public key
+     */
+    public IssuerIccPublicKeyNew parseIccPublicKeyNew(byte[] issuerPublicKeyExponent, byte[] issuerPublicKeyModulus, byte[] iccPublicKeyCertificate,
+                                                byte[] iccRemainder, byte[] iccPublicKeyExponent)
+            throws EmvParsingException {
+        byte[] recoveredBytes = calculateRSA(iccPublicKeyCertificate, issuerPublicKeyExponent,
+                issuerPublicKeyModulus);
+        final RecoveredIccPublicKey cert = this.parseIccPublicKeyCert(recoveredBytes,
+                issuerPublicKeyModulus.length);
+        Date expirationDate = parseDate(cert.certExpirationDate);
+        if (cert.iccPublicKeyExponentLength != iccPublicKeyExponent.length) {
+            throw new EmvParsingException(String.format("ICC public key exponent has incorrect length. Should be %d"
+                    + " but we got %d.", cert.iccPublicKeyExponentLength, iccPublicKeyExponent.length));
+        }
+
+        return new IssuerIccPublicKeyNew(new BigInteger(1, iccPublicKeyExponent),
+                new BigInteger(1, concatenateModulus(cert.leftMostPubKeyDigits, iccRemainder)),
+                iccPublicKeyCertificate, expirationDate, recoveredBytes);
+    }
+
+    /**
      * Check if cert is valid and if the calculated hash matches the hash in the certificate
      * TODO: this will fail in current implementation (missing lots of data to hash)
      *
-     * @param issuerPublicKey         public key of card issuer
+     * @param issuerPublicKeyExponent public key Exponent of card issuer
+     * @param issuerPublicKeyModulus  public key Modulus of card issuer
      * @param iccPublicKeyCertificate ICC public key certificate as read from card
      * @param iccRemainingBytes       ICC remaining modulus bytes as read from card
      * @param iccPublicKeyExponent    ICC public key exponent as read from card
@@ -200,6 +253,7 @@ public class EmvKeyReader {
      */
     public class RecoveredIssuerPublicKey {
         int recoveredDataHeader;
+        byte[] recoveredDataHeaderByte;
         int certificateFormat;
         byte[] issuerIdentifier;
         byte[] certExpirationDate;
@@ -212,24 +266,42 @@ public class EmvKeyReader {
         byte[] optionalPadding;
         byte[] hashResult;
         int dataTrailer;
+        byte[] dataTrailerByte;
+
+        public int getIssuerPublicKeyLength() {
+            return issuerPublicKeyLength;
+        }
+
+        public byte[] getLeftMostPubKeyDigits() {
+            return leftMostPubKeyDigits;
+        }
+
+        public byte[] getOptionalPadding() {
+            return optionalPadding;
+        }
+
+        public byte[] getHashResult() {
+            return hashResult;
+        }
 
         public String dump() {
             StringBuilder sb = new StringBuilder();
-            sb.append("Recovered Data Header: ").append(recoveredDataHeader).append("\n");
-            sb.append("Certificate Format: ").append(certificateFormat).append("\n");
-            sb.append("Issuer Identifier : ").append(bytesToHexNpe(issuerIdentifier)).append("\n");
-            sb.append("Certificate Expiration Date: ").append(bytesToHexNpe(certExpirationDate)).append("\n");
-            sb.append("Certificate Serial Number: ").append(bytesToHexNpe(certSerialNumber)).append("\n");
-            sb.append("Hash Algorithm Indicator").append(hashAlgoIndicator).append("\n");
-            sb.append("Issuer Public Key Algorithm Indicator: ").append(issuerPubKeyAlgoIndicator).append("\n");
-            sb.append("Issuer Public Key Length: ").append(issuerPublicKeyLength).append("\n");
-            sb.append("Issuer Public Key Exponent Length: ").append(issuerPublicKeyExponentLength).append("\n");
-            sb.append("Leftmost Digits of the Issuer Public Key: ").append(bytesToHexNpe(leftMostPubKeyDigits)).append("\n");
-            sb.append("Optional padding: ").append(bytesToHexNpe(optionalPadding)).append("\n");
-            sb.append("Hash Result : ").append(bytesToHexNpe(hashResult)).append("\n");
-            sb.append("dataTrailer: ").append(dataTrailer).append("\n");
+            sb.append(fillTrimRight("Recovered Data Header: ", 42)).append(recoveredDataHeader).append("\n");
+            sb.append(fillTrimRight("Recovered Data Header Byte: ", 42)).append(bytesToHexNpe(recoveredDataHeaderByte)).append("\n");
+            sb.append(fillTrimRight("Certificate Format: ", 42)).append(certificateFormat).append("\n");
+            sb.append(fillTrimRight("Issuer Identifier : ", 42)).append(bytesToHexNpe(issuerIdentifier)).append("\n");
+            sb.append(fillTrimRight("Certificate Expiration Date: ", 42)).append(bytesToHexNpe(certExpirationDate)).append("\n");
+            sb.append(fillTrimRight("Certificate Serial Number: ", 42)).append(bytesToHexNpe(certSerialNumber)).append("\n");
+            sb.append(fillTrimRight("Hash Algorithm Indicator", 42)).append(hashAlgoIndicator).append("\n");
+            sb.append(fillTrimRight("Issuer Public Key Algorithm Indicator: ", 42)).append(issuerPubKeyAlgoIndicator).append("\n");
+            sb.append(fillTrimRight("Issuer Public Key Length: ", 42)).append(issuerPublicKeyLength).append("\n");
+            sb.append(fillTrimRight("Issuer Public Key Exponent Length: ", 42)).append(issuerPublicKeyExponentLength).append("\n");
+            sb.append(fillTrimRight("Leftmost Digits of the Issuer Public Key: ", 42)).append(bytesToHexNpe(leftMostPubKeyDigits)).append("\n");
+            sb.append(fillTrimRight("Optional padding: ", 42)).append(bytesToHexNpe(optionalPadding)).append("\n");
+            sb.append(fillTrimRight("Hash Result : ", 42)).append(bytesToHexNpe(hashResult)).append("\n");
+            sb.append(fillTrimRight("Data Trailer: ", 42)).append(dataTrailer).append("\n");
+            sb.append(fillTrimRight("Data Trailer Byte: ", 42)).append(bytesToHexNpe(dataTrailerByte)).append("\n");
             return sb.toString();
-
         }
         // todo dump should look like this:
 /*
@@ -285,6 +357,7 @@ I/System.out: dataTrailer: 188
         BitUtils bits = new BitUtils(recoveredBytes);
 
         r.recoveredDataHeader = bits.getNextInteger(8);
+        r.recoveredDataHeaderByte = Arrays.copyOf(recoveredBytes, 1); // added
         System.out.println("*** r.recoveredDataHeader: " + r.recoveredDataHeader);
         if (r.recoveredDataHeader != 0x6a) {
             throw new EmvParsingException("Certificate started with incorrect header: "
@@ -330,6 +403,7 @@ I/System.out: dataTrailer: 188
         }
         r.hashResult = bits.getNextByte(20 * 8);
         r.dataTrailer = bits.getNextInteger(8);
+        r.dataTrailerByte = Arrays.copyOfRange(recoveredBytes, (recoveredBytes.length - 1),recoveredBytes.length); // added
         if (r.dataTrailer != 0xbc) {//Trailer
             throw new EmvParsingException("Certificate ended with incorrect trailer: " +
                     Integer.toHexString(r.dataTrailer));
@@ -365,8 +439,9 @@ I/System.out: dataTrailer: 188
      * Hash Result                           20    Hash of the Issuer Public Key and its related information
      * Recovered Data Trailer                1     Hex value 'BC' b
      */
-    private class RecoveredIccPublicKey {
+    public class RecoveredIccPublicKey {
         int recoveredDataHeader;
+        byte[] recoveredDataHeaderByte;
         int certificateFormat;
         byte[] applicationPan;
         byte[] certExpirationDate;
@@ -379,7 +454,35 @@ I/System.out: dataTrailer: 188
         byte[] optionalPadding;
         byte[] hashResult;
         int dataTrailer;
+        byte[] dataTrailerByte;
 
+        public byte[] getLeftMostPubKeyDigits() {
+            return leftMostPubKeyDigits;
+        }
+
+        public byte[] getOptionalPadding() {
+            return optionalPadding;
+        }
+
+        public String dump() {
+            StringBuilder sb = new StringBuilder();
+            sb.append(fillTrimRight("Recovered Data Header: ", 42)).append(recoveredDataHeader).append("\n");
+            sb.append(fillTrimRight("Recovered Data Header Byte: ", 42)).append(bytesToHexNpe(recoveredDataHeaderByte)).append("\n");
+            sb.append(fillTrimRight("Certificate Format: ", 42)).append(certificateFormat).append("\n");
+            sb.append(fillTrimRight("Application Pan: ", 42)).append(bytesToHexNpe(applicationPan)).append("\n");
+            sb.append(fillTrimRight("Certificate Expiration Date: ", 42)).append(bytesToHexNpe(certExpirationDate)).append("\n");
+            sb.append(fillTrimRight("Certificate Serial Number: ", 42)).append(bytesToHexNpe(certSerialNumber)).append("\n");
+            sb.append(fillTrimRight("Hash Algorithm Indicator", 42)).append(hashAlgoIndicator).append("\n");
+            sb.append(fillTrimRight("ICC Public Key Algorithm Indicator: ", 42)).append(iccPubKeyAlgoIndicator).append("\n");
+            sb.append(fillTrimRight("ICC Public Key Length: ", 42)).append(iccPublicKeyLength).append("\n");
+            sb.append(fillTrimRight("ICC Public Key Exponent Length: ", 42)).append(iccPublicKeyExponentLength).append("\n");
+            sb.append(fillTrimRight("Leftmost Digits of the ICC Public Key: ", 42)).append(bytesToHexNpe(leftMostPubKeyDigits)).append("\n");
+            sb.append(fillTrimRight("Optional padding: ", 42)).append(bytesToHexNpe(optionalPadding)).append("\n");
+            sb.append(fillTrimRight("Hash Result : ", 42)).append(bytesToHexNpe(hashResult)).append("\n");
+            sb.append(fillTrimRight("Data Trailer: ", 42)).append(dataTrailer).append("\n");
+            sb.append(fillTrimRight("Data Trailer Byte: ", 42)).append(bytesToHexNpe(dataTrailerByte)).append("\n");
+            return sb.toString();
+        }
 
     }
 
@@ -391,12 +494,13 @@ I/System.out: dataTrailer: 188
      * @return parsed data
      * @throws EmvParsingException
      */
-    private RecoveredIccPublicKey parseIccPublicKeyCert(byte[] recoveredBytes, int issuerKeyModulusLength)
+    public RecoveredIccPublicKey parseIccPublicKeyCert(byte[] recoveredBytes, int issuerKeyModulusLength)
             throws EmvParsingException {
         RecoveredIccPublicKey r = new RecoveredIccPublicKey();
         BitUtils bits = new BitUtils(recoveredBytes);
 
         r.recoveredDataHeader = bits.getNextInteger(8);
+        r.recoveredDataHeaderByte = Arrays.copyOf(recoveredBytes, 1); // added
         if (r.recoveredDataHeader != 0x6a) {
             throw new EmvParsingException("Certificate started with incorrect header: "
                     + Integer.toHexString(r.recoveredDataHeader));
@@ -441,6 +545,7 @@ I/System.out: dataTrailer: 188
         }
         r.hashResult = bits.getNextByte(20 * 8);
         r.dataTrailer = bits.getNextInteger(8);
+        r.dataTrailerByte = Arrays.copyOfRange(recoveredBytes, (recoveredBytes.length - 1),recoveredBytes.length); // added
         if (r.dataTrailer != 0xbc) {//Trailer
             throw new EmvParsingException("Certificate ended with incorrect trailer: " +
                     Integer.toHexString(r.dataTrailer));
@@ -459,7 +564,7 @@ I/System.out: dataTrailer: 188
      * @param remainder
      * @return
      */
-    private static byte[] concatenateModulus(byte[] leftMostDigits, byte[] remainder) {
+    public static byte[] concatenateModulus(byte[] leftMostDigits, byte[] remainder) {
         final byte[] completeModulus;
         if (remainder != null && remainder.length > 0) {
             // concatenate the leftmost part of modulus (recovered from certificate) plus
@@ -520,16 +625,38 @@ I/System.out: dataTrailer: 188
     /**
      * Manually perform RSA operation: data ^ exponent mod modulus
      *
-     * @param data                data bytes to operate on
-     * @param caPublicKeyExponent exponent
-     * @param caPublicKeyModulus  modulus
+     * @param dataBytes           data bytes to operate on
+     * @param expBytes            exponent
+     * @param modBytes            modulus
      * @return data ^ exponent mod modulus
      */
-    private static byte[] calculateRSA(byte[] data, byte[] caPublicKeyExponent, byte[] caPublicKeyModulus) throws EmvParsingException {
-        BigInteger exponent = new BigInteger(caPublicKeyExponent);
-        BigInteger modulus = new BigInteger(caPublicKeyModulus);
+    private static byte[] calculateRSA(byte[] dataBytes, byte[] expBytes, byte[] modBytes) throws EmvParsingException {
+        int inBytesLength = dataBytes.length;
+        if (expBytes[0] >= (byte) 0x80) {
+            //Prepend 0x00 to modulus
+            byte[] tmp = new byte[expBytes.length + 1];
+            tmp[0] = (byte) 0x00;
+            System.arraycopy(expBytes, 0, tmp, 1, expBytes.length);
+            expBytes = tmp;
+        }
+        if (modBytes[0] >= (byte) 0x80) {
+            //Prepend 0x00 to modulus
+            byte[] tmp = new byte[modBytes.length + 1];
+            tmp[0] = (byte) 0x00;
+            System.arraycopy(modBytes, 0, tmp, 1, modBytes.length);
+            modBytes = tmp;
+        }
+        if (dataBytes[0] >= (byte) 0x80) {
+            //Prepend 0x00 to signed data to avoid that the most significant bit is interpreted as the "signed" bit
+            byte[] tmp = new byte[dataBytes.length + 1];
+            tmp[0] = (byte) 0x00;
+            System.arraycopy(dataBytes, 0, tmp, 1, dataBytes.length);
+            dataBytes = tmp;
+        }
+        BigInteger exponent = new BigInteger(expBytes);
+        BigInteger modulus = new BigInteger(modBytes);
         // bigInts here are unsigned:
-        BigInteger dataBigInt = new BigInteger(1, data);
+        BigInteger dataBigInt = new BigInteger(1, dataBytes);
         return getUnsignedBytes(dataBigInt.modPow(exponent, modulus));
     }
 

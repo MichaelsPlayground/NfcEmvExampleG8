@@ -2,6 +2,7 @@ package de.androidcrypto.nfcemvexample;
 
 import static de.androidcrypto.nfcemvexample.BinaryUtils.bytesToHexNpe;
 import static de.androidcrypto.nfcemvexample.BinaryUtils.hexToBytes;
+import static de.androidcrypto.nfcemvexample.johnzweng.EmvKeyReader.concatenateModulus;
 
 import android.content.Intent;
 import android.os.Bundle;
@@ -24,7 +25,10 @@ import java.security.NoSuchAlgorithmException;
 import de.androidcrypto.nfcemvexample.johnzweng.EmvKeyReader;
 import de.androidcrypto.nfcemvexample.johnzweng.EmvParsingException;
 import de.androidcrypto.nfcemvexample.johnzweng.IssuerIccPublicKey;
+import de.androidcrypto.nfcemvexample.johnzweng.IssuerIccPublicKeyNew;
+import de.androidcrypto.nfcemvexample.johnzweng.SignedDynamicApplicationData;
 import de.androidcrypto.nfcemvexample.sasc.CA;
+import de.androidcrypto.nfcemvexample.sasc.ICCPublicKey;
 import de.androidcrypto.nfcemvexample.sasc.ICCPublicKeyCertificate;
 import de.androidcrypto.nfcemvexample.sasc.IssuerPublicKey;
 import de.androidcrypto.nfcemvexample.sasc.IssuerPublicKeyCertificate;
@@ -127,68 +131,122 @@ SHA-1
 6a02487178ff12280431ef0101b001bf19e3eb0d7cd72b45a02661ea4ab87e7a60cb7ab45fd170f5e9a650aee5154124b64e85bd3444c76fddb28f9e30c1304761713773fa2d5ea05be757cfacb2df7b80e8acbd585ec5e1606f3fc91241245f9d929e7e06790d996245eccbab1a37933268e31c622f9d1a486f6ba5340ceec7b794dc0f3303b5de4662efdcfc92f6953eab65a86bb4c8d58d3308c88b5329e2a10d6bec4465c485e5b0a223d87538b10ed755891767f5f4f86068f65de4f1bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb786706bd50c5618f7f69d42326d6966877ed609fbc
  */
 
+                // https://www.linkedin.com/pulse/emv-application-specification-offline-data-oda-part-farghaly-1f?trk=pulse-article
                 // see package johnzweng
                 EmvKeyReader emvKeyReader = new EmvKeyReader();
+
+                writeToUiAppend(tv1, "==============================");
+                writeToUiAppend(tv1, "Retrieval of Issuer Public Key by johnzweng");
+                // this is the johnzweng method to decrypt
+                IssuerIccPublicKeyNew issuerIccPublicKeyNew;
                 try {
-                    EmvKeyReader.RecoveredIssuerPublicKey recoveredIssuerPublicKeyParsed = emvKeyReader.parseIssuerPublicKeyCert(recoveredIssuerPublicKey, caPublicKeyVisa09Modulus.length);
+                    issuerIccPublicKeyNew = emvKeyReader.parseIssuerPublicKeyNew(caPublicKeyVisa09Exponent, caPublicKeyVisa09Modulus, tag90_IssuerPublicKeyCertificate, null, tag9f32_IssuerPublicKeyExponent);
+                    writeToUiAppend(tv1, "decrypted the tag90_IssuerPublicKeyCertificate to the public key");
+                    writeToUiAppend(tv1, "issuerIccPublicKey recovered: " + bytesToHexNpe(issuerIccPublicKeyNew.getRecoveredBytes()));
+                } catch (EmvParsingException e) {
+                    throw new RuntimeException(e);
+                }
+
+
+                EmvKeyReader.RecoveredIssuerPublicKey recoveredIssuerPublicKeyParsed;
+                try {
+                    recoveredIssuerPublicKeyParsed = emvKeyReader.parseIssuerPublicKeyCert(recoveredIssuerPublicKey, caPublicKeyVisa09Modulus.length);
                     writeToUiAppend(tv1, "parsed recovered Issuer Public Key\n" + recoveredIssuerPublicKeyParsed.dump());
                 } catch (EmvParsingException e) {
                     throw new RuntimeException(e);
                 }
 
+                writeToUiAppend(tv1, "==============================");
+                writeToUiAppend(tv1, "Validate the Issuer Public Key");
+                try {
+                    boolean issuerPublicKeyIsValid = emvKeyReader.validateIssuerPublicKey(caPublicKeyVisa09Exponent, caPublicKeyVisa09Modulus, tag90_IssuerPublicKeyCertificate, null, tag9f32_IssuerPublicKeyExponent);
+                    writeToUiAppend(tv1, "the decrypted Issuer Public Key is valid: " + issuerPublicKeyIsValid);
+                } catch (EmvParsingException e) {
+                    throw new RuntimeException(e);
+                }
+
+
                 // next step: Terminal decrypt ICC public key certificate using the issuer public key
+                writeToUiAppend(tv1, "==============================");
+                writeToUiAppend(tv1, "decrypting the IccPublicKeyCertificate");
+                byte[] fullKeyModulus = concatenateModulus(recoveredIssuerPublicKeyParsed.getLeftMostPubKeyDigits(), recoveredIssuerPublicKeyParsed.getOptionalPadding());
+                byte[] recoveredIccPublicKeyCertificate = performRSA(tag9f46_IccPublicKeyCertificate, tag9f32_IssuerPublicKeyExponent, recoveredIssuerPublicKeyParsed.getLeftMostPubKeyDigits());
+                writeToUiAppend(tv1, "decrypted: " + bytesToHexNpe(recoveredIccPublicKeyCertificate));
+
+                writeToUiAppend(tv1, "==============================");
+                writeToUiAppend(tv1, "Retrieval of ICC Public Key by johnzweng");
+                ICCPublicKey iccPublicKey;
+                IssuerIccPublicKeyNew issuerIccPublicKey2New;
+                try {
+                    issuerIccPublicKey2New = emvKeyReader.parseIccPublicKeyNew(tag9f32_IssuerPublicKeyExponent, recoveredIssuerPublicKeyParsed.getLeftMostPubKeyDigits(), tag9f46_IccPublicKeyCertificate, null, tag9f47_IccPublicKeyExponent);
+/*
+public IssuerIccPublicKey parseIccPublicKey(byte[] issuerPublicKeyExponent, byte[] issuerPublicKeyModulus, byte[] iccPublicKeyCertificate,
+                                                byte[] iccRemainder, byte[] iccPublicKeyExponent)
+ */
+                    //iccPublicKey = emvKeyReader.parseIccPublicKey(tag9f32_IssuerPublicKeyExponent, recoveredIssuerPublicKeyParsed.getLeftMostPubKeyDigits(), tag9f46_IccPublicKeyCertificate, null, tag9f32_IssuerPublicKeyExponent);
+                    writeToUiAppend(tv1, "decrypted the IccPublicKeyCertificate to the public key");
+                    writeToUiAppend(tv1, "iccPublicKey recovered: " + bytesToHexNpe(issuerIccPublicKey2New.getRecoveredBytes()));
+                } catch (EmvParsingException e) {
+                    throw new RuntimeException(e);
+                }
 
 
-                /*
-                CA.initFromFile("/certificationauthorities_test.xml");
-                CA visaCa = CA.getCA(visaRid);
-                IssuerPublicKeyCertificate visaCert = new IssuerPublicKeyCertificate(visaCa);
-                visaCert.setCAPublicKeyIndex(9);
+                EmvKeyReader.RecoveredIccPublicKey recoveredIccPublicKey;
+                try {
+                    recoveredIccPublicKey = emvKeyReader.parseIccPublicKeyCert(recoveredIccPublicKeyCertificate, recoveredIssuerPublicKeyParsed.getIssuerPublicKeyLength());
+                    writeToUiAppend(tv1, "parsed recovered ICC Public Key\n" + recoveredIccPublicKey.dump());
+                } catch (EmvParsingException e) {
+                    throw new RuntimeException(e);
+                }
 
-                byte[] recoverdIssuerPublicKey = Util.performRSA(tag90_IssuerPublicKeyCertificate, new byte[]{(byte) 0x03}, visaCa.getPublicKey(9).getModulus());
-                writeToUiAppend(tv1, "recoveredIssuerPublicKey: " + bytesToHexNpe(recoverdIssuerPublicKey));
-*/
+                writeToUiAppend(tv1, "==============================");
+                writeToUiAppend(tv1, "Validate the ICC Public Key");
+                try {
+                    boolean iccPublicKeyIsValid = emvKeyReader.validateIccPublicKey(tag9f32_IssuerPublicKeyExponent, recoveredIssuerPublicKeyParsed.getLeftMostPubKeyDigits(), tag9f46_IccPublicKeyCertificate, null, tag9f47_IccPublicKeyExponent);
+                    writeToUiAppend(tv1, "the decrypted ICC Public Key is valid: " + iccPublicKeyIsValid);
+                } catch (EmvParsingException e) {
+                    throw new RuntimeException(e);
+                }
 
+                // now 2 ways
+                // a) ask the card with an internal auth command and decrypt the response - or -
+                // b) you already received Signed Dynamic Data as shown here and decrypt these
 
-                //visaCert.setSignedBytes();
-                //IssuerPublicKey issuerPublicKey = new IssuerPublicKey();
-                //issuerPublicKey.setModulus();
+                // way b) decrypt tag9f4b_SignedDynamicApplicationData
+                writeToUiAppend(tv1, "==============================");
+                writeToUiAppend(tv1, "decrypting the SignedDynamicApplicationData with the ICC public key");
+                //byte[] fullKeyModulus = concatenateModulus(recoveredIssuerPublicKeyParsed.getLeftMostPubKeyDigits(), recoveredIssuerPublicKeyParsed.getOptionalPadding());
+                byte[] recoveredSignedDynamicApplicationData = performRSA(tag9f4b_SignedDynamicApplicationData, tag9f47_IccPublicKeyExponent, recoveredIccPublicKey.getLeftMostPubKeyDigits());
+                writeToUiAppend(tv1, "decrypted: " + bytesToHexNpe(recoveredSignedDynamicApplicationData));
+                SignedDynamicApplicationData signedDynamicApplicationData = new SignedDynamicApplicationData(recoveredSignedDynamicApplicationData);
+                writeToUiAppend(tv1, "parsed SignedDynamicApplicationData\n" + signedDynamicApplicationData.dump());
 
 /*
-                writeToUiAppend(tv1, "==============================");
-                byte[] rid = Util.fromHexString("a0 00 00 00 03"); // visa
-                byte[] mod = Util.fromHexString("BE9E1FA5E9A803852999C4AB432DB28600DCD9DAB76DFAAA47355A0FE37B1508AC6BF38860D3C6C2E5B12A3CAAF2A7005A7241EBAA7771112C74CF9A0634652FBCA0E5980C54A64761EA101A114E0F0B5572ADD57D010B7C9C887E104CA4EE1272DA66D997B9A90B5A6D624AB6C57E73C8F919000EB5F684898EF8C3DBEFB330C62660BED88EA78E909AFF05F6DA627B");
-                byte[] chksum = CA.calculateCAPublicKeyCheckSum(rid, Util.intToByteArray(149), mod, new byte[]{0x03});
-                System.out.println(Util.prettyPrintHexNoWrap(chksum));
-                writeToUiAppend(tv1, "chksum: " + Util.prettyPrintHexNoWrap(chksum));
-                CA.initFromFile("/certificationauthorities_test.xml");
-                CA ca = CA.getCA(rid);
-                IssuerPublicKeyCertificate cert = new IssuerPublicKeyCertificate(ca);
-                cert.setCAPublicKeyIndex(149);
-                String signedBytesStr = "8b 39 01 f6 25 30 48 a8 b2 cb 08 97 4a 42 45 d9" +
-                        "0e 1f 0c 4a 2a 69 bc a4 69 61 5a 71 db 21 ee 7b" +
-                        "3a a9 42 00 cf ae dc d6 f0 a7 d9 ad 0b f7 92 13" +
-                        "b6 a4 18 d7 a4 9d 23 4e 5c 97 15 c9 14 0d 87 94" +
-                        "0f 2e 04 d6 97 1f 4a 20 4c 92 7a 45 5d 4f 8f c0" +
-                        "d6 40 2a 79 a1 ce 05 aa 3a 52 68 67 32 98 53 f5" +
-                        "ac 2f eb 3c 6f 59 ff 6c 45 3a 72 45 e3 9d 73 45" +
-                        "14 61 72 57 95 ed 73 09 70 99 96 3b 82 eb f7 20" +
-                        "3c 1f 78 a5 29 14 0c 18 2d bb e6 b4 2a e0 0c 02";
-                byte[] signedBytes = Util.fromHexString(signedBytesStr);
-                cert.setSignedBytes(signedBytes);
+Signed Dynamic Application Data
+Now we decode the Signed Dynamic Application Data
 
-                String remainderStr = "33 f5 e4 44 7d 4a 32 e5 93 6e 5a 13 39 32 9b b4 e8 dd 8b f0 04 4c e4 42 8e 24 d0 86 6f ae fd 23 48 80 9d 71";
-                cert.getIssuerPublicKey().setExponent(new byte[]{0x03});
-                cert.getIssuerPublicKey().setRemainder(Util.fromHexString(remainderStr));
+	var picKey = new Key();
+	picKey.setType(Key.PUBLIC);
+	picKey.setComponent(Key.MODULUS, iccPublicKeyModulus);
+	picKey.setComponent(Key.EXPONENT, this.emv.cardDE[0x9F47]);
 
-                System.out.println(cert.toString());
-                writeToUiAppend(tv1, "cert:\n" + cert.toString());
-
-                // now with own data
-                // rid is already visa
-*/
+	var decryptedSDAD = crypto.decrypt(picKey, Crypto.RSA, SDAD);
+Field Name	Length	Description
+Recovered Data Header	1	Hex value '6A'
+Signed Data Format	1	Hex value '05'
+Hash Algorithm Indicator	1	Identifies the hash algorithm used to produce the Hash Result in the digital signature scheme
+ICC Dynamic Data Length	1	Identifies the length of the ICC Dynamic Data in bytes
+ICC Dynamic Data Length	LDD	Dynamic data generated by and/or stored in the ICC
+Pad Pattern	NIC - LDD - 25	(NIC - LDD - 25) padding bytes of value 'BB'
+Hash Result	20	Hash of the Dynamic Application Data and its related infromation
+Recovered Data Trailer	1	Hex value'BC'
+ */
 
 
+
+/*
+decrypted: 48e26a471054d1ae93d86ab9daaa30a8036d47997e0b556101e950462f67cbc8b92033aefd7132cd1c01c32e8a9e47cdceb80a9f9aded4f8fa951e7fb938357264508d73ea159ea88fba9dc2dabc9a49ebe5ddf93235c2140dde2ee35306f6c1bcfb646f55e408f45f653cf2580082556b526d861f263781874324facb100d7f3a66616d2bcf8b2a41a3a2b5511fd64362c0282d292ae6668608242e3640dd6f33fb671e5141d1bc97afe08f44b4b117
+ */
             }
         });
 
