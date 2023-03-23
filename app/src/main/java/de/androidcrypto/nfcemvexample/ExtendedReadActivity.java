@@ -4,6 +4,7 @@ import static de.androidcrypto.nfcemvexample.BinaryUtils.bytesToHex;
 import static de.androidcrypto.nfcemvexample.BinaryUtils.bytesToHexNpe;
 import static de.androidcrypto.nfcemvexample.BinaryUtils.hexToBytes;
 import static de.androidcrypto.nfcemvexample.BinaryUtils.intToByteArrayV4;
+import static de.androidcrypto.nfcemvexample.EmvModules.getInternalAuthentication;
 
 import android.app.Activity;
 import android.content.Context;
@@ -217,6 +218,7 @@ public class ExtendedReadActivity extends AppCompatActivity implements NfcAdapte
                 nfc.connect();
                 tsList = new ArrayList<>(); // holds the tags found during reading
                 List<TagSet> selectPpseTsList = new ArrayList<>();
+
                 // experimental section with new modules
                 ModuleInfo miSelectPpse = EmvModules.moduleSelectPpse(nfc);
                 printStepHeader(etLog, 1, "select PPSE");
@@ -379,9 +381,54 @@ public class ExtendedReadActivity extends AppCompatActivity implements NfcAdapte
                         }
                     } else {
                         // if (miGpo.isSuccess()) {
+                        // todo try another PDOL as this seems to be not working on DKB GiroCard ??
                         writeToUiAppend(etLog, "05 get processing options : found a strange behaviour - get processing options got wrong data to proceed... sorry");
                     }
+                    writeToUiAppend(etLog, "");
+                    printStepHeader(etLog, 9, "internal authentication");
+                    //writeToUiAppend(etLog, "get the internal authentication: " + bytesToHexNpe(tag8c_CDOL1));
+                    ModuleInfo miInternalAuthentication = getInternalAuthentication(nfc, new byte[4]);
+                    if (miInternalAuthentication != null) {
+                        if (miInternalAuthentication.isSuccess()) {
+                            writeToUiAppend(etLog, "10 get application cryptogram command length " + miInternalAuthentication.getCommand().length + " data: " + bytesToHex(miInternalAuthentication.getCommand()));
+                            writeToUiAppend(etLog, "10 get application cryptogram response length " + miInternalAuthentication.getResponse().length + " data: " + bytesToHex(miInternalAuthentication.getResponse()));
+                            //writeToUiAppend(etLog, miInternalAuthentication.dumpTsList());
+                            writeToUiAppend(etLog, miInternalAuthentication.getPrettyPrint());
+                            writeToUiAppend(etLog, "number of tags found: " + miInternalAuthentication.getTsList().size());
+                            aidTsList.addAll(miInternalAuthentication.getTsList());
+                        } else {
+                            writeToUiAppend(etLog, "could not get an internal authentication");
+                            writeToUiAppend(etLog, "response from card was: " + bytesToHexNpe(miInternalAuthentication.getResponse()));
+                        }
+                    } else {
+                        writeToUiAppend(etLog, "could not get an internal authentication");
+                    }
 
+                    // for getApplicationCryptogram we need the content of tag 0x8c = CDOL1
+                    byte[] tag8c_CDOL1 = EmvModules.getTagValueFromList(aidTsList, new byte[]{(byte) 0x8c});
+                    if (tag8c_CDOL1 != null) {
+                        writeToUiAppend(etLog, "");
+                        printStepHeader(etLog, 10, "application crypto");
+                        writeToUiAppend(etLog, "get the application cryptogram from CDOL1: " + bytesToHexNpe(tag8c_CDOL1));
+                        ModuleInfo miApplicationCryptogram = EmvModules.getApplicationCryptogram(nfc, tag8c_CDOL1);
+                        if (miApplicationCryptogram.isSuccess()) {
+                            writeToUiAppend(etLog, "10 get application cryptogram command length " + miApplicationCryptogram.getCommand().length + " data: " + bytesToHex(miApplicationCryptogram.getCommand()));
+                            writeToUiAppend(etLog, "10 get application cryptogram response length " + miApplicationCryptogram.getResponse().length + " data: " + bytesToHex(miApplicationCryptogram.getResponse()));
+                            //writeToUiAppend(etLog, miApplicationCryptogram.dumpTsList());
+                            writeToUiAppend(etLog, miApplicationCryptogram.getPrettyPrint());
+                            writeToUiAppend(etLog, "number of tags found: " + miApplicationCryptogram.getTsList().size());
+                            aidTsList.addAll(miApplicationCryptogram.getTsList());
+                        } else {
+                            writeToUiAppend(etLog, "could not get an application cryptogram");
+                            writeToUiAppend(etLog, "response from card was: " + bytesToHexNpe(miApplicationCryptogram.getResponse()));
+                        }
+                    } else {
+                        writeToUiAppend(etLog, "could not get an application cryptogram");
+                    }
+
+
+
+                    // place this at the end as the next readings get no response
                     // single readings
                     writeToUiAppend(etLog, "");
                     printStepHeader(etLog, 8, "single readings");
@@ -389,6 +436,7 @@ public class ExtendedReadActivity extends AppCompatActivity implements NfcAdapte
                     ModuleInfo miSingleRead = EmvModules.readSingleDataElements(nfc);
                     if (miSingleRead.isSuccess()) {
                         // todo check for not success in single commands
+                        writeToUiAppend(etLog, "application transaction counter (dec.): " + miSingleRead.getPrettyPrint());
                         writeToUiAppend(etLog, miSingleRead.dumpTsList());
                         aidTsList.addAll(miSingleRead.getTsList());
                     } else {
@@ -397,13 +445,15 @@ public class ExtendedReadActivity extends AppCompatActivity implements NfcAdapte
 
 
 
-
-
                 // for (int aidNumber = 0; aidNumber < moduleFoundAids; aidNumber++) {
                 }
 
                 printStepHeader(etLog, 9, "end experimental module");
-                // end experimental section
+
+                /**
+                 * experimental section ends here
+                 */
+
 
                 writeToUiAppend(etLog, "try to read a payment card with PPSE");
                 //byte[] command;

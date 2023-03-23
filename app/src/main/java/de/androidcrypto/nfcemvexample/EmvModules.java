@@ -1,6 +1,7 @@
 package de.androidcrypto.nfcemvexample;
 
 import static de.androidcrypto.nfcemvexample.BinaryUtils.bytesToHex;
+import static de.androidcrypto.nfcemvexample.BinaryUtils.bytesToHexNpe;
 import static de.androidcrypto.nfcemvexample.BinaryUtils.hexToBytes;
 import static de.androidcrypto.nfcemvexample.BinaryUtils.intToByteArrayV4;
 
@@ -405,6 +406,7 @@ in the second byte. The fourth byte may range from zero to the value of the thir
         List<TagSet> tsLst = new ArrayList<>();
         List<byte[]> dataLst = new ArrayList<>();
         ModuleInfo miAtc = getApplicationTransactionCounter(nfc);
+        String atcString = "00000";
         ModuleInfo miLeftPinTryCounter = getLeftPinTryCounterCounter(nfc);
         ModuleInfo miLastOnlineAtcRegister = getLastOnlineATCRegister(nfc);
         ModuleInfo miLogFormat = getLogFormat(nfc);
@@ -412,6 +414,7 @@ in the second byte. The fourth byte may range from zero to the value of the thir
             tsLst.addAll(miAtc.getTsList());
             dataLst.addAll(miAtc.getDataList());
             result = true;
+            atcString = miAtc.getPrettyPrint();
         }
         if (miLeftPinTryCounter.isSuccess()) {
             tsLst.addAll(miLeftPinTryCounter.getTsList());
@@ -428,7 +431,7 @@ in the second byte. The fourth byte may range from zero to the value of the thir
             dataLst.addAll(miLogFormat.getDataList());
             result = true;
         }
-        mi = new ModuleInfo(new byte[0], new byte[0], result, tsLst, dataLst, null);
+        mi = new ModuleInfo(new byte[0], new byte[0], result, tsLst, dataLst, atcString);
         return mi;
     }
 
@@ -646,6 +649,52 @@ in the second byte. The fourth byte may range from zero to the value of the thir
     }
 
     /**
+     * section for internal authentication
+     */
+
+    public static ModuleInfo getInternalAuthentication(IsoDep nfc, @NonNull byte[] unpredictionalNumber4Bytes) {
+        ModuleInfo mi;
+        byte[] command;
+        byte[] response = new byte[0];
+        byte[] responseOk = null;
+        // check for correct length of data
+        if (unpredictionalNumber4Bytes.length != 4) {
+            return null;
+        }
+
+        String internalAuthHeader = "00880000";
+        String randomNumberLength = "04";
+        String randomNumber = "01020304";
+        String internalAuthTrailer = "00";
+        String internalAuthString = internalAuthHeader + randomNumberLength + randomNumber + internalAuthTrailer;
+        command = hexToBytes(internalAuthString);
+        try {
+            response = nfc.transceive(command);
+        } catch (IOException e) {
+            mi = new ModuleInfo(command, null, false, null, null, null);
+            return mi;
+        }
+        if (response != null) {
+            System.out.println("**** internalAuthResponse: " + bytesToHexNpe(response));
+            responseOk = checkResponse(response);
+            if (responseOk != null) {
+                String responseString = TlvUtil.prettyPrintAPDUResponse(responseOk);
+                List<TagSet> tsList = new ArrayList<>();
+                tsList.addAll(getTagSetFromResponse(responseOk, "getInternalAuthentication"));
+                mi = new ModuleInfo(command, responseOk, true, tsList, null, responseString);
+                return mi;
+            } else {
+                mi = new ModuleInfo(command, response, false, null, null, null);
+                return mi;
+            }
+        } else {
+            return null;
+        }
+
+    }
+
+
+    /**
      * section for get application cryptogram
      */
 
@@ -655,7 +704,7 @@ in the second byte. The fourth byte may range from zero to the value of the thir
      * @param tag8cCdol1 - the tag 0x8c = CDOL1 can be found while reading any response
      * @return ModuleInfo with the application cryptogram
      */
-    public ModuleInfo getApplicationCryptogram (@NonNull IsoDep nfc, byte[] tag8cCdol1) {
+    public static ModuleInfo getApplicationCryptogram (@NonNull IsoDep nfc, byte[] tag8cCdol1) {
         ModuleInfo mi;
         byte[] command;
         byte[] response = new byte[0];
@@ -673,7 +722,7 @@ in the second byte. The fourth byte may range from zero to the value of the thir
                 if (responseOk != null) {
                     String responseString = TlvUtil.prettyPrintAPDUResponse(responseOk);
                     List<TagSet> tsList = new ArrayList<>();
-                    tsList.addAll(getTagSetFromResponse(responseOk, "getProcessingOptions"));
+                    tsList.addAll(getTagSetFromResponse(responseOk, "getApplicationCryptogram"));
                     mi = new ModuleInfo(command, responseOk, true, tsList, null, responseString);
                     return mi;
                 } else {
@@ -696,7 +745,7 @@ in the second byte. The fourth byte may range from zero to the value of the thir
      * @param cdol
      * @return
      */
-    private byte[] getAppCryptoCommandFromCdol(@NonNull byte[] cdol) {
+    private static byte[] getAppCryptoCommandFromCdol(@NonNull byte[] cdol) {
         // get the tags in a list
         List<TagAndLength> tagAndLength = TlvUtil.parseTagAndLength(cdol);
         int tagAndLengthSize = tagAndLength.size();
@@ -747,7 +796,7 @@ in the second byte. The fourth byte may range from zero to the value of the thir
      * section for getting the tags from read responses
      */
 
-    private static byte[] getTagValueFromList(@NonNull List<TagSet> tagSetList, @NonNull byte[] tag) {
+    public static byte[] getTagValueFromList(@NonNull List<TagSet> tagSetList, @NonNull byte[] tag) {
         int size = tagSetList.size();
         for (int i = 0; i < size; i++) {
             TagSet tagSet = tagSetList.get(i);
