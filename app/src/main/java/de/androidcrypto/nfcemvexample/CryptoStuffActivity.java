@@ -32,6 +32,7 @@ import de.androidcrypto.nfcemvexample.johnzweng.IssuerIccPublicKey;
 import de.androidcrypto.nfcemvexample.johnzweng.IssuerIccPublicKeyNew;
 import de.androidcrypto.nfcemvexample.johnzweng.SignedDynamicApplicationData;
 import de.androidcrypto.nfcemvexample.nfccreditcards.DolTag;
+import de.androidcrypto.nfcemvexample.sasc.ApplicationInterchangeProfile;
 import de.androidcrypto.nfcemvexample.sasc.CA;
 import de.androidcrypto.nfcemvexample.sasc.ICCPublicKey;
 import de.androidcrypto.nfcemvexample.sasc.ICCPublicKeyCertificate;
@@ -232,7 +233,7 @@ public IssuerIccPublicKey parseIccPublicKey(byte[] issuerPublicKeyExponent, byte
                 writeToUiAppend(tv1, "==============================");
                 writeToUiAppend(tv1, "validate the SignedDynamicApplicationData");
                 try {
-                    boolean isSignedDynamicApplicationDataValid = validateSignedDynamicApplicationData(signedDynamicApplicationData);
+                    boolean isSignedDynamicApplicationDataValid = validateSignedDynamicApplicationData(signedDynamicApplicationData, tag9f69_Udol);
                     writeToUiAppend(tv1, "isSignedDynamicApplicationDataValid: " + isSignedDynamicApplicationDataValid);
                 } catch (EmvParsingException e) {
                     throw new RuntimeException(e);
@@ -470,7 +471,7 @@ decrypted: 48e26a471054d1ae93d86ab9daaa30a8036d47997e0b556101e950462f67cbc8b9203
                 writeToUiAppend(tv1, "==============================");
                 writeToUiAppend(tv1, "validate the SignedDynamicApplicationData");
                 try {
-                    boolean isSignedDynamicApplicationDataValid = validateSignedDynamicApplicationData(signedDynamicApplicationData);
+                    boolean isSignedDynamicApplicationDataValid = validateSignedDynamicApplicationData(signedDynamicApplicationData, tag9f69_Udol);
                     writeToUiAppend(tv1, "isSignedDynamicApplicationDataValid: " + isSignedDynamicApplicationDataValid);
                 } catch (EmvParsingException e) {
                     throw new RuntimeException(e);
@@ -478,6 +479,25 @@ decrypted: 48e26a471054d1ae93d86ab9daaa30a8036d47997e0b556101e950462f67cbc8b9203
                     throw new RuntimeException(e);
                 }
 
+            }
+        });
+
+        btn6.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                // shows AIP dump data
+                // Visa comd m 20 20
+                // MC aab 19 80
+                // GC voba 18 00
+                // Visa Lloyds 20 00
+                ApplicationInterchangeProfile aipVisaComd = new ApplicationInterchangeProfile((byte) 0x20, (byte) 0x20);
+                writeToUiAppend(tv1, "AIP Visa comd: " + aipVisaComd.toString());
+                ApplicationInterchangeProfile aipMcAab = new ApplicationInterchangeProfile((byte) 0x19, (byte) 0x80);
+                writeToUiAppend(tv1, "AIP MC AAB: " + aipMcAab.toString());
+                ApplicationInterchangeProfile aipGcVoba = new ApplicationInterchangeProfile((byte) 0x18, (byte) 0x00);
+                writeToUiAppend(tv1, "AIP GC Voba: " + aipGcVoba.toString());
+                ApplicationInterchangeProfile aipVisaLloyds = new ApplicationInterchangeProfile((byte) 0x20, (byte) 0x00);
+                writeToUiAppend(tv1, "AIP Visa Lloyds: " + aipVisaLloyds.toString());
             }
         });
     }
@@ -489,7 +509,7 @@ decrypted: 48e26a471054d1ae93d86ab9daaa30a8036d47997e0b556101e950462f67cbc8b9203
      * @return true if validation is successful, false otherwise
      * @throws EmvParsingException, NoSuchAlgorithmException
      */
-    public boolean validateSignedDynamicApplicationData(SignedDynamicApplicationData sDAD) throws EmvParsingException, NoSuchAlgorithmException {
+    public boolean validateSignedDynamicApplicationData(SignedDynamicApplicationData sDAD, byte[] t9f69) throws EmvParsingException, NoSuchAlgorithmException {
         // Concatenation of Signed Data Format, Hash Algorithm Indicator,
         //        ICC Dynamic Data Length, ICC Dynamic Data, Pad Pattern, random number
 
@@ -505,26 +525,135 @@ decrypted: 48e26a471054d1ae93d86ab9daaa30a8036d47997e0b556101e950462f67cbc8b9203
         // DolTag t5f2a = setTag(new byte[]{(byte) 0x5f, (byte) 0x2a}, "Transaction Currency Code", hexBlankToBytes("09 78")); // eur
         // tag 0x9f69 = UDOL = 01 8C C9 F8 07 84 00
 
-        byte[] t9f02 = hexBlankToBytes("00 00 00 00 10 00");
         byte[] t9f37 = hexBlankToBytes("38 39 30 31");
+        byte[] t9f02 = hexBlankToBytes("00 00 00 00 10 00");
         byte[] t5f2a = hexBlankToBytes("09 78");
-        byte[] t9f69 = hexBlankToBytes("01 8C C9 F8 07 84 00");
+        //byte[] t9f69 = hexBlankToBytes("01 8C C9 F8 07 84 00");
+        
+/*
+see C-3 Kernel 3 V 2.10 page 121
+Table C-1: Terminal Dynamic Data for Input to DDA Hash Algorithm
+Tag Data Element                         Length
+'9F37' Unpredictable Number (UN)         4 bytes
+'9F02' Amount, Authorised                6 bytes
+'5F2A' Transaction Currency Code         2 bytes
+'9F69' Card Authentication Related Data  var bytes
 
+I/System.out: read command length: 5 data: 00b2031400
+I/System.out: data from AFL was: 10010300
+I/System.out: data from AFL SFI: 10 REC: 03
+I/System.out: data from AFL SFI: 02 REC: 03
+
+ 9F 69 07 -- UDOL
+          01 8C C9 F8 07 84 00 (BINARY)
+
+Card Authentication Related Data
+F: b
+T: ‘9F69’
+L: var. 5-16 S: Card
+Conditional
+If fDDA supported
+Contains the fDDA Version Number, Card Unpredictable Number, and Card Transaction Qualifiers.
+For transactions where fDDA is performed, the Card Authentication Related Data is returned
+in the last record specified by the Application File Locator for that transaction.
+Byte 1:    fDDA Version Number (‘01’)
+Byte 2-5:  (Card) Unpredictable Number
+Byte 6-7:  Card Transaction Qualifiers
+ */
+
+        // this is for DDA (MasterCard)
+        ByteArrayOutputStream hashStream = new ByteArrayOutputStream();
+        // calculate our own hash for comparison:
+        //hashStream.write((byte) 5);
+        //hashStream.write((byte) 1);
+        //hashStream.write((byte) 9);
+        hashStream.write(sDAD.getSignedDataFormat(), 0, sDAD.getSignedDataFormat().length);
+        hashStream.write(sDAD.getHashAlgorithmIndicator(), 0, sDAD.getHashAlgorithmIndicator().length);
+        hashStream.write(sDAD.getIccDynamicDataLength(), 0, sDAD.getIccDynamicDataLength().length);
+        hashStream.write(sDAD.getIccDynamicData(), 0, sDAD.getIccDynamicData().length);
+        hashStream.write(sDAD.getPadPattern(), 0, sDAD.getPadPattern().length);
+        // todo get the used random number from authentication command
+        // todo here the fixed number
+        byte[] randomNumber = hexToBytes("E153F3E8");
+        // first version E153F3E8
+        // second version 01020304 // mastercard
+        hashStream.write(randomNumber, 0, randomNumber.length);
+        // calculate hash:
+        writeToUiAppend(tv1, "*********************");
+        byte[] hashStreamByte = hashStream.toByteArray();
+        writeToUiAppend(tv1, "hashStreamByte:\n" + bytesToHexNpe(hashStreamByte));
+        byte[] calculatedHash = calculateSHA1(hashStreamByte);
+        writeToUiAppend(tv1, "calculatedHash: " + bytesToHexNpe(calculatedHash));
+        writeToUiAppend(tv1, "hashResult:     " + bytesToHexNpe(sDAD.getHashResult()));
+        writeToUiAppend(tv1, "*********************");
+        // compare it with value in cert:
+        return Arrays.equals(calculatedHash, sDAD.getHashResult());
+    }
+
+    /**
+     * Check if cert is valid and if the calculated hash matches the hash in the certificate
+     * this is for fDDA (some VisaCard only !)
+     *
+     * @param sDAD
+     * @return true if validation is successful, false otherwise
+     * @throws EmvParsingException, NoSuchAlgorithmException
+     */
+    public boolean validateSignedDynamicApplicationDataFDda(SignedDynamicApplicationData sDAD, byte[] t9f69) throws EmvParsingException, NoSuchAlgorithmException {
+        // Concatenation of Signed Data Format, Hash Algorithm Indicator,
+        //        ICC Dynamic Data Length, ICC Dynamic Data, Pad Pattern, random number
+
+        //String sDADOrg = "6a05010908d89a8ab98969d82abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb1cd1cdd6d05915423ed517767c2160015ac87c19bc";
+        //String sDDANew = "05010908d89a8ab98969d82abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+        //String randomNumberString = "01020304";
+        //String sDDAcomplete = sDDANew + randomNumberString;
+        //byte[] sDDAcompleteByte = hexToBytes(sDDAcomplete);
+
+        // data that was used on GPO
+        // DolTag t9f02 = setTag(new byte[]{(byte) 0x9f, (byte) 0x02}, "Transaction Amount", hexBlankToBytes("00 00 00 00 10 00")); // 00 00 00 00 10 00
+        // DolTag t9f37 = setTag(new byte[]{(byte) 0x9f, (byte) 0x37}, "Unpredictable Number", hexBlankToBytes("38 39 30 31"));
+        // DolTag t5f2a = setTag(new byte[]{(byte) 0x5f, (byte) 0x2a}, "Transaction Currency Code", hexBlankToBytes("09 78")); // eur
+        // tag 0x9f69 = UDOL = 01 8C C9 F8 07 84 00
+
+        byte[] t9f37 = hexBlankToBytes("38 39 30 31");
+        byte[] t9f02 = hexBlankToBytes("00 00 00 00 10 00");
+        byte[] t5f2a = hexBlankToBytes("09 78");
+
+        /*
+        see EMV 4.3 Book 2 page 80 for DDA and C-3 Kernel 3 v 2.10 page 121 for fDDA
+        Concatenate from left to right the second to the sixth data elements in Table 17
+        (that is, Signed Data Format through Pad Pattern),
+        followed by the data elements specified by the DDOL.
+         */
+
+        // this is for fDDA (VisaCard)
         ByteArrayOutputStream hashStream2 = new ByteArrayOutputStream();
+        // elements for DDA
+        hashStream2.write(sDAD.getSignedDataFormat(), 0, sDAD.getSignedDataFormat().length);
+        hashStream2.write(sDAD.getHashAlgorithmIndicator(), 0, sDAD.getHashAlgorithmIndicator().length);
+        hashStream2.write(sDAD.getIccDynamicDataLength(), 0, sDAD.getIccDynamicDataLength().length);
+        hashStream2.write(sDAD.getIccDynamicData(), 0, sDAD.getIccDynamicData().length);
+        hashStream2.write(sDAD.getPadPattern(), 0, sDAD.getPadPattern().length);
+        // elements instead of ddol elements for fDDA
         hashStream2.write(t9f37, 0, t9f37.length); // unpredictable number
         hashStream2.write(t9f02, 0, t9f02.length); // transaction amount
         hashStream2.write(t5f2a, 0, t5f2a.length); // transaction currency code
-        hashStream2.write(t9f69, 0, t9f69.length); // Card Authentication Related Data
+        hashStream2.write(t9f69, 0, t9f69.length); // Card Authentication Related Data = UDOL
         byte[] hashStreamByte2 = hashStream2.toByteArray();
 
-        writeToUiAppend(tv1, "*********************");
+        writeToUiAppend(tv1, "********* realtime ************");
+        writeToUiAppend(tv1, "*********   fDDA   ************");
+        writeToUiAppend(tv1, "9f37 unpredictable number:      " + bytesToHexNpe(t9f37));
+        writeToUiAppend(tv1, "9f02 transaction amount:        " + bytesToHexNpe(t9f02));
+        writeToUiAppend(tv1, "5f2a transaction currency code: " + bytesToHexNpe(t5f2a));
+        writeToUiAppend(tv1, "9f69 card auth data = UDOL:     " + bytesToHexNpe(t9f69));
         writeToUiAppend(tv1, "hashStreamByte2:\n" + bytesToHexNpe(hashStreamByte2));
         //writeToUiAppend(tv1, "sDDAcomplete B:\n" + bytesToHexNpe(sDDAcompleteByte));
         //byte[] calculatedHash = calculateSHA1(hashStream.toByteArray());
         byte[] calculatedHash2 = calculateSHA1(hashStreamByte2);
         writeToUiAppend(tv1, "calculatedHash2: " + bytesToHexNpe(calculatedHash2));
         writeToUiAppend(tv1, "hashResult:      " + bytesToHexNpe(sDAD.getHashResult()));
-
+        writeToUiAppend(tv1, "fDDA validation equals hashResult: " + Arrays.equals(calculatedHash2, sDAD.getHashResult()));
+        writeToUiAppend(tv1, "********* realtime ************");
 /*
 see C-3 Kernel 3 V 2.10 page 121
 Table C-1: Terminal Dynamic Data for Input to DDA Hash Algorithm
@@ -555,44 +684,8 @@ Byte 1:    fDDA Version Number (‘01’)
 Byte 2-5:  (Card) Unpredictable Number
 Byte 6-7:  Card Transaction Qualifiers
 
-
-
-
-
  */
-
-        ByteArrayOutputStream hashStream = new ByteArrayOutputStream();
-        // calculate our own hash for comparison:
-        //hashStream.write((byte) 5);
-        //hashStream.write((byte) 1);
-        //hashStream.write((byte) 9);
-        hashStream.write(sDAD.getSignedDataFormat(), 0, sDAD.getSignedDataFormat().length);
-        hashStream.write(sDAD.getHashAlgorithmIndicator(), 0, sDAD.getHashAlgorithmIndicator().length);
-        hashStream.write(sDAD.getIccDynamicDataLength(), 0, sDAD.getIccDynamicDataLength().length);
-        hashStream.write(sDAD.getIccDynamicData(), 0, sDAD.getIccDynamicData().length);
-        hashStream.write(sDAD.getPadPattern(), 0, sDAD.getPadPattern().length);
-        // todo get the used random number from authentication command
-        // todo here the fixed number
-        byte[] randomNumber = hexToBytes("E153F3E8");
-        // first version E153F3E8
-        // second version 01020304 // mastercard
-        hashStream.write(randomNumber, 0, randomNumber.length);
-        // calculate hash:
-        writeToUiAppend(tv1, "*********************");
-        byte[] hashStreamByte = hashStream.toByteArray();
-        writeToUiAppend(tv1, "hashStreamByte:\n" + bytesToHexNpe(hashStreamByte));
-        //writeToUiAppend(tv1, "sDDAcomplete B:\n" + bytesToHexNpe(sDDAcompleteByte));
-        //byte[] calculatedHash = calculateSHA1(hashStream.toByteArray());
-        byte[] calculatedHash = calculateSHA1(hashStreamByte);
-        writeToUiAppend(tv1, "calculatedHash: " + bytesToHexNpe(calculatedHash));
-        //byte[] calculatedHash2 = calculateSHA1(sDDAcompleteByte);
-        //writeToUiAppend(tv1, "calculatedHas2: " + bytesToHexNpe(calculatedHash2));
-        // hashStream.write((byte) 5);.. 16db31...
-        // ashStream.write(sDAD.getSignedDataFormat.. 6db31...
-        writeToUiAppend(tv1, "hashResult:     " + bytesToHexNpe(sDAD.getHashResult()));
-        writeToUiAppend(tv1, "*********************");
-        // compare it with value in cert:
-        return Arrays.equals(calculatedHash, sDAD.getHashResult());
+        return Arrays.equals(calculatedHash2, sDAD.getHashResult());
     }
 
     /**

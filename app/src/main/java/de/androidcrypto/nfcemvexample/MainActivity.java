@@ -480,6 +480,8 @@ List<Afl> listAfl = extractAfl(data);
                                     + x9F26: "0102030405060708" # EMV, Cryptogram, Application
                                     + x9F10: "06010A03A40000" # EMV, Issuer Application Data (IAD)
                                      */
+                                } else {
+                                    writeToUiAppend(etLog, "Found a strange behaviour - get processing options got wrong data to proceed... sorry");
                                 }
                             } else {
                                 // we do not need this path

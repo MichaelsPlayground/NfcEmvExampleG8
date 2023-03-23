@@ -140,7 +140,7 @@
             android:layout_height="wrap_content"
             android:layout_marginRight="8dp"
             android:layout_weight="1"
-            android:text="Button 6" />
+            android:text="AIP" />
 
         <Button
             android:id="@+id/btn7"

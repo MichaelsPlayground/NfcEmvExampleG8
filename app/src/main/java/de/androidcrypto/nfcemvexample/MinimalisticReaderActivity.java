@@ -9,7 +9,6 @@ import static de.androidcrypto.nfcemvexample.johnzweng.EmvKeyReader.concatenateM
 
 import android.app.Activity;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.media.MediaPlayer;
 import android.net.Uri;
@@ -27,7 +26,6 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -36,7 +34,6 @@ import androidx.activity.result.ActivityResultCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
@@ -53,7 +50,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.math.BigInteger;
-import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
@@ -63,6 +59,9 @@ import java.util.List;
 import de.androidcrypto.nfcemvexample.cardvalidation.CardValidationResult;
 import de.androidcrypto.nfcemvexample.cardvalidation.RegexCardValidator;
 import de.androidcrypto.nfcemvexample.emulate.FilesModel;
+import de.androidcrypto.nfcemvexample.extended.TagListParser;
+import de.androidcrypto.nfcemvexample.extended.TagNameValue;
+import de.androidcrypto.nfcemvexample.extended.TagSet;
 import de.androidcrypto.nfcemvexample.johnzweng.EmvKeyReader;
 import de.androidcrypto.nfcemvexample.johnzweng.EmvParsingException;
 import de.androidcrypto.nfcemvexample.johnzweng.IssuerIccPublicKeyNew;
@@ -93,9 +92,13 @@ public class MinimalisticReaderActivity extends AppCompatActivity implements Nfc
     private byte[] tagId;
     final String TechIsoDep = "android.nfc.tech.IsoDep";
     byte[] tag0x8cFound = new byte[0]; // tag 0x8c = CDOL1
+    List<TagSet> tsList = new ArrayList<>(); // holds the tags found during reading
+    String foundPan = "";
     String outputString = ""; // used for the UI output
     // exporting the data
     String exportString = "";
+    String exportStringFileName = "emv.html";
+    String stepSeparatorString = "*********************************";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -203,7 +206,6 @@ SHA-1
                     throw new RuntimeException(e);
                 }
 
-
                 EmvKeyReader.RecoveredIssuerPublicKey recoveredIssuerPublicKeyParsed;
                 try {
                     recoveredIssuerPublicKeyParsed = emvKeyReader.parseIssuerPublicKeyCert(recoveredIssuerPublicKey, caPublicKeyVisa09Modulus.length);
@@ -283,7 +285,7 @@ public IssuerIccPublicKey parseIccPublicKey(byte[] issuerPublicKeyExponent, byte
                 writeToUiAppend(tv1, "==============================");
                 writeToUiAppend(tv1, "validate the SignedDynamicApplicationData");
                 try {
-                    boolean isSignedDynamicApplicationDataValid = validateSignedDynamicApplicationData(signedDynamicApplicationData);
+                    boolean isSignedDynamicApplicationDataValid = validateSignedDynamicApplicationData(signedDynamicApplicationData, tag9f69_Udol);
                     writeToUiAppend(tv1, "isSignedDynamicApplicationDataValid: " + isSignedDynamicApplicationDataValid);
                 } catch (EmvParsingException e) {
                     throw new RuntimeException(e);
@@ -521,7 +523,7 @@ decrypted: 48e26a471054d1ae93d86ab9daaa30a8036d47997e0b556101e950462f67cbc8b9203
                 writeToUiAppend(tv1, "==============================");
                 writeToUiAppend(tv1, "validate the SignedDynamicApplicationData");
                 try {
-                    boolean isSignedDynamicApplicationDataValid = validateSignedDynamicApplicationData(signedDynamicApplicationData);
+                    boolean isSignedDynamicApplicationDataValid = validateSignedDynamicApplicationData(signedDynamicApplicationData, tag9f69_Udol);
                     writeToUiAppend(tv1, "isSignedDynamicApplicationDataValid: " + isSignedDynamicApplicationDataValid);
                 } catch (EmvParsingException e) {
                     throw new RuntimeException(e);
@@ -542,9 +544,6 @@ decrypted: 48e26a471054d1ae93d86ab9daaa30a8036d47997e0b556101e950462f67cbc8b9203
                 // 2 select AID
 
 
-
-
-
             }
         });
     }
@@ -556,7 +555,7 @@ decrypted: 48e26a471054d1ae93d86ab9daaa30a8036d47997e0b556101e950462f67cbc8b9203
      * @return true if validation is successful, false otherwise
      * @throws EmvParsingException, NoSuchAlgorithmException
      */
-    public boolean validateSignedDynamicApplicationData(SignedDynamicApplicationData sDAD) throws EmvParsingException, NoSuchAlgorithmException {
+    public boolean validateSignedDynamicApplicationData(SignedDynamicApplicationData sDAD, byte[] t9f69) throws EmvParsingException, NoSuchAlgorithmException {
         // Concatenation of Signed Data Format, Hash Algorithm Indicator,
         //        ICC Dynamic Data Length, ICC Dynamic Data, Pad Pattern, random number
 
@@ -572,25 +571,10 @@ decrypted: 48e26a471054d1ae93d86ab9daaa30a8036d47997e0b556101e950462f67cbc8b9203
         // DolTag t5f2a = setTag(new byte[]{(byte) 0x5f, (byte) 0x2a}, "Transaction Currency Code", hexBlankToBytes("09 78")); // eur
         // tag 0x9f69 = UDOL = 01 8C C9 F8 07 84 00
 
-        byte[] t9f02 = hexBlankToBytes("00 00 00 00 10 00");
         byte[] t9f37 = hexBlankToBytes("38 39 30 31");
+        byte[] t9f02 = hexBlankToBytes("00 00 00 00 10 00");
         byte[] t5f2a = hexBlankToBytes("09 78");
-        byte[] t9f69 = hexBlankToBytes("01 8C C9 F8 07 84 00");
-
-        ByteArrayOutputStream hashStream2 = new ByteArrayOutputStream();
-        hashStream2.write(t9f37, 0, t9f37.length); // unpredictable number
-        hashStream2.write(t9f02, 0, t9f02.length); // transaction amount
-        hashStream2.write(t5f2a, 0, t5f2a.length); // transaction currency code
-        hashStream2.write(t9f69, 0, t9f69.length); // Card Authentication Related Data
-        byte[] hashStreamByte2 = hashStream2.toByteArray();
-
-        writeToUiAppend(tv1, "*********************");
-        writeToUiAppend(tv1, "hashStreamByte2:\n" + bytesToHexNpe(hashStreamByte2));
-        //writeToUiAppend(tv1, "sDDAcomplete B:\n" + bytesToHexNpe(sDDAcompleteByte));
-        //byte[] calculatedHash = calculateSHA1(hashStream.toByteArray());
-        byte[] calculatedHash2 = calculateSHA1(hashStreamByte2);
-        writeToUiAppend(tv1, "calculatedHash2: " + bytesToHexNpe(calculatedHash2));
-        writeToUiAppend(tv1, "hashResult:      " + bytesToHexNpe(sDAD.getHashResult()));
+        //byte[] t9f69 = hexBlankToBytes("01 8C C9 F8 07 84 00");
 
 /*
 see C-3 Kernel 3 V 2.10 page 121
@@ -621,13 +605,9 @@ in the last record specified by the Application File Locator for that transactio
 Byte 1:    fDDA Version Number (‘01’)
 Byte 2-5:  (Card) Unpredictable Number
 Byte 6-7:  Card Transaction Qualifiers
-
-
-
-
-
  */
 
+        // this is for DDA (MasterCard)
         ByteArrayOutputStream hashStream = new ByteArrayOutputStream();
         // calculate our own hash for comparison:
         //hashStream.write((byte) 5);
@@ -648,18 +628,110 @@ Byte 6-7:  Card Transaction Qualifiers
         writeToUiAppend(tv1, "*********************");
         byte[] hashStreamByte = hashStream.toByteArray();
         writeToUiAppend(tv1, "hashStreamByte:\n" + bytesToHexNpe(hashStreamByte));
-        //writeToUiAppend(tv1, "sDDAcomplete B:\n" + bytesToHexNpe(sDDAcompleteByte));
-        //byte[] calculatedHash = calculateSHA1(hashStream.toByteArray());
         byte[] calculatedHash = calculateSHA1(hashStreamByte);
         writeToUiAppend(tv1, "calculatedHash: " + bytesToHexNpe(calculatedHash));
-        //byte[] calculatedHash2 = calculateSHA1(sDDAcompleteByte);
-        //writeToUiAppend(tv1, "calculatedHas2: " + bytesToHexNpe(calculatedHash2));
-        // hashStream.write((byte) 5);.. 16db31...
-        // ashStream.write(sDAD.getSignedDataFormat.. 6db31...
         writeToUiAppend(tv1, "hashResult:     " + bytesToHexNpe(sDAD.getHashResult()));
         writeToUiAppend(tv1, "*********************");
         // compare it with value in cert:
         return Arrays.equals(calculatedHash, sDAD.getHashResult());
+    }
+
+    /**
+     * Check if cert is valid and if the calculated hash matches the hash in the certificate
+     * this is for fDDA (some VisaCard only !)
+     *
+     * @param sDAD
+     * @return true if validation is successful, false otherwise
+     * @throws EmvParsingException, NoSuchAlgorithmException
+     */
+    public boolean validateSignedDynamicApplicationDataFDda(SignedDynamicApplicationData sDAD, byte[] t9f69) throws EmvParsingException, NoSuchAlgorithmException {
+        // Concatenation of Signed Data Format, Hash Algorithm Indicator,
+        //        ICC Dynamic Data Length, ICC Dynamic Data, Pad Pattern, random number
+
+        //String sDADOrg = "6a05010908d89a8ab98969d82abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb1cd1cdd6d05915423ed517767c2160015ac87c19bc";
+        //String sDDANew = "05010908d89a8ab98969d82abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+        //String randomNumberString = "01020304";
+        //String sDDAcomplete = sDDANew + randomNumberString;
+        //byte[] sDDAcompleteByte = hexToBytes(sDDAcomplete);
+
+        // data that was used on GPO
+        // DolTag t9f02 = setTag(new byte[]{(byte) 0x9f, (byte) 0x02}, "Transaction Amount", hexBlankToBytes("00 00 00 00 10 00")); // 00 00 00 00 10 00
+        // DolTag t9f37 = setTag(new byte[]{(byte) 0x9f, (byte) 0x37}, "Unpredictable Number", hexBlankToBytes("38 39 30 31"));
+        // DolTag t5f2a = setTag(new byte[]{(byte) 0x5f, (byte) 0x2a}, "Transaction Currency Code", hexBlankToBytes("09 78")); // eur
+        // tag 0x9f69 = UDOL = 01 8C C9 F8 07 84 00
+
+        byte[] t9f37 = hexBlankToBytes("38 39 30 31");
+        byte[] t9f02 = hexBlankToBytes("00 00 00 00 10 00");
+        byte[] t5f2a = hexBlankToBytes("09 78");
+
+        /*
+        see EMV 4.3 Book 2 page 80 for DDA and C-3 Kernel 3 v 2.10 page 121 for fDDA
+        Concatenate from left to right the second to the sixth data elements in Table 17
+        (that is, Signed Data Format through Pad Pattern),
+        followed by the data elements specified by the DDOL.
+         */
+
+        // this is for fDDA (VisaCard)
+        ByteArrayOutputStream hashStream2 = new ByteArrayOutputStream();
+        // elements for DDA
+        hashStream2.write(sDAD.getSignedDataFormat(), 0, sDAD.getSignedDataFormat().length);
+        hashStream2.write(sDAD.getHashAlgorithmIndicator(), 0, sDAD.getHashAlgorithmIndicator().length);
+        hashStream2.write(sDAD.getIccDynamicDataLength(), 0, sDAD.getIccDynamicDataLength().length);
+        hashStream2.write(sDAD.getIccDynamicData(), 0, sDAD.getIccDynamicData().length);
+        hashStream2.write(sDAD.getPadPattern(), 0, sDAD.getPadPattern().length);
+        // elements instead of ddol elements for fDDA
+        hashStream2.write(t9f37, 0, t9f37.length); // unpredictable number
+        hashStream2.write(t9f02, 0, t9f02.length); // transaction amount
+        hashStream2.write(t5f2a, 0, t5f2a.length); // transaction currency code
+        hashStream2.write(t9f69, 0, t9f69.length); // Card Authentication Related Data = UDOL
+        byte[] hashStreamByte2 = hashStream2.toByteArray();
+
+        writeToUiAppend(etLog, "********* realtime ************");
+        writeToUiAppend(etLog, "*********   fDDA   ************");
+        writeToUiAppend(etLog, "9f37 unpredictable number:      " + bytesToHexNpe(t9f37));
+        writeToUiAppend(etLog, "9f02 transaction amount:        " + bytesToHexNpe(t9f02));
+        writeToUiAppend(etLog, "5f2a transaction currency code: " + bytesToHexNpe(t5f2a));
+        writeToUiAppend(etLog, "9f69 card auth data = UDOL:     " + bytesToHexNpe(t9f69));
+        writeToUiAppend(etLog, "hashStreamByte2:\n" + bytesToHexNpe(hashStreamByte2));
+        //writeToUiAppend(tv1, "sDDAcomplete B:\n" + bytesToHexNpe(sDDAcompleteByte));
+        //byte[] calculatedHash = calculateSHA1(hashStream.toByteArray());
+        byte[] calculatedHash2 = calculateSHA1(hashStreamByte2);
+        writeToUiAppend(etLog, "calculatedHash2: " + bytesToHexNpe(calculatedHash2));
+        writeToUiAppend(etLog, "hashResult:      " + bytesToHexNpe(sDAD.getHashResult()));
+        writeToUiAppend(etLog, "fDDA validation equals hashResult: " + Arrays.equals(calculatedHash2, sDAD.getHashResult()));
+        writeToUiAppend(etLog, "********* realtime ************");
+/*
+see C-3 Kernel 3 V 2.10 page 121
+Table C-1: Terminal Dynamic Data for Input to DDA Hash Algorithm
+Tag Data Element                         Length
+'9F37' Unpredictable Number (UN)         4 bytes
+'9F02' Amount, Authorised                6 bytes
+'5F2A' Transaction Currency Code         2 bytes
+'9F69' Card Authentication Related Data  var bytes
+
+I/System.out: read command length: 5 data: 00b2031400
+I/System.out: data from AFL was: 10010300
+I/System.out: data from AFL SFI: 10 REC: 03
+I/System.out: data from AFL SFI: 02 REC: 03
+
+ 9F 69 07 -- UDOL
+          01 8C C9 F8 07 84 00 (BINARY)
+
+Card Authentication Related Data
+F: b
+T: ‘9F69’
+L: var. 5-16 S: Card
+Conditional
+If fDDA supported
+Contains the fDDA Version Number, Card Unpredictable Number, and Card Transaction Qualifiers.
+For transactions where fDDA is performed, the Card Authentication Related Data is returned
+in the last record specified by the Application File Locator for that transaction.
+Byte 1:    fDDA Version Number (‘01’)
+Byte 2-5:  (Card) Unpredictable Number
+Byte 6-7:  Card Transaction Qualifiers
+
+ */
+        return Arrays.equals(calculatedHash2, sDAD.getHashResult());
     }
 
     /**
@@ -717,17 +789,42 @@ Byte 6-7:  Card Transaction Qualifiers
     }
 
 
-    // this method will print the output additionally to the console
-    private void writeToUiAppend(TextView textView, String message) {
-        runOnUiThread(() -> {
-            if (TextUtils.isEmpty(textView.getText().toString())) {
-                textView.setText(message);
-            } else {
-                String newString = textView.getText().toString() + "\n" + message;
-                textView.setText(newString);
+    /**
+     * section for getting the tags from read responses
+     */
+
+    private byte[] getTagValueFromList(@NonNull List<TagSet> tagSetList, @NonNull byte[] tag) {
+        int size = tagSetList.size();
+        for (int i = 0; i < size; i++) {
+            TagSet tagSet = tagSetList.get(i);
+            if (Arrays.equals(tag, tagSet.getTag())) {
+                return tagSet.getTagValue();
             }
-            System.out.println(message);
-        });
+        }
+        return null;
+    }
+
+    private List<TagSet> getTagSetFromResponse(@NonNull byte[] data, @NonNull String tagsFound) {
+        List<TagSet> tagsSet = new ArrayList<>();
+        List<TagNameValue> parsedTags = TagListParser.parseRespond(data);
+        int parsedTagsSize = parsedTags.size();
+        //writeToUiAppend(etLog, "selectPpseResponseParsedSize: " + selectPpseResponseParsedSize);
+        for (int i = 0; i < parsedTagsSize; i++) {
+            TagNameValue parsedTag = parsedTags.get(i);
+            //writeToUiAppend(etLog, "selectPpseResponseParsed " + i + ": " + selectPpseResponseParsed.toString());
+            byte[] eTag = parsedTag.getTagBytes();
+            String eTagName = parsedTag.getTagName();
+            //String eTagName = selectPpseTag.getTag().getDescription();
+            byte[] eTagValue = parsedTag.getTagValueBytes();
+            String eTagValueType = parsedTag.getTagValueType();
+            //TagValueTypeEnum eTagValueType = selectPpseParsedTag.getTagValueType();
+            //String eTagFound = "selectPpse";
+            TagSet tagSet = new TagSet(eTag, eTagName, eTagValue, eTagValueType, tagsFound);
+            tagsSet.add(tagSet);
+            //writeToUiAppend(etLog, "--- tag nr " + i + " ---");
+            //writeToUiAppend(etLog, eTagSet.dump());
+        }
+        return tagsSet;
     }
 
     /**
@@ -786,6 +883,7 @@ Byte 6-7:  Card Transaction Qualifiers
 
     private void clearData() {
         etLog.setText("");
+        setLoadingLayoutVisibility(false);
         tag0x8cFound = new byte[0];
     }
 
@@ -809,242 +907,319 @@ Byte 6-7:  Card Transaction Qualifiers
                 String aidSelectedName = "VISA credit/debit";
                 writeToUiAppend(etLog, "03 select application by AID " + bytesToHexNpe(aidSelected));
                 writeToUiAppend(etLog, "card is a " + aidSelectedName);
-                        byte[] selectAidCommand = selectApdu(aidSelected);
-                        byte[] selectAidResponse = nfc.transceive(selectAidCommand);
+                byte[] selectAidCommand = selectApdu(aidSelected);
+                byte[] selectAidResponse = nfc.transceive(selectAidCommand);
+                writeToUiAppend(etLog, "");
+                writeToUiAppend(etLog, "03 select AID command length " + selectAidCommand.length + " data: " + bytesToHex(selectAidCommand));
+                byte[] selectAidResponseOk = checkResponse(selectAidResponse);
+                if (selectAidResponseOk != null) {
+                    writeToUiAppend(etLog, "03 select AID response length " + selectAidResponseOk.length + " data: " + bytesToHex(selectAidResponseOk));
+                    tsList.addAll(getTagSetFromResponse(selectAidResponseOk, "selectAid " + aidSelectedName));
+                    prettyPrintData(etLog, selectAidResponseOk);
+                    writeToUiAppend(etLog, "");
+                    printStepHeader(etLog, 4, "search for tag 0x9F38");
+                    writeToUiAppend(etLog, "04 search for tag 0x9F38 in the selectAid response");
+                    BerTlvParser parser = new BerTlvParser();
+
+                    /**
+                     * note: different behaviour between VisaCard, Mastercard and German GiroCards
+                     * Mastercard has NO PDOL, Visa gives PDOL in tag 9F38
+                     * tag 50 and/or tag 9F12 has an application label or application name
+                     * next step: search for tag 9F38 Processing Options Data Object List (PDOL)
+                     */
+                    BerTlvs tlvsAid = parser.parse(selectAidResponseOk);
+                    BerTlv tag9f38 = tlvsAid.find(new BerTag(0x9F, 0x38));
+                    byte[] gpoRequestCommand;
+                    // tag9f38 is null when not found
+                    if (tag9f38 != null) {
+                        /**
+                         * the following code is for VisaCards and (German) GiroCards as we found a PDOL
+                         */
                         writeToUiAppend(etLog, "");
-                        writeToUiAppend(etLog, "03 select AID command length " + selectAidCommand.length + " data: " + bytesToHex(selectAidCommand));
-                        byte[] selectAidResponseOk = checkResponse(selectAidResponse);
-                        if (selectAidResponseOk != null) {
-                            writeToUiAppend(etLog, "03 select AID response length " + selectAidResponseOk.length + " data: " + bytesToHex(selectAidResponseOk));
-                            prettyPrintData(etLog, selectAidResponseOk);
-                            writeToUiAppend(etLog, "");
-                            printStepHeader(etLog, 4, "search for tag 0x9F38");
-                            writeToUiAppend(etLog, "04 search for tag 0x9F38 in the selectAid response");
-                            BerTlvParser parser = new BerTlvParser();
+                        writeToUiAppend(etLog, "### processing the VisaCard and GiroCard path ###");
+                        writeToUiAppend(etLog, "");
+                        byte[] pdolValue = tag9f38.getBytesValue();
+                        writeToUiAppend(etLog, "found tag 0x9F38 in the selectAid with this length: " + pdolValue.length + " data: " + bytesToHex(pdolValue));
+                        // code will run for VISA and NOT for MasterCard
+                        /**
+                         * BASIC CODE
+                         */
+                        // byte[] commandGpoRequest = hexToBytes(pu.getPdolWithCountryCode()); // basic code = fixed GPO
 
+                        /**
+                         * ADVANCED CODE
+                         */
+                        gpoRequestCommand = getGpoFromPdol(pdolValue); // advanced one, build it dynamically
 
+                        writeToUiAppend(etLog, "");
+                        printStepHeader(etLog, 5, "get the processing options");
+                        writeToUiAppend(etLog, "05 get the processing options command length: " + gpoRequestCommand.length + " data: " + bytesToHex(gpoRequestCommand));
+                        byte[] gpoRequestResponse = nfc.transceive(gpoRequestCommand);
+                        if (!responseSendWithPdolFailure(gpoRequestResponse)) {
+                            byte[] gpoRequestResponseOk = checkResponse(gpoRequestResponse);
+                            if (gpoRequestResponseOk != null) {
+                                writeToUiAppend(etLog, "05 run GPO response length: " + gpoRequestResponseOk.length + " data: " + bytesToHex(gpoRequestResponseOk));
+                                tsList.addAll(getTagSetFromResponse(gpoRequestResponseOk, "get processing options"));
+                                prettyPrintData(etLog, gpoRequestResponseOk);
 
-
-
-
-
-
-
-
-                            /**
-                             * note: different behaviour between VisaCard, Mastercard and German GiroCards
-                             * Mastercard has NO PDOL, Visa gives PDOL in tag 9F38
-                             * tag 50 and/or tag 9F12 has an application label or application name
-                             * next step: search for tag 9F38 Processing Options Data Object List (PDOL)
-                             */
-                            BerTlvs tlvsAid = parser.parse(selectAidResponseOk);
-                            BerTlv tag9f38 = tlvsAid.find(new BerTag(0x9F, 0x38));
-                            byte[] gpoRequestCommand;
-                            // tag9f38 is null when not found
-                            if (tag9f38 != null) {
                                 /**
-                                 * the following code is for VisaCards and (German) GiroCards as we found a PDOL
+                                 * response can be a tag 77 Response Message Template Format 2
+                                 * (found with my Visa-, Master- and German Giro-Cards)
+                                 * or a tag 80 Response Message Template Format 1
+                                 * (found with my American Express card)
                                  */
+
                                 writeToUiAppend(etLog, "");
-                                writeToUiAppend(etLog, "### processing the VisaCard and GiroCard path ###");
+                                printStepHeader(etLog, 6, "read files & search PAN");
+                                writeToUiAppend(etLog, "06 read the files from card and search for tag 0x57 in each file");
+                                String pan_expirationDate = readPanFromFilesFromGpo(nfc, gpoRequestResponseOk);
+                                String[] parts = pan_expirationDate.split("_");
                                 writeToUiAppend(etLog, "");
-                                byte[] pdolValue = tag9f38.getBytesValue();
-                                writeToUiAppend(etLog, "found tag 0x9F38 in the selectAid with this length: " + pdolValue.length + " data: " + bytesToHex(pdolValue));
-                                // code will run for VISA and NOT for MasterCard
-                                // we are using a generalized selectGpo command
+                                printStepHeader(etLog, 7, "print PAN & expire date");
+                                writeToUiAppend(etLog, "07 get PAN and Expiration date from tag 0x57 (Track 2 Equivalent Data)");
+                                writeToUiAppend(etLog, "data for AID " + bytesToHexNpe(aidSelected) + " (" + aidSelectedName + ")");
+                                writeToUiAppend(etLog, "PAN: " + parts[0]);
+                                writeToUiAppend(etLog, "Expiration date (YYMM): " + parts[1]);
+                                foundPan = parts[0];
 
-                                /**
-                                 * BASIC CODE
-                                 */
-                                // byte[] commandGpoRequest = hexToBytes(pu.getPdolWithCountryCode()); // basic code
 
-                                /**
-                                 * ADVANCED CODE
-                                 */
-                                gpoRequestCommand = getGpoFromPdol(pdolValue); // advanced one, build it dynamically
-                            } else {
-                                // could not find a tag 0x9f38 in the selectAid response means there is no PDOL request available
-                                // instead we use an empty PDOL of length 0
-                                // this is usually a mastercard
-                                /**
-                                 * MasterCard code
-                                 */
+                                // intermediate step - get single data from card, will be printed later
+                                byte[] applicationTransactionCounter = getApplicationTransactionCounter(nfc);
+                                byte[] pinTryCounter = getPinTryCounter(nfc);
+                                byte[] lastOnlineATCRegister = getLastOnlineATCRegister(nfc);
+                                byte[] logFormat = getLogFormat(nfc);
+
                                 writeToUiAppend(etLog, "");
-                                writeToUiAppend(etLog, "### processing the MasterCard path ###");
+                                // print single data
+                                printSingleData(etLog, applicationTransactionCounter, pinTryCounter, lastOnlineATCRegister, logFormat);
+
+                                // internal authentication
+                                // probably not supported
                                 writeToUiAppend(etLog, "");
+                                writeToUiAppend(etLog, "get the internal authentication");
+                                String internalAuthString = "0088000004E153F3E800";
+                                byte[] internalAuthCommand = hexToBytes(internalAuthString);
+                                writeToUiAppend(etLog, "internalAuthCommand: " + internalAuthCommand.length + " data: " + bytesToHex(internalAuthCommand));
+                                byte[] internalAuthResponse = nfc.transceive(internalAuthCommand);
+                                if (internalAuthResponse != null) {
+                                    writeToUiAppend(etLog, "internalAuthResponse: " + internalAuthResponse.length + " data: " + bytesToHex(internalAuthResponse));
+                                    prettyPrintData(etLog, internalAuthResponse);
+                                } else {
+                                    writeToUiAppend(etLog, "internalAuthResponse failure");
+                                }
 
-                                writeToUiAppend(etLog, "No PDOL found in the selectAid response");
-                                writeToUiAppend(etLog, "try to request the get processing options (GPO) with an empty PDOL");
-
-                                /**
-                                 * simple code
-                                 */
-                                //byte[] responseGpoRequestOk = pu.getGpo(0);
-
-                                /**
-                                 * advanced code
-                                 */
-                                gpoRequestCommand = getGpoFromPdol(new byte[0]); // empty PDOL
-                            }
-                            // from here the processing is equals
-
-                            writeToUiAppend(etLog, "");
-                            printStepHeader(etLog, 5, "get the processing options");
-                            writeToUiAppend(etLog, "05 get the processing options command length: " + gpoRequestCommand.length + " data: " + bytesToHex(gpoRequestCommand));
-                            byte[] gpoRequestResponse = nfc.transceive(gpoRequestCommand);
-                            if (!responseSendWithPdolFailure(gpoRequestResponse)) {
-                                byte[] gpoRequestResponseOk = checkResponse(gpoRequestResponse);
-                                if (gpoRequestResponseOk != null) {
-                                    writeToUiAppend(etLog, "05 run GPO response length: " + gpoRequestResponseOk.length + " data: " + bytesToHex(gpoRequestResponseOk));
-
-                                    // pretty print of response
-                                    if (isPrettyPrintResponse)
-                                        prettyPrintData(etLog, gpoRequestResponseOk);
-
-                                    /**
-                                     * response can be a tag 77 Response Message Template Format 2
-                                     * (found with my Visa-, Master- and German Giro-Cards)
-                                     * or a tag 80 Response Message Template Format 1
-                                     * (found with my American Express card)
-                                     */
-
-                                    //
-
-/*
-I/System.out: ------------------------------------
-Amexco:
-I/System.out: 80 12 -- Response Message Template Format 1
-I/System.out:       18 00 08 01 01 00 08 03 03 00 08 05 05 00 10 02
-I/System.out:       02 00 (BINARY)
-I/System.out: ------------------------------------
-
-data = ArrayUtils.subarray(data, 2, data.length);
-List<Afl> listAfl = extractAfl(data);
-
-
- */
-
-                                    writeToUiAppend(etLog, "");
-                                    printStepHeader(etLog, 6, "read files & search PAN");
-                                    writeToUiAppend(etLog, "06 read the files from card and search for tag 0x57 in each file");
-                                    String pan_expirationDate = readPanFromFilesFromGpo(nfc, gpoRequestResponseOk);
-                                    String[] parts = pan_expirationDate.split("_");
-                                    writeToUiAppend(etLog, "");
-                                    printStepHeader(etLog, 7, "print PAN & expire date");
-                                    writeToUiAppend(etLog, "07 get PAN and Expiration date from tag 0x57 (Track 2 Equivalent Data)");
-                                    writeToUiAppend(etLog, "data for AID " + aidSelectedForAnalyze + " (" + aidSelectedForAnalyzeName + ")");
-                                    writeToUiAppend(etLog, "PAN: " + parts[0]);
-                                    writeToUiAppend(etLog, "Expiration date (YYMM): " + parts[1]);
-                                    writeToUiAppendNoExport(etData, "");
-                                    writeToUiAppendNoExport(etData, "data for AID " + aidSelectedForAnalyze + " (" + aidSelectedForAnalyzeName + ")");
-                                    writeToUiAppendNoExport(etData, "PAN: " + parts[0]);
-                                    writeToUiAppendNoExport(etData, "Expiration date (YYMM): " + parts[1]);
-                                    foundPan = parts[0];
-
-
-                                    // intermediate step - get single data from card, will be printed later
-                                    byte[] applicationTransactionCounter = getApplicationTransactionCounter(nfc);
-                                    byte[] pinTryCounter = getPinTryCounter(nfc);
-                                    byte[] lastOnlineATCRegister = getLastOnlineATCRegister(nfc);
-                                    byte[] logFormat = getLogFormat(nfc);
-
-                                    writeToUiAppend(etLog, "");
-                                    // print single data
-                                    printSingleData(etLog, applicationTransactionCounter, pinTryCounter, lastOnlineATCRegister, logFormat);
-
-                                    // internal authentication
-                                    // probably not supported
-                                    writeToUiAppend(etLog, "");
-                                    writeToUiAppend(etLog, "get the internal authentication");
-                                    String internalAuthString = "0088000004E153F3E800";
-                                    byte[] internalAuthCommand = hexToBytes(internalAuthString);
-                                    writeToUiAppend(etLog, "internalAuthCommand: " + internalAuthCommand.length + " data: " + bytesToHex(internalAuthCommand));
-                                    byte[] internalAuthResponse = nfc.transceive(internalAuthCommand);
-                                    if (internalAuthResponse != null) {
-                                        writeToUiAppend(etLog, "internalAuthResponse: " + internalAuthResponse.length + " data: " + bytesToHex(internalAuthResponse));
-                                        prettyPrintData(etLog, internalAuthResponse);
-                                    } else {
-                                        writeToUiAppend(etLog, "internalAuthResponse failure");
-                                    }
-
-                                    writeToUiAppend(etLog, "");
-                                    writeToUiAppend(etLog, "get the application cryptogram");
-                                    // check that it was found in any file
-                                    writeToUiAppend(etLog, "### tag0x8cFound: " + bytesToHex(tag0x8cFound));
-                                    byte[] getApplicationCryptoResponseOk = null;
-                                    if (tag0x8cFound.length > 1) {
-                                        byte[] getApplicationCryptoCommand = getAppCryptoCommandFromCdol(tag0x8cFound);
-                                        writeToUiAppend(etLog, "getApplicationCryptoCommand length: " + getApplicationCryptoCommand.length + " data: " + bytesToHex(getApplicationCryptoCommand));
-                                        byte[] getApplicationCryptoResponse = nfc.transceive(getApplicationCryptoCommand);
-                                        if (getApplicationCryptoResponse != null) {
-                                            getApplicationCryptoResponseOk = checkResponse(getApplicationCryptoResponse);
-                                            if (getApplicationCryptoResponseOk != null) {
-                                                writeToUiAppend(etLog, "getApplicationCryptoResponse length: " + getApplicationCryptoResponseOk.length + " data: " + bytesToHex(getApplicationCryptoResponseOk));
-                                                if (isPrettyPrintResponse)
-                                                    prettyPrintData(etLog, getApplicationCryptoResponseOk);
-                                            } else {
-                                                writeToUiAppend(etLog, "getApplicationCryptoResponse length: " + getApplicationCryptoResponse.length + " data: " + bytesToHex(getApplicationCryptoResponse));
-                                            }
+                                writeToUiAppend(etLog, "");
+                                writeToUiAppend(etLog, "get the application cryptogram");
+                                // check that it was found in any file
+                                writeToUiAppend(etLog, "### tag0x8cFound: " + bytesToHex(tag0x8cFound));
+                                byte[] getApplicationCryptoResponseOk = null;
+                                if (tag0x8cFound.length > 1) {
+                                    byte[] getApplicationCryptoCommand = getAppCryptoCommandFromCdol(tag0x8cFound);
+                                    writeToUiAppend(etLog, "getApplicationCryptoCommand length: " + getApplicationCryptoCommand.length + " data: " + bytesToHex(getApplicationCryptoCommand));
+                                    byte[] getApplicationCryptoResponse = nfc.transceive(getApplicationCryptoCommand);
+                                    if (getApplicationCryptoResponse != null) {
+                                        getApplicationCryptoResponseOk = checkResponse(getApplicationCryptoResponse);
+                                        if (getApplicationCryptoResponseOk != null) {
+                                            writeToUiAppend(etLog, "getApplicationCryptoResponse length: " + getApplicationCryptoResponseOk.length + " data: " + bytesToHex(getApplicationCryptoResponseOk));
+                                            prettyPrintData(etLog, getApplicationCryptoResponseOk);
                                         } else {
                                             writeToUiAppend(etLog, "getApplicationCryptoResponse length: " + getApplicationCryptoResponse.length + " data: " + bytesToHex(getApplicationCryptoResponse));
                                         }
                                     } else {
-                                        // no cdol1 found
-                                        // work with an empty cdol1
-                                        writeToUiAppend(etLog, "no CDOL1 found in files, using an empty one");
-                                        byte[] getApplicationCryptoCommand = getAppCryptoCommandFromCdol(new byte[0]);
-                                        writeToUiAppend(etLog, "getApplicationCryptoCommand length: " + getApplicationCryptoCommand.length + " data: " + bytesToHex(getApplicationCryptoCommand));
-                                        byte[] getApplicationCryptoResponse = nfc.transceive(getApplicationCryptoCommand);
-                                        if (getApplicationCryptoResponse != null) {
-                                            getApplicationCryptoResponseOk = checkResponse(getApplicationCryptoResponse);
-                                            if (getApplicationCryptoResponseOk != null) {
-                                                writeToUiAppend(etLog, "getApplicationCryptoResponse length: " + getApplicationCryptoResponseOk.length + " data: " + bytesToHex(getApplicationCryptoResponseOk));
-                                                if (isPrettyPrintResponse)
-                                                    prettyPrintData(etLog, getApplicationCryptoResponseOk);
-                                            } else {
-                                                writeToUiAppend(etLog, "getApplicationCryptoResponse failure");
-                                            }
+                                        writeToUiAppend(etLog, "getApplicationCryptoResponse length: " + getApplicationCryptoResponse.length + " data: " + bytesToHex(getApplicationCryptoResponse));
+                                    }
+                                } else {
+                                    // no cdol1 found
+                                    // work with an empty cdol1
+                                    writeToUiAppend(etLog, "no CDOL1 found in files, using an empty one");
+                                    byte[] getApplicationCryptoCommand = getAppCryptoCommandFromCdol(new byte[0]);
+                                    writeToUiAppend(etLog, "getApplicationCryptoCommand length: " + getApplicationCryptoCommand.length + " data: " + bytesToHex(getApplicationCryptoCommand));
+                                    byte[] getApplicationCryptoResponse = nfc.transceive(getApplicationCryptoCommand);
+                                    if (getApplicationCryptoResponse != null) {
+                                        getApplicationCryptoResponseOk = checkResponse(getApplicationCryptoResponse);
+                                        if (getApplicationCryptoResponseOk != null) {
+                                            writeToUiAppend(etLog, "getApplicationCryptoResponse length: " + getApplicationCryptoResponseOk.length + " data: " + bytesToHex(getApplicationCryptoResponseOk));
+                                            prettyPrintData(etLog, getApplicationCryptoResponseOk);
                                         } else {
                                             writeToUiAppend(etLog, "getApplicationCryptoResponse failure");
                                         }
-                                    } // get application crypto
-                                    if (getApplicationCryptoResponseOk != null) {
-                                        if (isPrettyPrintResponse) {
-                                            String applicationCryptoResponseString = dumpApplicationCryptoResponseMessageTemplate1(getApplicationCryptoResponseOk);
-                                            writeToUiAppend(etLog, "Response Message Template Format 1 applicationCrypto:\n" + applicationCryptoResponseString);
-                                        }
+                                    } else {
+                                        writeToUiAppend(etLog, "getApplicationCryptoResponse failure");
                                     }
-                                    /*
-                                    https://stackoverflow.com/a/35892602/8166854
-                                    if response is tag 0x80 Response Message Template Format 1
-                                    - x9F27:  # EMV, Cryptogram Information Data (CID)
-                                        val: "80" # Cryptogram Information Data (CID).
-                                        # 10______ - bits 8-7, ARQC
-                                        # _____000 - bits 3-1 (Reason/Advice/Referral Code), No information given
-                                    + x9F36: "0001" # EMV, Application Transaction Counter (ATC)
-                                    + x9F26: "0102030405060708" # EMV, Cryptogram, Application
-                                    + x9F10: "06010A03A40000" # EMV, Issuer Application Data (IAD)
-                                     */
+                                } // get application crypto
+                                if (getApplicationCryptoResponseOk != null) {
+                                    String applicationCryptoResponseString = dumpApplicationCryptoResponseMessageTemplate1(getApplicationCryptoResponseOk);
+                                    writeToUiAppend(etLog, "Response Message Template Format 1 applicationCrypto:\n" + applicationCryptoResponseString);
+
                                 }
-                            } else {
-                                // we do not need this path
-                                writeToUiAppend(etLog, "Found a strange behaviour - get processing options got wrong data to proceed... sorry");
+
+                                /**
+                                 * dump the tag list
+                                 */
+
+                                writeToUiAppend(etLog, "---- tagSet list ----");
+                                for (int i = 0; i < tsList.size(); i++) {
+                                    writeToUiAppend(etLog, "--- tag nr " + i + " ---");
+                                    writeToUiAppend(etLog, tsList.get(i).dump());
+                                }
+
+                                /**
+                                 * retrieve some data fields for crypto
+                                 */
+
+                                // here we are starting the crypto stuff and try to decrypt some data from the card
+                                // we do need the content of some tags:
+                                // these tags are available on Visa comd M
+                                byte[] tag90_IssuerPublicKeyCertificate;
+                                byte[] tag8f_CertificationAuthorityPublicKeyIndex;
+                                byte[] tag9f32_IssuerPublicKeyExponent;
+                                byte[] tag92_IssuerPublicKeyRemainder;
+                                byte[] tag9f46_IccPublicKeyCertificate;
+                                byte[] tag9f47_IccPublicKeyExponent;
+                                byte[] tag9f48_IccPublicKeyRemainder;
+                                byte[] tag9f4a_StaticDataAuthenticationTagList;
+                                byte[] tag9f69_Udol;
+                                byte[] tag9f4b_SignedDynamicApplicationData;
+                                byte[] tag9f10_IssuerApplicationData;
+                                byte[] tag9f26_ApplicationCryptogram;
+                                // todo null check ?
+                                // todo 9F2F Integrated Circuit Card (ICC) PIN Encipherment Public Key Remainder Remaining digits of the ICC PIN Encipherment Public Key Modulus
+                                tag90_IssuerPublicKeyCertificate = getTagValueFromList(tsList, new byte[]{(byte) 0x90});
+                                tag8f_CertificationAuthorityPublicKeyIndex = getTagValueFromList(tsList, new byte[]{(byte) 0x8f});
+                                tag9f32_IssuerPublicKeyExponent = getTagValueFromList(tsList, new byte[]{(byte) 0x9f, (byte) 0x32});
+                                tag92_IssuerPublicKeyRemainder = getTagValueFromList(tsList, new byte[]{(byte) 0x92});
+                                tag9f46_IccPublicKeyCertificate = getTagValueFromList(tsList, new byte[]{(byte) 0x9f, (byte) 0x46});
+                                tag9f47_IccPublicKeyExponent = getTagValueFromList(tsList, new byte[]{(byte) 0x9f, (byte) 0x47});
+                                tag9f48_IccPublicKeyRemainder = getTagValueFromList(tsList, new byte[]{(byte) 0x9f, (byte) 0x48});
+                                tag9f4a_StaticDataAuthenticationTagList = getTagValueFromList(tsList, new byte[]{(byte) 0x9f, (byte) 0x4a});
+                                tag9f69_Udol = getTagValueFromList(tsList, new byte[]{(byte) 0x9f, (byte) 0x69});
+                                tag9f4b_SignedDynamicApplicationData = getTagValueFromList(tsList, new byte[]{(byte) 0x9f, (byte) 0x4b});
+                                tag9f10_IssuerApplicationData = getTagValueFromList(tsList, new byte[]{(byte) 0x9f, (byte) 0x10});
+                                tag9f26_ApplicationCryptogram = getTagValueFromList(tsList, new byte[]{(byte) 0x9f, (byte) 0x26});
+
+                                // note: the output looks strange but it is for a copy & paste to manually transfer the data to CryptoStuffActivity
+                                writeToUiAppend(etLog, "tag90_IssuerPublicKeyCertificate = hexToBytes(\"" + bytesToHexNpe(tag90_IssuerPublicKeyCertificate) + "\");");
+                                writeToUiAppend(etLog, "tag8f_CertificationAuthorityPublicKeyIndex = hexToBytes(\"" + bytesToHexNpe(tag8f_CertificationAuthorityPublicKeyIndex) + "\");");
+                                writeToUiAppend(etLog, "tag9f32_IssuerPublicKeyExponent = hexToBytes(\"" + bytesToHexNpe(tag9f32_IssuerPublicKeyExponent) + "\");");
+                                writeToUiAppend(etLog, "tag92_IssuerPublicKeyRemainder = hexToBytes(\"" + bytesToHexNpe(tag92_IssuerPublicKeyRemainder) + "\");");
+                                writeToUiAppend(etLog, "tag9f46_IccPublicKeyCertificate = hexToBytes(\"" + bytesToHexNpe(tag9f46_IccPublicKeyCertificate) + "\");");
+                                writeToUiAppend(etLog, "tag9f47_IccPublicKeyExponent = hexToBytes(\"" + bytesToHexNpe(tag9f47_IccPublicKeyExponent) + "\");");
+                                writeToUiAppend(etLog, "tag9f48_IccPublicKeyRemainder = hexToBytes(\"" + bytesToHexNpe(tag9f48_IccPublicKeyRemainder) + "\");");
+                                writeToUiAppend(etLog, "tag9f4a_StaticDataAuthenticationTagList = hexToBytes(\"" + bytesToHexNpe(tag9f4a_StaticDataAuthenticationTagList) + "\");");
+                                writeToUiAppend(etLog, "tag9f69_Udol = hexToBytes(\"" + bytesToHexNpe(tag9f69_Udol) + "\");");
+                                writeToUiAppend(etLog, "tag9f4b_SignedDynamicApplicationData = hexToBytes(\"" + bytesToHexNpe(tag9f4b_SignedDynamicApplicationData) + "\");");
+                                writeToUiAppend(etLog, "tag9f10_IssuerApplicationData = hexToBytes(\"" + bytesToHexNpe(tag9f10_IssuerApplicationData) + "\");");
+                                writeToUiAppend(etLog, "tag9f26_ApplicationCryptogram = hexToBytes(\"" + bytesToHexNpe(tag9f26_ApplicationCryptogram) + "\");");
+
+                                // crypto stuff
+                                byte[] visaRid = hexToBytes("A000000003");
+                                byte[] caPublicKeyVisa09Modulus = hexToBytes("9D912248DE0A4E39C1A7DDE3F6D2588992C1A4095AFBD1824D1BA74847F2BC4926D2EFD904B4B54954CD189A54C5D1179654F8F9B0D2AB5F0357EB642FEDA95D3912C6576945FAB897E7062CAA44A4AA06B8FE6E3DBA18AF6AE3738E30429EE9BE03427C9D64F695FA8CAB4BFE376853EA34AD1D76BFCAD15908C077FFE6DC5521ECEF5D278A96E26F57359FFAEDA19434B937F1AD999DC5C41EB11935B44C18100E857F431A4A5A6BB65114F174C2D7B59FDF237D6BB1DD0916E644D709DED56481477C75D95CDD68254615F7740EC07F330AC5D67BCD75BF23D28A140826C026DBDE971A37CD3EF9B8DF644AC385010501EFC6509D7A41");
+                                byte[] caPublicKeyVisa09Exponent = hexToBytes(("03"));
+                                byte[] caPublicKeyVisa09Sha1 = hexToBytes("1FF80A40173F52D7D27E0F26A146A1C8CCB29046");
+                                // https://www.linkedin.com/pulse/emv-application-specification-offline-data-oda-part-farghaly-1f?trk=pulse-article
+                                // see package johnzweng
+                                EmvKeyReader emvKeyReader = new EmvKeyReader();
+
+                                // step 1 - get the issuer public key from issuer public key certificate
+                                writeToUiAppend(etLog, "==============================");
+                                writeToUiAppend(etLog, "step 1 Retrieval of Issuer Public Key by johnzweng");
+                                // this is the johnzweng method to decrypt
+                                IssuerIccPublicKeyNew issuerIccPublicKeyNew = null;
+                                try {
+                                    issuerIccPublicKeyNew = emvKeyReader.parseIssuerPublicKeyNew(caPublicKeyVisa09Exponent, caPublicKeyVisa09Modulus, tag90_IssuerPublicKeyCertificate, null, tag9f32_IssuerPublicKeyExponent);
+                                    writeToUiAppend(etLog, "decrypted the tag90_IssuerPublicKeyCertificate to the public key");
+                                    writeToUiAppend(etLog, "issuerIccPublicKey recovered: " + bytesToHexNpe(issuerIccPublicKeyNew.getRecoveredBytes()));
+                                } catch (EmvParsingException e) {
+                                    //throw new RuntimeException(e);
+                                }
+
+                                EmvKeyReader.RecoveredIssuerPublicKey recoveredIssuerPublicKeyParsed = null;
+                                try {
+                                    recoveredIssuerPublicKeyParsed = emvKeyReader.parseIssuerPublicKeyCert(issuerIccPublicKeyNew.getRecoveredBytes(), caPublicKeyVisa09Modulus.length);
+                                    writeToUiAppend(etLog, "parsed recovered Issuer Public Key\n" + recoveredIssuerPublicKeyParsed.dump());
+                                } catch (EmvParsingException e) {
+                                    //throw new RuntimeException(e);
+                                }
+
+                                writeToUiAppend(etLog, "==============================");
+                                writeToUiAppend(etLog, "Validate the Issuer Public Key");
+                                try {
+                                    boolean issuerPublicKeyIsValid = emvKeyReader.validateIssuerPublicKey(caPublicKeyVisa09Exponent, caPublicKeyVisa09Modulus, tag90_IssuerPublicKeyCertificate, null, tag9f32_IssuerPublicKeyExponent);
+                                    writeToUiAppend(etLog, "the decrypted Issuer Public Key is valid: " + issuerPublicKeyIsValid);
+                                } catch (EmvParsingException e) {
+                                    //throw new RuntimeException(e);
+                                }
+/*
+                                // step 2 - get the icc public key from icc public key certificate
+                                writeToUiAppend(tv1, "==============================");
+                                writeToUiAppend(tv1, "step 2 decrypting the IccPublicKeyCertificate");
+                                byte[] fullKeyModulus = concatenateModulus(recoveredIssuerPublicKeyParsed.getLeftMostPubKeyDigits(), recoveredIssuerPublicKeyParsed.getOptionalPadding());
+                                byte[] recoveredIccPublicKeyCertificate = performRSA(tag9f46_IccPublicKeyCertificate, tag9f32_IssuerPublicKeyExponent, recoveredIssuerPublicKeyParsed.getLeftMostPubKeyDigits());
+                                writeToUiAppend(tv1, "decrypted: " + bytesToHexNpe(recoveredIccPublicKeyCertificate));
+*/
+                                writeToUiAppend(etLog, "==============================");
+                                writeToUiAppend(etLog, "step 2 Retrieval of ICC Public Key by johnzweng");
+                                ICCPublicKey iccPublicKey;
+                                IssuerIccPublicKeyNew issuerIccPublicKey2New = null;
+                                try {
+                                    issuerIccPublicKey2New = emvKeyReader.parseIccPublicKeyNew(tag9f32_IssuerPublicKeyExponent, recoveredIssuerPublicKeyParsed.getLeftMostPubKeyDigits(), tag9f46_IccPublicKeyCertificate, null, tag9f47_IccPublicKeyExponent);
+                                    writeToUiAppend(etLog, "decrypted the IccPublicKeyCertificate to the public key");
+                                    writeToUiAppend(etLog, "iccPublicKey recovered: " + bytesToHexNpe(issuerIccPublicKey2New.getRecoveredBytes()));
+                                } catch (EmvParsingException e) {
+                                    //throw new RuntimeException(e);
+                                }
+
+                                EmvKeyReader.RecoveredIccPublicKey recoveredIccPublicKey = null;
+                                try {
+                                    recoveredIccPublicKey = emvKeyReader.parseIccPublicKeyCert(issuerIccPublicKey2New.getRecoveredBytes(), recoveredIssuerPublicKeyParsed.getIssuerPublicKeyLength());
+                                    writeToUiAppend(etLog, "parsed recovered ICC Public Key\n" + recoveredIccPublicKey.dump());
+                                } catch (EmvParsingException e) {
+                                    //throw new RuntimeException(e);
+                                }
+
+                                writeToUiAppend(etLog, "==============================");
+                                writeToUiAppend(etLog, "Validate the ICC Public Key (will fail !!)");
+                                try {
+                                    boolean iccPublicKeyIsValid = emvKeyReader.validateIccPublicKey(tag9f32_IssuerPublicKeyExponent, recoveredIssuerPublicKeyParsed.getLeftMostPubKeyDigits(), tag9f46_IccPublicKeyCertificate, null, tag9f47_IccPublicKeyExponent);
+                                    writeToUiAppend(etLog, "the decrypted ICC Public Key is valid: " + iccPublicKeyIsValid);
+                                } catch (EmvParsingException e) {
+                                    //throw new RuntimeException(e);
+                                }
+
+                                // now 2 ways
+                                // a) ask the card with an internal auth command and decrypt the response - or -
+                                // b) you already received Signed Dynamic Data as shown here and decrypt these
+
+                                // way b) decrypt tag9f4b_SignedDynamicApplicationData for visa comd
+                                writeToUiAppend(etLog, "==============================");
+                                writeToUiAppend(etLog, "step 3 decrypting the SignedDynamicApplicationData with the ICC public key");
+                                //byte[] fullKeyModulus = concatenateModulus(recoveredIssuerPublicKeyParsed.getLeftMostPubKeyDigits(), recoveredIssuerPublicKeyParsed.getOptionalPadding());
+                                byte[] recoveredSignedDynamicApplicationData = performRSA(tag9f4b_SignedDynamicApplicationData, tag9f47_IccPublicKeyExponent, recoveredIccPublicKey.getLeftMostPubKeyDigits());
+                                writeToUiAppend(etLog, "decrypted: " + bytesToHexNpe(recoveredSignedDynamicApplicationData));
+                                SignedDynamicApplicationData signedDynamicApplicationData = new SignedDynamicApplicationData(recoveredSignedDynamicApplicationData);
+                                writeToUiAppend(etLog, "parsed SignedDynamicApplicationData\n" + signedDynamicApplicationData.dump());
+
+                                // validate the SignedDynamicApplicationData
+                                //Step 5: Concatenation of Signed Data Format, Hash Algorithm Indicator,
+                                //        ICC Dynamic Data Length, ICC Dynamic Data, Pad Pattern, random number
+                                writeToUiAppend(etLog, "==============================");
+                                writeToUiAppend(etLog, "validate the SignedDynamicApplicationData");
+                                try {
+                                    boolean isSignedDynamicApplicationDataValid = validateSignedDynamicApplicationDataFDda(signedDynamicApplicationData, tag9f69_Udol);
+                                    writeToUiAppend(etLog, "isSignedDynamicApplicationDataValid: " + isSignedDynamicApplicationDataValid);
+                                } catch (EmvParsingException | NoSuchAlgorithmException e) {
+                                    //throw new RuntimeException(e);
+                                }
+
+
                             }
+                        } else {
+                            // we do not need this path
+                            writeToUiAppend(etLog, "Found a strange behaviour - get processing options got wrong data to proceed... sorry");
                         }
+                    }
 
-
-                // todo ### decrypts the IssuerPublicKeyCertificate
-                try {
-                    IssuerPublicKeyCertificate.main(null);
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
                 }
-                try {
-                    CA.main(null);
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
-
 
                 // print the complete Log
                 writeToUiFinal(etLog);
@@ -1069,7 +1244,8 @@ List<Afl> listAfl = extractAfl(data);
         }
     }
 
-    private String dumpApplicationCryptoResponseMessageTemplate1(byte[] applicationCryptoResponseOk) {
+    private String dumpApplicationCryptoResponseMessageTemplate1(
+            byte[] applicationCryptoResponseOk) {
         // check that response is a 0x80 Response Message Template Format 1
         byte[] respHeader = Arrays.copyOfRange(applicationCryptoResponseOk, 0, 2);
         if (Arrays.equals(respHeader, new byte[]{(byte) 0x80, (byte) 0x12})) {
@@ -1355,10 +1531,8 @@ List<Afl> listAfl = extractAfl(data);
 
                             writeToUiAppend(etLog, "data from AFL " + "SFI: " + String.format("%02X", sfiFile) + " REC: " + String.format("%02d", iRecords));
                             writeToUiAppend(etLog, "read result length: " + resultReadRecordOk.length + " data: " + bytesToHex(resultReadRecordOk));
-                            // pretty print of response
-                            if (isPrettyPrintResponse) {
-                                prettyPrintData(etLog, resultReadRecordOk);
-                            }
+                            prettyPrintData(etLog, resultReadRecordOk);
+                            tsList.addAll(getTagSetFromResponse(resultReadRecordOk, "read file from AFL " + "SFI: " + String.format("%02X", sfiOrg) + " REC: " + String.format("%02d", iRecords)));
                             // this is the shortened one
                             try {
                                 BerTlvs tlvsAfl = parser.parse(resultReadRecordOk);
@@ -1404,6 +1578,7 @@ List<Afl> listAfl = extractAfl(data);
     /**
      * remove all trailing 0xF's trailing in the 10 length fiel tag 0x5a = PAN
      * PAN is padded with 'F'
+     *
      * @param input
      * @return
      */
@@ -1789,11 +1964,6 @@ see: https://stackoverflow.com/a/35892602/8166854
     }
 
     /**
-     * section for anonymize the output
-     */
-
-
-    /**
      * section for UI
      */
 
@@ -1820,7 +1990,8 @@ see: https://stackoverflow.com/a/35892602/8166854
         return output.length > 1 ? output[1] : output[0];
     }
 
-    private void printSingleData(TextView textView, byte[] applicationTransactionCounter, byte[] pinTryCounter, byte[] lastOnlineATCRegister, byte[] logFormat) {
+    private void printSingleData(TextView textView, byte[] applicationTransactionCounter,
+                                 byte[] pinTryCounter, byte[] lastOnlineATCRegister, byte[] logFormat) {
         writeToUiAppend(etLog, "");
         writeToUiAppend(etLog, "single data retrieved from card");
         if (applicationTransactionCounter != null) {
@@ -1844,6 +2015,32 @@ see: https://stackoverflow.com/a/35892602/8166854
         } else {
             writeToUiAppend(etLog, "logFormat: NULL");
         }
+    }
+
+    // special version, needs a boolean variable in class header: boolean debugPrint = true;
+    // if true this method will print the output additionally to the console
+    // a second variable is need for export of a log file exportString
+    // to avoid heavy printing on UI thread this method "prints" message to an outputString variable
+    // to show the messages you need to call writeToUiFinal(TextView view)
+    private void writeToUiAppend(final TextView textView, String message) {
+        exportString += message + "\n";
+        runOnUiThread(() -> {
+            if (TextUtils.isEmpty(textView.getText().toString())) {
+                if (textView == (TextView) etLog) {
+                    outputString += message + "\n";
+                } else {
+                    textView.setText(message);
+                }
+            } else {
+                String newString = textView.getText().toString() + "\n" + message;
+                if (textView == (TextView) etLog) {
+                    outputString += newString + "\n";
+                } else {
+                    textView.setText(newString);
+                }
+            }
+            System.out.println(message);
+        });
     }
 
     private void writeToUiFinal(final TextView textView) {

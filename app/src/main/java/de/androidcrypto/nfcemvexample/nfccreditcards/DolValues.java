@@ -15,7 +15,9 @@ public class DolValues {
     //private final DolTag t9f66 = setTag(new byte[]{(byte) 0x9f, (byte) 0x66}, "Terminal Transaction Qualifiers", hexBlankToBytes("A0 00 00 00")); // runs on all my cards
     // test for visa comd, seems to be the better option ()
     // online decoder: https://paymentcardtools.com/emv-tag-decoders/ttq
-    private final DolTag t9f66 = setTag(new byte[]{(byte) 0x9f, (byte) 0x66}, "Terminal Transaction Qualifiers", hexBlankToBytes("B7 60 40 00")); // runs on all my cards
+    //private final DolTag t9f66 = setTag(new byte[]{(byte) 0x9f, (byte) 0x66}, "Terminal Transaction Qualifiers", hexBlankToBytes("B7 60 40 00")); // does not run with Lloyds Visa
+    private final DolTag t9f66 = setTag(new byte[]{(byte) 0x9f, (byte) 0x66}, "Terminal Transaction Qualifiers", hexBlankToBytes("27 00 00 00"));
+
 /*
 https://stackoverflow.com/a/68996365/8166854
 Your Terminal Transaction Qualifier byte 1 bit 1 is set to zero, meaning "Offline Data Authentication for Online Authorizations
