@@ -74,4 +74,14 @@ public class ModuleInfo {
     public void setPrettyPrint(String prettyPrint) {
         this.prettyPrint = prettyPrint;
     }
+
+    public String dumpTsList() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("---- tagSet list ----").append("\n");
+        for (int i = 0; i < tsList.size(); i++) {
+            sb.append("--- tag nr ").append(i).append(" ---\"").append("\n");
+            sb.append(tsList.get(i).dump());
+        }
+        return sb.toString();
+    }
 }

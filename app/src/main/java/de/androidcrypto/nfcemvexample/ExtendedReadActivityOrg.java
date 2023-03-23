@@ -37,7 +37,6 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
-import com.github.devnied.emvnfccard.enums.TagValueTypeEnum;
 import com.github.devnied.emvnfccard.iso7816emv.TagAndLength;
 import com.github.devnied.emvnfccard.utils.TlvUtil;
 import com.google.android.material.switchmaterial.SwitchMaterial;
@@ -65,13 +64,11 @@ import java.util.List;
 import de.androidcrypto.nfcemvexample.cardvalidation.CardValidationResult;
 import de.androidcrypto.nfcemvexample.cardvalidation.RegexCardValidator;
 import de.androidcrypto.nfcemvexample.emulate.FilesModel;
-import de.androidcrypto.nfcemvexample.emulate.PureFileModel;
 import de.androidcrypto.nfcemvexample.extended.TagListParser;
 import de.androidcrypto.nfcemvexample.extended.TagNameValue;
 import de.androidcrypto.nfcemvexample.extended.TagSet;
 import de.androidcrypto.nfcemvexample.nfccreditcards.AidValues;
 import de.androidcrypto.nfcemvexample.nfccreditcards.DolValues;
-import de.androidcrypto.nfcemvexample.nfccreditcards.ModuleInfo;
 import de.androidcrypto.nfcemvexample.nfccreditcards.PdolUtil;
 import de.androidcrypto.nfcemvexample.paymentcardgenerator.CardType;
 import de.androidcrypto.nfcemvexample.paymentcardgenerator.PaymentCardGeneratorImpl;
@@ -79,7 +76,7 @@ import de.androidcrypto.nfcemvexample.sasc.CA;
 import de.androidcrypto.nfcemvexample.sasc.IssuerPublicKeyCertificate;
 import de.androidcrypto.nfcemvexample.sasc.Util;
 
-public class ExtendedReadActivity extends AppCompatActivity implements NfcAdapter.ReaderCallback {
+public class ExtendedReadActivityOrg extends AppCompatActivity implements NfcAdapter.ReaderCallback {
 
     private final String TAG = "NfcCcExtendedReadAct";
 
@@ -111,7 +108,6 @@ public class ExtendedReadActivity extends AppCompatActivity implements NfcAdapte
     private boolean runAnonymizing = false;
     String exportStringFileName = "emv.html";
     String stepSeparatorString = "*********************************";
-    String lineSeparatorString = "---------------------------------";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -182,12 +178,12 @@ public class ExtendedReadActivity extends AppCompatActivity implements NfcAdapte
     }
 
     private void playPing() {
-        MediaPlayer mp = MediaPlayer.create(ExtendedReadActivity.this, R.raw.single_ping);
+        MediaPlayer mp = MediaPlayer.create(ExtendedReadActivityOrg.this, R.raw.single_ping);
         mp.start();
     }
 
     private void playDoublePing() {
-        MediaPlayer mp = MediaPlayer.create(ExtendedReadActivity.this, R.raw.double_ping);
+        MediaPlayer mp = MediaPlayer.create(ExtendedReadActivityOrg.this, R.raw.double_ping);
         mp.start();
     }
 
@@ -215,174 +211,6 @@ public class ExtendedReadActivity extends AppCompatActivity implements NfcAdapte
             try {
                 nfc.connect();
                 tsList = new ArrayList<>(); // holds the tags found during reading
-
-                // experimental section with new modules
-                ModuleInfo miSelectPpse = EmvModules.moduleSelectPpse(nfc);
-                printStepHeader(etLog, 1, "select PPSE");
-                writeToUiAppend(etLog, "01 select PPSE command length " + miSelectPpse.getCommand().length + " data: " + bytesToHex(miSelectPpse.getCommand()));
-                if (miSelectPpse.isSuccess()) {
-                    writeToUiAppend(etLog, "01 select PPSE response length " + miSelectPpse.getResponse().length + " data: " + bytesToHex(miSelectPpse.getResponse()));
-                    if (isPrettyPrintResponse)
-                        writeToUiAppend(etLog, miSelectPpse.getPrettyPrint());
-                    writeToUiAppend(etLog, "number of tags found: " + miSelectPpse.getTsList().size());
-                } else {
-                    writeToUiAppend(etLog, "01 select PPSE response was not successful, aborted");
-                    writeToUiFinal(etLog);
-                    // stopping ? running a list of know AIDs ?
-                    setLoadingLayoutVisibility(false);
-                    try {
-                        nfc.close();
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
-                    return;
-                }
-                // at this point we received a list with found aid's
-                printStepHeader(etLog, 2, "search applications on card");
-                writeToUiAppend(etLog, "02 analyze select PPSE response and search for tag 0x4F (applications on card)");
-                int moduleFoundAids = miSelectPpse.getDataList().size();
-                writeToUiAppend(etLog, "");
-                writeToUiAppend(etLog, "found tag 0x4F " + moduleFoundAids + " time(s):");
-                for (int i = 0; i < moduleFoundAids; i++) {
-                    byte[] aidfound = miSelectPpse.getDataList().get(i);
-                    String aidNameFound = aidV.getAidName(aidfound);
-                    writeToUiAppend(etLog, bytesToHex(aidfound) + " (" + aidNameFound + ")");
-                }
-                // now iterate through aid list, next module is selectAid
-                for (int aidNumber = 0; aidNumber < moduleFoundAids; aidNumber++) {
-                    byte[] aidfound = miSelectPpse.getDataList().get(aidNumber);
-                    aidSelectedForAnalyze = bytesToHex(aidfound);
-                    aidSelectedForAnalyzeName = aidV.getAidName(aidfound);
-                    writeToUiAppend(etLog, "");
-                    printStepHeader(etLog, 3, "select application by AID");
-                    writeToUiAppend(etLog, "03 select application by AID " + aidSelectedForAnalyze + " (number " + (aidNumber + 1) + ")");
-                    writeToUiAppend(etLog, "card is a " + aidSelectedForAnalyzeName);
-                    ModuleInfo miSelectAid = EmvModules.moduleSelectAid(nfc, aidfound);
-                    writeToUiAppend(etLog, "03 select AID command length " + miSelectAid.getCommand().length + " data: " + bytesToHex(miSelectAid.getCommand()));
-                    if (miSelectAid.isSuccess()) {
-                        writeToUiAppend(etLog, "03 select AID response length " + miSelectAid.getResponse().length + " data: " + bytesToHex(miSelectAid.getResponse()));
-                        if (isPrettyPrintResponse)
-                            writeToUiAppend(etLog, miSelectAid.getPrettyPrint());
-                        writeToUiAppend(etLog, "number of tags found: " + miSelectAid.getTsList().size());
-                    } else {
-                        writeToUiAppend(etLog, "03 select AID response was not successful, aborted");
-                        writeToUiFinal(etLog);
-                        // stopping ? running a list of know AIDs ?
-                        setLoadingLayoutVisibility(false);
-                        try {
-                            nfc.close();
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
-                        }
-                        return;
-                    }
-                    // at this point we have selected an application with its AID
-                    writeToUiAppend(etLog, "");
-                    printStepHeader(etLog, 4, "search for tag 0x9F38");
-                    writeToUiAppend(etLog, "04 search for tag 0x9F38 (PDOL) in the selectAid response");
-                    /**
-                     * note: different behaviour between VisaCard, Mastercard and German GiroCards
-                     * Mastercard has NO PDOL, Visa gives PDOL in tag 9F38
-                     * tag 50 and/or tag 9F12 has an application label or application name
-                     * next step: search for tag 9F38 Processing Options Data Object List (PDOL),
-                     * this was done in the moduleSelectAid - if a PDOL was found the dataList is not null
-                     */
-                    byte[] gpoRequestCommand;
-                    if (miSelectAid.getDataList() != null) {
-                        // there is a PDOL
-                        byte[] pdolValue = miSelectAid.getDataList().get(0);
-                        writeToUiAppend(etLog, "value of tag 0x9f38 (PDOL): " + bytesToHexNpe(pdolValue));
-                        writeToUiAppend(etLog, "this could be a Visa-, American Express- or Giro-Card");
-                        gpoRequestCommand = getGpoFromPdol(pdolValue);
-                    } else {
-                        // if (miSelectAid.getDataList() != null) {
-                        // there is no PDOL
-                        gpoRequestCommand = getGpoFromPdol(new byte[0]); // empty PDOL
-                        writeToUiAppend(etLog, "No PDOL found in the selectAid response");
-                        writeToUiAppend(etLog, "this could be a MasterCard");
-                    }
-                    // now get processing options (GPO)
-                    writeToUiAppend(etLog, "");
-                    printStepHeader(etLog, 5, "get the processing options");
-                    ModuleInfo miGpo = EmvModules.moduleGetProcessingOptions(nfc, gpoRequestCommand);
-                    writeToUiAppend(etLog, "05 get processing options command length " + miGpo.getCommand().length + " data: " + bytesToHex(miGpo.getCommand()));
-                    if (miGpo.isSuccess()) {
-                        writeToUiAppend(etLog, "05 get processing options response length " + miGpo.getResponse().length + " data: " + bytesToHex(miGpo.getResponse()));
-                        if (isPrettyPrintResponse) writeToUiAppend(etLog, miGpo.getPrettyPrint());
-                        writeToUiAppend(etLog, "number of tags found: " + miGpo.getTsList().size());
-
-                        // now we are reading all data from card to get PAN, expire date and all other stuff
-                        // lets see what is in the response:
-                        writeToUiAppend(etLog, "05 get processing options response has these tags:");
-                        writeToUiAppend(etLog, miGpo.dumpTsList());
-
-                        // is a pan & expiration date available in gpoResponse ?
-                        String panExpirationDate = EmvModules.checkForPanInResponse(miGpo.getResponse());
-                        //String pan_expirationDate = readPanFromFilesFromGpo(nfc, gpoRequestResponseOk);
-                        String[] parts = panExpirationDate.split("_");
-                        if (parts.length == 0) {
-                            writeToUiAppend(etLog, "07 NO PAN was found in gpoResponse");
-                        } else {
-                            writeToUiAppend(etLog, "");
-                            printStepHeader(etLog, 6, "read files skipped");
-                            writeToUiAppend(etLog, "06 read the files from card and search for PAN in each file was skipped");
-                            writeToUiAppend(etLog, "");
-                            printStepHeader(etLog, 7, "print PAN & expire date");
-                            writeToUiAppend(etLog, "07 get PAN and Expiration date from getProcessingOptions");
-                            writeToUiAppend(etLog, "data for AID " + aidSelectedForAnalyze + " (" + aidSelectedForAnalyzeName + ")");
-                            writeToUiAppend(etLog, "PAN: " + parts[0]);
-                            writeToUiAppend(etLog, "Expiration date (YYMM): " + parts[1]);
-                            //writeToUiAppendNoExport(etData, "");
-                            //writeToUiAppendNoExport(etData, "data for AID " + aidSelectedForAnalyze + " (" + aidSelectedForAnalyzeName + ")");
-                            //writeToUiAppendNoExport(etData, "PAN: " + parts[0]);
-                            //writeToUiAppendNoExport(etData, "Expiration date (YYMM): " + parts[1]);
-                            foundPan = parts[0];
-                        }
-
-                        printStepHeader(etLog, 6, "read files from AFL");
-                        writeToUiAppend(etLog, "06 read the files from card and get the data from each file");
-                        // is an AFL list available in gpoResponse ?
-                        List<byte[]> aflList = EmvModules.checkForAflInGpoResponse(miGpo.getResponse());
-                        if (aflList.size() == 0) {
-                            writeToUiAppend(etLog, "Sorry - no AFL was found in the GPO response");
-                        } else {
-                            List<TagSet> aflTagSets = new ArrayList<>();
-                            int aflListSize = aflList.size();
-                            writeToUiAppend(etLog, "number of AFL entries: " + aflListSize);
-                            List<ModuleInfo> misComplete = new ArrayList<>();
-                            for (int i = 0; i < aflListSize; i++) {
-                                List<ModuleInfo> mis = EmvModules.moduleReadAflEntry(nfc, aflList.get(i));
-                                int misSize = mis.size();
-                                for (int misEntry = 0; misEntry < misSize; misEntry++) {
-                                    ModuleInfo miAfl = mis.get(misEntry);
-                                    writeToUiAppend(etLog, lineSeparatorString);
-                                    writeToUiAppend(etLog, "content of record: " + misEntry);
-                                    if (miAfl.isSuccess()) {
-                                        writeToUiAppend(etLog, miAfl.getPrettyPrint());
-                                        aflTagSets.addAll(miAfl.getTsList());
-                                    } else {
-                                        writeToUiAppend(etLog, "error in reading the record");
-                                    }
-                                }
-                                misComplete.addAll(mis);
-                            }
-                            writeToUiAppend(etLog, "--- afl reading complete ---");
-                            writeToUiAppend(etLog, "number of records read: " + misComplete.size());
-                            writeToUiAppend(etLog, "number of tags read: " + aflTagSets.size());
-                            writeToUiAppend(etLog, lineSeparatorString);
-                            // todo add aflTags to complete tags
-                        }
-
-                    } else {
-                        // if (miGpo.isSuccess()) {
-                        writeToUiAppend(etLog, "05 get processing options : found a strange behaviour - get processing options got wrong data to proceed... sorry");
-                    }
-
-                // for (int aidNumber = 0; aidNumber < moduleFoundAids; aidNumber++) {
-                }
-
-                printStepHeader(etLog, 9, "end experimental module");
-                // end experimental section
 
                 writeToUiAppend(etLog, "try to read a payment card with PPSE");
                 //byte[] command;
@@ -415,6 +243,42 @@ public class ExtendedReadActivity extends AppCompatActivity implements NfcAdapte
 
                     // extended
                     tsList.addAll(getTagSetFromResponse(selectPpseResponseOk, "selectPpse"));
+                    /* old
+                    List<TagAndLength> selectPpseTags = com.github.devnied.emvnfccard.utils.TlvUtil.parseTagAndLength(selectPpseResponseOk);
+                    int selectPpseTagsSize = selectPpseTags.size();
+                    writeToUiAppend(etLog, "selectPpseTagsSize: " + selectPpseTagsSize);
+                    for (int i = 0; i < selectPpseTagsSize; i++) {
+                        TagAndLength selectPpseTag = selectPpseTags.get(i);
+                        writeToUiAppend(etLog, "selectPpseTag " + i + ": " + selectPpseTag.toString());
+                        byte[] eTag = selectPpseTag.getTag().getTagBytes();
+                        String eTagName = selectPpseTag.getTag().getName();
+                        //String eTagName = selectPpseTag.getTag().getDescription();
+                        byte[] eTagValue = selectPpseTag.getBytes();
+                        TagValueTypeEnum eTagValueType = selectPpseTag.getTag().getTagValueType();
+                        String eTagFound = "selectPpse";
+                        TagSet eTagSet = new TagSet(eTag, eTagName, eTagValue, eTagValueType.toString(), eTagFound);
+                        writeToUiAppend(etLog, "--- tag nr " + i + " ---");
+                        writeToUiAppend(etLog, eTagSet.dump());
+                    }
+
+                    List<TagNameValue> selectPpseResponseParsed =  TagListParser.parseRespond(selectPpseResponseOk);
+                    int selectPpseResponseParsedSize = selectPpseResponseParsed.size();
+                    writeToUiAppend(etLog, "selectPpseResponseParsedSize: " + selectPpseResponseParsedSize);
+                    for (int i = 0; i < selectPpseResponseParsedSize; i++) {
+                        TagNameValue selectPpseParsedTag = selectPpseResponseParsed.get(i);
+                        writeToUiAppend(etLog, "selectPpseResponseParsed " + i + ": " + selectPpseResponseParsed.toString());
+                        byte[] eTag = selectPpseParsedTag.getTagBytes();
+                        String eTagName = selectPpseParsedTag.getTagName();
+                        //String eTagName = selectPpseTag.getTag().getDescription();
+                        byte[] eTagValue = selectPpseParsedTag.getTagValueBytes();
+                        String eTagValueType = selectPpseParsedTag.getTagValueType();
+                        //TagValueTypeEnum eTagValueType = selectPpseParsedTag.getTagValueType();
+                        String eTagFound = "selectPpse";
+                        TagSet eTagSet = new TagSet(eTag, eTagName, eTagValue, eTagValueType, eTagFound);
+                        writeToUiAppend(etLog, "--- tag nr " + i + " ---");
+                        writeToUiAppend(etLog, eTagSet.dump());
+                    }
+                     */
 
                     writeToUiAppend(etLog, "");
                     printStepHeader(etLog, 2, "search applications on card");
@@ -443,6 +307,9 @@ public class ExtendedReadActivity extends AppCompatActivity implements NfcAdapte
                         aidList.add(tlv4fBytes);
                         writeToUiAppend(etLog, "application Id (AID): " + bytesToHex(tlv4fBytes));
                     }
+
+
+
 
                     // step 03: iterating through aidList by selecting AID
                     for (int aidNumber = 0; aidNumber < tag4fList.size(); aidNumber++) {
@@ -871,6 +738,7 @@ tag9f26_ApplicationCryptogram = hexToBytes("bffdfe76b1b8fc4e");
   */
 
 
+
                                 }
                             } else {
                                 // we do not need this path
@@ -907,7 +775,6 @@ tag9f26_ApplicationCryptogram = hexToBytes("bffdfe76b1b8fc4e");
             v.vibrate(200);
         }
     }
-
 
     /**
      * section for getting the tags from read responses
@@ -1720,7 +1587,7 @@ see: https://stackoverflow.com/a/35892602/8166854
             }
         };
         final String selectedFolderString = "Do you want to anonymize the export data (recommended) ?";
-        AlertDialog.Builder builder = new AlertDialog.Builder(ExtendedReadActivity.this);
+        AlertDialog.Builder builder = new AlertDialog.Builder(ExtendedReadActivityOrg.this);
         builder.setTitle("ANONYMIZE EXPORT STRING ?");
         builder.setMessage(selectedFolderString).setPositiveButton(android.R.string.yes, dialogClickListener)
                 .setNegativeButton(android.R.string.no, dialogClickListener).show();
@@ -1769,14 +1636,6 @@ see: https://stackoverflow.com/a/35892602/8166854
         String responseGetAppCryptoString = TlvUtil.prettyPrintAPDUResponse(responseData);
         writeToUiAppend(textView, trimLeadingLineFeeds(responseGetAppCryptoString));
         writeToUiAppend(textView, "------------------------------------");
-    }
-
-    private String prettyPrintDataToString(byte[] responseData) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("------------------------------------").append("\n");
-        sb.append(trimLeadingLineFeeds(TlvUtil.prettyPrintAPDUResponse(responseData))).append("\n");
-        sb.append("------------------------------------").append("\n");
-        return sb.toString();
     }
 
     public static String trimLeadingLineFeeds(String input) {
@@ -2045,7 +1904,7 @@ see: https://stackoverflow.com/a/35892602/8166854
         mFileReaderActivity.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
             @Override
             public boolean onMenuItemClick(@NonNull MenuItem menuItem) {
-                Intent intent = new Intent(ExtendedReadActivity.this, FileReaderActivity.class);
+                Intent intent = new Intent(ExtendedReadActivityOrg.this, FileReaderActivity.class);
                 startActivity(intent);
                 return false;
             }
@@ -2055,7 +1914,7 @@ see: https://stackoverflow.com/a/35892602/8166854
         mExportEmulationDataActivity.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
             @Override
             public boolean onMenuItemClick(@NonNull MenuItem menuItem) {
-                Intent intent = new Intent(ExtendedReadActivity.this, ExportEmulationDataActivity.class);
+                Intent intent = new Intent(ExtendedReadActivityOrg.this, ExportEmulationDataActivity.class);
                 startActivity(intent);
                 return false;
             }
@@ -2065,7 +1924,7 @@ see: https://stackoverflow.com/a/35892602/8166854
         mViewEmulationDataActivity.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
             @Override
             public boolean onMenuItemClick(@NonNull MenuItem menuItem) {
-                Intent intent = new Intent(ExtendedReadActivity.this, ViewEmulationDataActivity.class);
+                Intent intent = new Intent(ExtendedReadActivityOrg.this, ViewEmulationDataActivity.class);
                 startActivity(intent);
                 return false;
             }

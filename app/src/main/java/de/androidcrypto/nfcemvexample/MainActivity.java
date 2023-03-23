@@ -202,41 +202,7 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
             try {
                 nfc.connect();
 
-                // experimental section with new modules
-                ModuleInfo miSelectPpse = moduleSelectPpse(nfc);
-                printStepHeader(etLog, 1, "select PPSE");
-                writeToUiAppend(etLog, "01 select PPSE command length " + miSelectPpse.getCommand().length + " data: " + bytesToHex(miSelectPpse.getCommand()));
-                if (miSelectPpse.isSuccess()) {
-                    writeToUiAppend(etLog, "01 select PPSE response length " + miSelectPpse.getResponse().length + " data: " + bytesToHex(miSelectPpse.getResponse()));
-                    if (isPrettyPrintResponse) writeToUiAppend(etLog, miSelectPpse.getPrettyPrint());
-                } else {
-                    writeToUiAppend(etLog, "01 select PPSE response was not successful, aborted");
-                    writeToUiFinal(etLog);
-                    // stopping ? running a list of know AIDs ?
-                    setLoadingLayoutVisibility(false);
-                    try {
-                        nfc.close();
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
-                    return;
-                }
-                // at this point we received a list with found aid's
-                printStepHeader(etLog, 2, "search applications on card");
-                writeToUiAppend(etLog, "02 analyze select PPSE response and search for tag 0x4F (applications on card)");
-                int moduleFoundAids = miSelectPpse.getDataList().size();
-                writeToUiAppend(etLog, "");
-                writeToUiAppend(etLog, "found tag 0x4F " + moduleFoundAids + " time(s):");
-                for (int i = 0; i < moduleFoundAids; i++) {
-                    byte[] aidfound = miSelectPpse.getDataList().get(i);
-                    String aidNameFound = aidV.getAidName(aidfound);
-                    writeToUiAppend(etLog, bytesToHex(aidfound) + " (" + aidNameFound + ")");
-                }
-                // now iterate through aid list, next module is selectAid
 
-
-                printStepHeader(etLog, 9, "end experimental module");
-                // end experimental section
 
 
                 writeToUiAppend(etLog, "try to read a payment card with PPSE");
@@ -568,79 +534,6 @@ List<Afl> listAfl = extractAfl(data);
         }
     }
 
-    /**
-     * module for selecting PPSE
-     * @param nfc
-     * @return ModuleInfo
-     */
-    private ModuleInfo moduleSelectPpse(IsoDep nfc) {
-        ModuleInfo mi;
-        byte[] PPSE = "2PAY.SYS.DDF01".getBytes(StandardCharsets.UTF_8); // PPSE
-        byte[] command = selectApdu(PPSE);
-        byte[] response = new byte[0];
-        try {
-            response = nfc.transceive(command);
-            boolean selectPpseNotAllowed = responseNotAllowed(response);
-            if (selectPpseNotAllowed) {
-                mi = new ModuleInfo(command, response, false, null, null, null);
-                return mi;
-            }
-            byte[] responseOk = checkResponse(response);
-            if (responseOk != null) {
-                String responseString = TlvUtil.prettyPrintAPDUResponse(responseOk);
-                List<TagSet> tsList = new ArrayList<>();
-                tsList.addAll(getTagSetFromResponse(responseOk, "selectPpse"));
-                List<byte[]> dataList = new ArrayList<>(); // will return the found aid's in tag 0x4f
-                BerTlvParser parser = new BerTlvParser();
-                BerTlvs tlv4Fs = parser.parse(responseOk);
-                // by searching for tag 4f
-                List<BerTlv> tag4fList = tlv4Fs.findAll(new BerTag(0x4F));
-                if (tag4fList.size() < 1) {
-                    mi = new ModuleInfo(command, responseOk, true, tsList, null, responseString);
-                    return mi;
-                }
-                //ArrayList<byte[]> aidList = new ArrayList<>();
-                for (int i4f = 0; i4f < tag4fList.size(); i4f++) {
-                    BerTlv tlv4f = tag4fList.get(i4f);
-                    byte[] tlv4fBytes = tlv4f.getBytesValue();
-                    dataList.add(tlv4fBytes);
-                }
-                mi = new ModuleInfo(command, response, true, tsList, dataList, responseString);
-                return mi;
-            } else {
-                // if (responseOk != null) {
-                mi = new ModuleInfo(command, response, false, null, null, null);
-                return mi;
-            }
-        } catch (IOException e) {
-            mi = new ModuleInfo(command, null, false, null, null, null);
-            return mi;
-        }
-    }
-
-    private List<TagSet> getTagSetFromResponse(@NonNull byte[] data, @NonNull String tagsFound) {
-        List<TagSet> tagsSet = new ArrayList<>();
-        List<TagNameValue> parsedTags = TagListParser.parseRespond(data);
-        int parsedTagsSize = parsedTags.size();
-        //writeToUiAppend(etLog, "selectPpseResponseParsedSize: " + selectPpseResponseParsedSize);
-        for (int i = 0; i < parsedTagsSize; i++) {
-            TagNameValue parsedTag = parsedTags.get(i);
-            //writeToUiAppend(etLog, "selectPpseResponseParsed " + i + ": " + selectPpseResponseParsed.toString());
-            byte[] eTag = parsedTag.getTagBytes();
-            String eTagName = parsedTag.getTagName();
-            //String eTagName = selectPpseTag.getTag().getDescription();
-            byte[] eTagValue = parsedTag.getTagValueBytes();
-            String eTagValueType = parsedTag.getTagValueType();
-            //TagValueTypeEnum eTagValueType = selectPpseParsedTag.getTagValueType();
-            //String eTagFound = "selectPpse";
-            TagSet tagSet = new TagSet(eTag, eTagName, eTagValue, eTagValueType, tagsFound);
-            tagsSet.add(tagSet);
-            //writeToUiAppend(etLog, "--- tag nr " + i + " ---");
-            //writeToUiAppend(etLog, eTagSet.dump());
-        }
-        return tagsSet;
-    }
-
 
     private String dumpApplicationCryptoResponseMessageTemplate1(byte[] applicationCryptoResponseOk) {
         // check that response is a 0x80 Response Message Template Format 1
@@ -762,7 +655,7 @@ List<Afl> listAfl = extractAfl(data);
     }
 
     /**
-     * reads a single file (sfi + sector) of an EMV card
+     * reads a single file (sfi + record) of an EMV card
      * source: https://stackoverflow.com/a/38999989/8166854 answered Aug 17, 2016
      * by Michael Roland
      *
