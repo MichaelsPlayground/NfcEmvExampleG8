@@ -101,6 +101,7 @@ public class ExtendedReadActivity extends AppCompatActivity implements NfcAdapte
     byte[] tag0x8cFound = new byte[0]; // tag 0x8c = CDOL1
 
     List<TagSet> tsList = new ArrayList<>(); // holds the tags found during reading
+    List<TagSet> aidTsList; // holds the tag found within an AID select
 
     String outputString = ""; // used for the UI output
     // exporting the data
@@ -215,7 +216,7 @@ public class ExtendedReadActivity extends AppCompatActivity implements NfcAdapte
             try {
                 nfc.connect();
                 tsList = new ArrayList<>(); // holds the tags found during reading
-
+                List<TagSet> selectPpseTsList = new ArrayList<>();
                 // experimental section with new modules
                 ModuleInfo miSelectPpse = EmvModules.moduleSelectPpse(nfc);
                 printStepHeader(etLog, 1, "select PPSE");
@@ -225,6 +226,7 @@ public class ExtendedReadActivity extends AppCompatActivity implements NfcAdapte
                     if (isPrettyPrintResponse)
                         writeToUiAppend(etLog, miSelectPpse.getPrettyPrint());
                     writeToUiAppend(etLog, "number of tags found: " + miSelectPpse.getTsList().size());
+                    selectPpseTsList = miSelectPpse.getTsList();
                 } else {
                     writeToUiAppend(etLog, "01 select PPSE response was not successful, aborted");
                     writeToUiFinal(etLog);
@@ -249,7 +251,10 @@ public class ExtendedReadActivity extends AppCompatActivity implements NfcAdapte
                     writeToUiAppend(etLog, bytesToHex(aidfound) + " (" + aidNameFound + ")");
                 }
                 // now iterate through aid list, next module is selectAid
+
                 for (int aidNumber = 0; aidNumber < moduleFoundAids; aidNumber++) {
+                    aidTsList = new ArrayList<>();
+                    aidTsList.addAll(selectPpseTsList);
                     byte[] aidfound = miSelectPpse.getDataList().get(aidNumber);
                     aidSelectedForAnalyze = bytesToHex(aidfound);
                     aidSelectedForAnalyzeName = aidV.getAidName(aidfound);
@@ -264,6 +269,7 @@ public class ExtendedReadActivity extends AppCompatActivity implements NfcAdapte
                         if (isPrettyPrintResponse)
                             writeToUiAppend(etLog, miSelectAid.getPrettyPrint());
                         writeToUiAppend(etLog, "number of tags found: " + miSelectAid.getTsList().size());
+                        aidTsList.addAll(miSelectAid.getTsList());
                     } else {
                         writeToUiAppend(etLog, "03 select AID response was not successful, aborted");
                         writeToUiFinal(etLog);
@@ -310,7 +316,7 @@ public class ExtendedReadActivity extends AppCompatActivity implements NfcAdapte
                         writeToUiAppend(etLog, "05 get processing options response length " + miGpo.getResponse().length + " data: " + bytesToHex(miGpo.getResponse()));
                         if (isPrettyPrintResponse) writeToUiAppend(etLog, miGpo.getPrettyPrint());
                         writeToUiAppend(etLog, "number of tags found: " + miGpo.getTsList().size());
-
+                        aidTsList.addAll(miGpo.getTsList());
                         // now we are reading all data from card to get PAN, expire date and all other stuff
                         // lets see what is in the response:
                         writeToUiAppend(etLog, "05 get processing options response has these tags:");
@@ -321,11 +327,10 @@ public class ExtendedReadActivity extends AppCompatActivity implements NfcAdapte
                         //String pan_expirationDate = readPanFromFilesFromGpo(nfc, gpoRequestResponseOk);
                         String[] parts = panExpirationDate.split("_");
                         if (parts.length == 0) {
-                            writeToUiAppend(etLog, "07 NO PAN was found in gpoResponse");
+                            writeToUiAppend(etLog, "06 NO PAN was found in gpoResponse");
                         } else {
                             writeToUiAppend(etLog, "");
-                            printStepHeader(etLog, 6, "read files skipped");
-                            writeToUiAppend(etLog, "06 read the files from card and search for PAN in each file was skipped");
+                            writeToUiAppend(etLog, "06 read the files from card and search for PAN in each file was skipped at this time because we found the PAN within GPO response");
                             writeToUiAppend(etLog, "");
                             printStepHeader(etLog, 7, "print PAN & expire date");
                             writeToUiAppend(etLog, "07 get PAN and Expiration date from getProcessingOptions");
@@ -346,7 +351,7 @@ public class ExtendedReadActivity extends AppCompatActivity implements NfcAdapte
                         if (aflList.size() == 0) {
                             writeToUiAppend(etLog, "Sorry - no AFL was found in the GPO response");
                         } else {
-                            List<TagSet> aflTagSets = new ArrayList<>();
+                            List<TagSet> aflTsList = new ArrayList<>();
                             int aflListSize = aflList.size();
                             writeToUiAppend(etLog, "number of AFL entries: " + aflListSize);
                             List<ModuleInfo> misComplete = new ArrayList<>();
@@ -359,7 +364,7 @@ public class ExtendedReadActivity extends AppCompatActivity implements NfcAdapte
                                     writeToUiAppend(etLog, "content of record: " + misEntry);
                                     if (miAfl.isSuccess()) {
                                         writeToUiAppend(etLog, miAfl.getPrettyPrint());
-                                        aflTagSets.addAll(miAfl.getTsList());
+                                        aflTsList.addAll(miAfl.getTsList());
                                     } else {
                                         writeToUiAppend(etLog, "error in reading the record");
                                     }
@@ -368,15 +373,31 @@ public class ExtendedReadActivity extends AppCompatActivity implements NfcAdapte
                             }
                             writeToUiAppend(etLog, "--- afl reading complete ---");
                             writeToUiAppend(etLog, "number of records read: " + misComplete.size());
-                            writeToUiAppend(etLog, "number of tags read: " + aflTagSets.size());
+                            writeToUiAppend(etLog, "number of tags read: " + aflTsList.size());
                             writeToUiAppend(etLog, lineSeparatorString);
-                            // todo add aflTags to complete tags
+                            aidTsList.addAll(aflTsList);
                         }
-
                     } else {
                         // if (miGpo.isSuccess()) {
                         writeToUiAppend(etLog, "05 get processing options : found a strange behaviour - get processing options got wrong data to proceed... sorry");
                     }
+
+                    // single readings
+                    writeToUiAppend(etLog, "");
+                    printStepHeader(etLog, 8, "single readings");
+                    writeToUiAppend(etLog, "read data with single commands");
+                    ModuleInfo miSingleRead = EmvModules.readSingleDataElements(nfc);
+                    if (miSingleRead.isSuccess()) {
+                        // todo check for not success in single commands
+                        writeToUiAppend(etLog, miSingleRead.dumpTsList());
+                        aidTsList.addAll(miSingleRead.getTsList());
+                    } else {
+                        writeToUiAppend(etLog, "Not one element is present on card");
+                    }
+
+
+
+
 
                 // for (int aidNumber = 0; aidNumber < moduleFoundAids; aidNumber++) {
                 }

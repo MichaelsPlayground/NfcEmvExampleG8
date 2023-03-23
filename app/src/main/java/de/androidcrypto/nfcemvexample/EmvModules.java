@@ -2,12 +2,15 @@ package de.androidcrypto.nfcemvexample;
 
 import static de.androidcrypto.nfcemvexample.BinaryUtils.bytesToHex;
 import static de.androidcrypto.nfcemvexample.BinaryUtils.hexToBytes;
+import static de.androidcrypto.nfcemvexample.BinaryUtils.intToByteArrayV4;
 
 import android.nfc.tech.IsoDep;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
 
+import com.github.devnied.emvnfccard.enums.TagValueTypeEnum;
+import com.github.devnied.emvnfccard.iso7816emv.TagAndLength;
 import com.github.devnied.emvnfccard.utils.TlvUtil;
 import com.payneteasy.tlv.BerTag;
 import com.payneteasy.tlv.BerTlv;
@@ -25,6 +28,7 @@ import de.androidcrypto.nfcemvexample.emulate.PureFilesModel;
 import de.androidcrypto.nfcemvexample.extended.TagListParser;
 import de.androidcrypto.nfcemvexample.extended.TagNameValue;
 import de.androidcrypto.nfcemvexample.extended.TagSet;
+import de.androidcrypto.nfcemvexample.nfccreditcards.DolValues;
 import de.androidcrypto.nfcemvexample.nfccreditcards.ModuleInfo;
 
 public class EmvModules {
@@ -38,6 +42,7 @@ public class EmvModules {
 
     /**
      * module for selecting PPSE
+     *
      * @param nfc
      * @return ModuleInfo
      */
@@ -73,7 +78,7 @@ public class EmvModules {
                     byte[] tlv4fBytes = tlv4f.getBytesValue();
                     dataList.add(tlv4fBytes);
                 }
-                mi = new ModuleInfo(command, response, true, tsList, dataList, responseString);
+                mi = new ModuleInfo(command, responseOk, true, tsList, dataList, responseString);
                 return mi;
             } else {
                 // if (responseOk != null) {
@@ -88,6 +93,7 @@ public class EmvModules {
 
     /**
      * module for selecting AID
+     *
      * @param nfc
      * @param aid
      * @return ModuleInfo
@@ -119,7 +125,7 @@ public class EmvModules {
                 } else {
                     byte[] pdolValue = tag9f38.getBytesValue();
                     dataList.add(pdolValue); // just one entry
-                    mi = new ModuleInfo(command, response, true, tsList, dataList, responseString);
+                    mi = new ModuleInfo(command, responseOk, true, tsList, dataList, responseString);
                 }
                 return mi;
             } else {
@@ -135,6 +141,7 @@ public class EmvModules {
 
     /**
      * module for get the processing options (GPO)
+     *
      * @param nfc
      * @param commandRequestGpo
      * @return ModuleInfo
@@ -262,6 +269,7 @@ public class EmvModules {
 
     /**
      * reads one AFL entry, could be more than one record
+     *
      * @param nfc
      * @param aflEntry 4 bytes
      * @return List<ModuleInfo>
@@ -282,8 +290,25 @@ public class EmvModules {
         return mis;
     }
 
+/*
+offline authorization
+EMV Book 4.1 Book 3 page 78:
+The AFL determines the files and records to be used for processing a transaction. The use of the AFL is described in section 10.2.
+The data objects listed in Table 25 are used by the offline data authentication algorithm and, when present,
+should be located in the first record referenced by the AFL.4
+Tag '8F' Value Certification Authority Public Key Index
+Tag '90' Value Issuer Public Key Certificate
+Table 25: Data Objects Used by the Offline Data Authentication Algorithm
+
+page 95:
+The fourth byte indicates the number of records involved in offline data authentication starting with the record number coded
+in the second byte. The fourth byte may range from zero to the value of the third byte less the value of the second byte plus 1.
+
+ */
+
     /**
      * reads a single entry from an AFL entry (just one record)
+     *
      * @param nfc
      * @param sfiNew
      * @param record
@@ -313,145 +338,6 @@ public class EmvModules {
             return mi;
         }
     }
-
-
-    /*
-    public static PureFilesModel moduleReadAflEntry(IsoDep nfc, byte[] aflEntry) {
-        PureFileModel pf;
-        PureFilesModel pfs;
-        //List<ModuleInfo> mis = new ArrayList<>();
-        byte[] response = new byte[0];
-        try {
-            byte sfiOrg = aflEntry[0];
-            byte rec1 = aflEntry[1];
-            byte recL = aflEntry[2];
-            byte offl = aflEntry[3]; // offline authorization
-            //writeToUiAppend(etLog, "sfiOrg: " + sfiOrg + " rec1: " + ((int) rec1) + " recL: " + ((int) recL));
-            int sfiNew = (byte) sfiOrg | 0x04; // add 4 = set bit 3
-            // read records
-            //byte[] resultReadRecord = new byte[0];
-            for (int iRecords = (int) rec1; iRecords <= (int) recL; iRecords++) {
-                byte[] command = hexToBytes("00B2000400");
-                command[2] = (byte) (iRecords & 0x0FF);
-                command[3] |= (byte) (sfiNew & 0x0FF);
-                response = nfc.transceive(command);
-                if (response != null) {
-                    pf = new PureFileModel()
-
-                } else {
-                    // if (response != null) {
-                    // no entry
-                    //mi = new ModuleInfo(command, response, false, null, null, null);
-                    //mis.add(mi);
-                }
-
-
-
-            }
-
-
-            boolean gpoNotAllowed = responseNotAllowed(response);
-            if (gpoNotAllowed) {
-                mi = new ModuleInfo(commandRequestGpo, response, false, null, null, null);
-                return mi;
-            }
-            byte[] responseOk = checkResponse(response);
-            if (responseOk != null) {
-                String responseString = TlvUtil.prettyPrintAPDUResponse(responseOk);
-                List<TagSet> tsList = new ArrayList<>();
-                tsList.addAll(getTagSetFromResponse(responseOk, "getProcessingOptions"));
-                mi = new ModuleInfo(commandRequestGpo, response, true, tsList, null, responseString);
-                return mi;
-            } else {
-                // if (responseOk != null) {
-                mi = new ModuleInfo(commandRequestGpo, response, false, null, null, null);
-                return mi;
-            }
-        } catch (IOException e) {
-            mi = new ModuleInfo(commandRequestGpo, null, false, null, null, null);
-            return mi;
-        }
-    }
-    */
-
-/*
-    public static byte[] readFileAflEntryOrg(IsoDep nfc, byte[] aflEntry) {
-        byte sfiOrg = aflEntry[0];
-        byte rec1 = aflEntry[1];
-        byte recL = aflEntry[2];
-        byte offl = aflEntry[3]; // offline authorization
-        //writeToUiAppend(etLog, "sfiOrg: " + sfiOrg + " rec1: " + ((int) rec1) + " recL: " + ((int) recL));
-        int sfiNew = (byte) sfiOrg | 0x04; // add 4 = set bit 3
-        // read records
-        byte[] resultReadRecord = new byte[0];
-
-        for (int iRecords = (int) rec1; iRecords <= (int) recL; iRecords++) {
-            //System.out.println("** for loop start " + (int) rec1 + " to " + (int) recL + " iRecords: " + iRecords);
-
-            //System.out.println("*#* readRecord iRecords: " + iRecords);
-            byte[] cmd = hexToBytes("00B2000400");
-            cmd[2] = (byte) (iRecords & 0x0FF);
-            cmd[3] |= (byte) (sfiNew & 0x0FF);
-            //writeToUiAppend(etLog, "");
-            //writeToUiAppend(etLog, "read command length: " + cmd.length + " data: " + bytesToHex(cmd));
-
-            try {
-                resultReadRecord = nfc.transceive(cmd);
-                //writeToUiAppend(etLog, "readRecordCommand length: " + cmd.length + " data: " + bytesToHex(cmd));
-                byte[] resultReadRecordOk = checkResponse(resultReadRecord);
-                if (resultReadRecordOk != null) {
-                    //writeToUiAppend(etLog, "data from AFL " + bytesToHex(tag94BytesListEntry)); // given wrong output for second or third files in multiple records
-                    writeToUiAppend(etLog, "data from AFL was: " + bytesToHex(tag94BytesListEntry));
-                    writeToUiAppend(etLog, "data from AFL " + "SFI: " + String.format("%02X", sfiOrg) + " REC: " + String.format("%02d", iRecords));
-
-                    byte sfiFile = (byte) (cmd[3] >>> 3);
-
-                    writeToUiAppend(etLog, "data from AFL " + "SFI: " + String.format("%02X", sfiFile) + " REC: " + String.format("%02d", iRecords));
-                    writeToUiAppend(etLog, "read result length: " + resultReadRecordOk.length + " data: " + bytesToHex(resultReadRecordOk));
-                    // pretty print of response
-                    if (isPrettyPrintResponse) {
-                        prettyPrintData(etLog, resultReadRecordOk);
-                    }
-                    // this is the shortened one
-                    try {
-                        BerTlvs tlvsAfl = parser.parse(resultReadRecordOk);
-                        // todo there could be a 57 Track 2 Equivalent Data field as well
-                        // 5a = Application Primary Account Number (PAN)
-                        // 5F34 = Application Primary Account Number (PAN) Sequence Number
-                        // 5F25  = Application Effective Date (card valid from)
-                        // 5F24 = Application Expiration Date
-                        BerTlv tag5a = tlvsAfl.find(new BerTag(0x5a));
-                        if (tag5a != null) {
-                            byte[] tag5aBytes = tag5a.getBytesValue();
-                            pan = removeTrailingF(bytesToHex(tag5aBytes));
-                            Log.e(TAG, "found tag 0x5A PAN: " + pan);
-                        }
-                        BerTlv tag5f24 = tlvsAfl.find(new BerTag(0x5f, 0x24));
-                        if (tag5f24 != null) {
-                            byte[] tag5f24Bytes = tag5f24.getBytesValue();
-                            expirationDate = bytesToHex(tag5f24Bytes);
-                        } else {
-                            // System.out.println("record: " + iRecords + " Tag 5F24 not found");
-                        }
-
-                        findTag0x8c(tlvsAfl);
-                    } catch (ArrayIndexOutOfBoundsException e) {
-                        //System.out.println("ERROR: ArrayOutOfBoundsException: " + e.getMessage());
-                    }
-                } else {
-                    //writeToUiAppend(etLog, "ERROR: read record failed, result: " + bytesToHex(resultReadRecord));
-                    resultReadRecord = new byte[0];
-                }
-            } catch (IOException e) {
-                //throw new RuntimeException(e);
-                //return "";
-            }
-        }
-
-    }
-
- */
-
 
     /**
      * reads a single file (sector) of an EMV card
@@ -501,6 +387,361 @@ public class EmvModules {
         return sb.toString();
     }
 
+    /**
+     * section for single read commands
+     * overview: https://github.com/sasc999/javaemvreader/blob/master/src/main/java/sasc/emv/EMVAPDUCommands.java
+     */
+
+
+    /**
+     * reads the single data elements "application transaction counter", "left pin try counter",
+     * "last online ATC register" and "logFormat"
+     * @param nfc
+     * @return
+     */
+    public static ModuleInfo readSingleDataElements(IsoDep nfc) {
+        ModuleInfo mi;
+        boolean result = false;
+        List<TagSet> tsLst = new ArrayList<>();
+        List<byte[]> dataLst = new ArrayList<>();
+        ModuleInfo miAtc = getApplicationTransactionCounter(nfc);
+        ModuleInfo miLeftPinTryCounter = getLeftPinTryCounterCounter(nfc);
+        ModuleInfo miLastOnlineAtcRegister = getLastOnlineATCRegister(nfc);
+        ModuleInfo miLogFormat = getLogFormat(nfc);
+        if (miAtc.isSuccess()) {
+            tsLst.addAll(miAtc.getTsList());
+            dataLst.addAll(miAtc.getDataList());
+            result = true;
+        }
+        if (miLeftPinTryCounter.isSuccess()) {
+            tsLst.addAll(miLeftPinTryCounter.getTsList());
+            dataLst.addAll(miLeftPinTryCounter.getDataList());
+            result = true;
+        }
+        if (miLastOnlineAtcRegister.isSuccess()) {
+            tsLst.addAll(miLastOnlineAtcRegister.getTsList());
+            dataLst.addAll(miLastOnlineAtcRegister.getDataList());
+            result = true;
+        }
+        if (miLogFormat.isSuccess()) {
+            tsLst.addAll(miLogFormat.getTsList());
+            dataLst.addAll(miLogFormat.getDataList());
+            result = true;
+        }
+        mi = new ModuleInfo(new byte[0], new byte[0], result, tsLst, dataLst, null);
+        return mi;
+    }
+
+    // Get the data of ATC(Application Transaction Counter, tag '9F36')), template 77 or 80
+    private static ModuleInfo getApplicationTransactionCounter(IsoDep nfc) {
+        ModuleInfo mi;
+        // we do need empty lists because we need a complete list after all reads
+        TagSet tsEmpty = new TagSet(new byte[]{(byte) 0x00F}, "empty", new byte[0], TagValueTypeEnum.TEXT.toString(), "read single data elements");
+        byte[] dsEmpty = new byte[0];
+        List<TagSet> tsLstEmpty = new ArrayList<>();
+        tsLstEmpty.add(tsEmpty);
+        List<byte[]> dataLstEmpty = new ArrayList<>();
+        dataLstEmpty.add(dsEmpty);
+
+        List<TagSet> tsLst = new ArrayList<>();
+        List<byte[]> dataLst = new ArrayList<>();
+        byte[] command = new byte[]{(byte) 0x80, (byte) 0xCA, (byte) 0x9F, (byte) 0x36, (byte) 0x00};
+        byte[] result = new byte[0];
+        try {
+            result = nfc.transceive(command);
+        } catch (IOException e) {
+            //System.out.println("* getApplicationTransactionCounter failed");
+            mi = new ModuleInfo(command, null, false, tsLstEmpty, dataLstEmpty, null);
+            return mi;
+        }
+        // e.g. visa returns 9f360200459000
+        // e.g. visa returns 9f36020045 9000
+        byte[] resultOk = checkResponse(result);
+        if (resultOk == null) {
+            mi = new ModuleInfo(command, result, false, tsLstEmpty, dataLstEmpty, null);
+            return mi;
+        } else {
+            byte[] tagValue = getTagValueFromResult(resultOk, (byte) 0x9f, (byte) 0x36);
+            TagSet ts = new TagSet(new byte[]{(byte) 0x9F, (byte) 0x36}, "application transaction counter (ATC)", tagValue, TagValueTypeEnum.BINARY.toString(), "read single data elements");
+            tsLst.add(ts);
+            dataLst.add(resultOk);
+            mi = new ModuleInfo(command, result, true, tsLst, dataLst, String.valueOf(BinaryUtils.intFromByteArrayV4(tagValue)));
+            return mi;
+        }
+    }
+
+    private static ModuleInfo getLeftPinTryCounterCounter(IsoDep nfc) {
+        ModuleInfo mi;
+        // we do need empty lists because we need a complete list after all reads
+        TagSet tsEmpty = new TagSet(new byte[]{(byte) 0x00F}, "empty", new byte[0], TagValueTypeEnum.TEXT.toString(), "read single data elements");
+        byte[] dsEmpty = new byte[0];
+        List<TagSet> tsLstEmpty = new ArrayList<>();
+        tsLstEmpty.add(tsEmpty);
+        List<byte[]> dataLstEmpty = new ArrayList<>();
+        dataLstEmpty.add(dsEmpty);
+
+        List<TagSet> tsLst = new ArrayList<>();
+        List<byte[]> dataLst = new ArrayList<>();
+        byte[] command = new byte[]{(byte) 0x80, (byte) 0xCA, (byte) 0x9F, (byte) 0x17, (byte) 0x00};
+        byte[] result = new byte[0];
+        try {
+            result = nfc.transceive(command);
+        } catch (IOException e) {
+            //System.out.println("* getApplicationTransactionCounter failed");
+            mi = new ModuleInfo(command, null, false, tsLstEmpty, dataLstEmpty, null);
+            return mi;
+        }
+        byte[] resultOk = checkResponse(result);
+        if (resultOk == null) {
+            mi = new ModuleInfo(command, result, false, tsLstEmpty, dataLstEmpty, null);
+            return mi;
+        } else {
+            byte[] tagValue = getTagValueFromResult(resultOk, (byte) 0x9f, (byte) 0x17);
+            TagSet ts = new TagSet(new byte[]{(byte) 0x9F, (byte) 0x17}, "left PIN try counter", tagValue, TagValueTypeEnum.BINARY.toString(), "read single data elements");
+            tsLst.add(ts);
+            dataLst.add(resultOk);
+            mi = new ModuleInfo(command, result, true, tsLst, dataLst, String.valueOf(BinaryUtils.intFromByteArrayV4(tagValue)));
+            return mi;
+        }
+    }
+
+    private static ModuleInfo getLastOnlineATCRegister(IsoDep nfc) {
+        ModuleInfo mi;
+        // we do need empty lists because we need a complete list after all reads
+        TagSet tsEmpty = new TagSet(new byte[]{(byte) 0x00F}, "empty", new byte[0], TagValueTypeEnum.TEXT.toString(), "read single data elements");
+        byte[] dsEmpty = new byte[0];
+        List<TagSet> tsLstEmpty = new ArrayList<>();
+        tsLstEmpty.add(tsEmpty);
+        List<byte[]> dataLstEmpty = new ArrayList<>();
+        dataLstEmpty.add(dsEmpty);
+
+        List<TagSet> tsLst = new ArrayList<>();
+        List<byte[]> dataLst = new ArrayList<>();
+        byte[] command = new byte[]{(byte) 0x80, (byte) 0xCA, (byte) 0x9F, (byte) 0x13, (byte) 0x00};
+        byte[] result = new byte[0];
+        try {
+            result = nfc.transceive(command);
+        } catch (IOException e) {
+            //System.out.println("* getApplicationTransactionCounter failed");
+            mi = new ModuleInfo(command, null, false, tsLstEmpty, dataLstEmpty, null);
+            return mi;
+        }
+        byte[] resultOk = checkResponse(result);
+        if (resultOk == null) {
+            mi = new ModuleInfo(command, result, false, tsLstEmpty, dataLstEmpty, null);
+            return mi;
+        } else {
+            byte[] tagValue = getTagValueFromResult(resultOk, (byte) 0x9f, (byte) 0x13);
+            TagSet ts = new TagSet(new byte[]{(byte) 0x9F, (byte) 0x13}, "last online ATC register", tagValue, TagValueTypeEnum.BINARY.toString(), "read single data elements");
+            tsLst.add(ts);
+            dataLst.add(resultOk);
+            mi = new ModuleInfo(command, result, true, tsLst, dataLst, String.valueOf(BinaryUtils.intFromByteArrayV4(tagValue)));
+            return mi;
+        }
+    }
+
+    private static ModuleInfo getLogFormat(IsoDep nfc) {
+        ModuleInfo mi;
+        // we do need empty lists because we need a complete list after all reads
+        TagSet tsEmpty = new TagSet(new byte[]{(byte) 0x00F}, "empty", new byte[0], TagValueTypeEnum.TEXT.toString(), "read single data elements");
+        byte[] dsEmpty = new byte[0];
+        List<TagSet> tsLstEmpty = new ArrayList<>();
+        tsLstEmpty.add(tsEmpty);
+        List<byte[]> dataLstEmpty = new ArrayList<>();
+        dataLstEmpty.add(dsEmpty);
+
+        List<TagSet> tsLst = new ArrayList<>();
+        List<byte[]> dataLst = new ArrayList<>();
+        byte[] command = new byte[]{(byte) 0x80, (byte) 0xCA, (byte) 0x9F, (byte) 0x4F, (byte) 0x00};
+        byte[] result = new byte[0];
+        try {
+            result = nfc.transceive(command);
+        } catch (IOException e) {
+            //System.out.println("* getApplicationTransactionCounter failed");
+            mi = new ModuleInfo(command, null, false, tsLstEmpty, dataLstEmpty, null);
+            return mi;
+        }
+        byte[] resultOk = checkResponse(result);
+        if (resultOk == null) {
+            mi = new ModuleInfo(command, result, false, tsLstEmpty, dataLstEmpty, null);
+            return mi;
+        } else {
+            byte[] tagValue = getTagValueFromResult(resultOk, (byte) 0x9f, (byte) 0x4f);
+            TagSet ts = new TagSet(new byte[]{(byte) 0x9F, (byte) 0x4F}, "log format", tagValue, TagValueTypeEnum.BINARY.toString(), "read single data elements");
+            tsLst.add(ts);
+            dataLst.add(resultOk);
+            mi = new ModuleInfo(command, result, true, tsLst, dataLst, bytesToHex(tagValue));
+            return mi;
+        }
+    }
+
+    private static byte[] getApplicationTransactionCounterOrg(IsoDep nfc) {
+        byte[] cmd = new byte[]{(byte) 0x80, (byte) 0xCA, (byte) 0x9F, (byte) 0x36, (byte) 0x00};
+        byte[] result = new byte[0];
+        try {
+            result = nfc.transceive(cmd);
+        } catch (IOException e) {
+            //System.out.println("* getApplicationTransactionCounter failed");
+            return null;
+        }
+        // e.g. visa returns 9f360200459000
+        // e.g. visa returns 9f36020045 9000
+        byte[] resultOk = checkResponse(result);
+        if (resultOk == null) {
+            return null;
+        } else {
+            return getTagValueFromResult(resultOk, (byte) 0x9f, (byte) 0x36);
+        }
+    }
+
+    private static byte[] getPinTryCounterOrg(IsoDep nfc) {
+        byte[] cmd = new byte[]{(byte) 0x80, (byte) 0xCA, (byte) 0x9F, (byte) 0x17, (byte) 0x00};
+        byte[] result = new byte[0];
+        try {
+            result = nfc.transceive(cmd);
+        } catch (IOException e) {
+            System.out.println("* getPinTryCounterCounter failed");
+            return null;
+        }
+        byte[] resultOk = checkResponse(result);
+        if (resultOk == null) {
+            return null;
+        } else {
+            return getTagValueFromResult(resultOk, (byte) 0x9f, (byte) 0x17);
+        }
+    }
+
+    private static byte[] getLastOnlineATCRegisterOrg(IsoDep nfc) {
+        byte[] cmd = new byte[]{(byte) 0x80, (byte) 0xCA, (byte) 0x9F, (byte) 0x13, (byte) 0x00};
+        byte[] result = new byte[0];
+        try {
+            result = nfc.transceive(cmd);
+        } catch (IOException e) {
+            System.out.println("* getLastOnlineATCRegister failed");
+            return null;
+        }
+        byte[] resultOk = checkResponse(result);
+        if (resultOk == null) {
+            return null;
+        } else {
+            return getTagValueFromResult(resultOk, (byte) 0x9f, (byte) 0x13);
+        }
+    }
+
+    private static byte[] getLogFormatOrg(IsoDep nfc) {
+        byte[] cmd = new byte[]{(byte) 0x80, (byte) 0xCA, (byte) 0x9F, (byte) 0x4F, (byte) 0x00};
+        byte[] result = new byte[0];
+        try {
+            result = nfc.transceive(cmd);
+        } catch (IOException e) {
+            System.out.println("* getLastOnlineATCRegister failed");
+            return null;
+        }
+        byte[] resultOk = checkResponse(result);
+        if (resultOk == null) {
+            return null;
+        } else {
+            return getTagValueFromResult(resultOk, (byte) 0x9f, (byte) 0x4F);
+        }
+    }
+
+    /**
+     * section for get application cryptogram
+     */
+
+    /**
+     * get application cryptogram
+     * @param nfc
+     * @param tag8cCdol1 - the tag 0x8c = CDOL1 can be found while reading any response
+     * @return ModuleInfo with the application cryptogram
+     */
+    public ModuleInfo getApplicationCryptogram (@NonNull IsoDep nfc, byte[] tag8cCdol1) {
+        ModuleInfo mi;
+        byte[] command;
+        byte[] response = new byte[0];
+        byte[] responseOk = null;
+        if (tag8cCdol1.length > 1) {
+            command = getAppCryptoCommandFromCdol(tag8cCdol1);
+            try {
+                response = nfc.transceive(command);
+            } catch (IOException e) {
+                mi = new ModuleInfo(command, null, false, null, null, null);
+                return mi;
+            }
+            if (response != null) {
+                responseOk = checkResponse(response);
+                if (responseOk != null) {
+                    String responseString = TlvUtil.prettyPrintAPDUResponse(responseOk);
+                    List<TagSet> tsList = new ArrayList<>();
+                    tsList.addAll(getTagSetFromResponse(responseOk, "getProcessingOptions"));
+                    mi = new ModuleInfo(command, responseOk, true, tsList, null, responseString);
+                    return mi;
+                } else {
+                    mi = new ModuleInfo(command, response, false, null, null, null);
+                    return mi;          }
+            } else {
+                mi = new ModuleInfo(command, response, false, null, null, null);
+                return mi;
+            }
+        } else {
+            // no cdol1 found
+            mi = new ModuleInfo(null, null, false, null, null, null);
+            return mi;
+        }
+    }
+
+    /**
+     * takes the CDOL1 list from any response (file reading) and returns the getApplicationCrypto command
+     *
+     * @param cdol
+     * @return
+     */
+    private byte[] getAppCryptoCommandFromCdol(@NonNull byte[] cdol) {
+        // get the tags in a list
+        List<TagAndLength> tagAndLength = TlvUtil.parseTagAndLength(cdol);
+        int tagAndLengthSize = tagAndLength.size();
+        if (tagAndLengthSize < 1) {
+            // there are no cdols in the list
+            // returning an empty cdolCommand
+            String constructedGetAcCommandString = "80AE8000" + "00" + "" + "00";
+            return hexToBytes(constructedGetAcCommandString);
+        }
+        int valueOfTagSum = 0; // total length
+        StringBuilder sb = new StringBuilder(); // takes the default values of the tags
+        DolValues dolValues = new DolValues();
+        for (int i = 0; i < tagAndLengthSize; i++) {
+            // get a single tag
+            TagAndLength tal = tagAndLength.get(i); // eg 9F0206
+            byte[] tagToSearch = tal.getTag().getTagBytes(); // gives the tag 9F02
+            int lengthOfTag = tal.getLength(); // 2
+            valueOfTagSum += tal.getLength(); // add it to the sum
+            // now we are trying to find a default value
+            byte[] defaultValue = dolValues.getDolValue(tagToSearch);
+            byte[] usedValue = new byte[0];
+            if (defaultValue != null) {
+                if (defaultValue.length > lengthOfTag) {
+                    // cut it to correct length
+                    usedValue = Arrays.copyOfRange(defaultValue, 0, lengthOfTag);
+                } else if (defaultValue.length < lengthOfTag) {
+                    // increase length
+                    usedValue = new byte[lengthOfTag];
+                    System.arraycopy(defaultValue, 0, usedValue, 0, defaultValue.length);
+                } else {
+                    // correct length
+                    usedValue = defaultValue.clone();
+                }
+            } else {
+                // defaultValue is null means the tag was not found in our tags database for default values
+                usedValue = new byte[lengthOfTag];
+            }
+            // now usedValue does have the correct length
+            sb.append(bytesToHex(usedValue));
+        }
+        String constructedGetAcString = sb.toString();
+        String tagLength2d = bytesToHex(intToByteArrayV4(valueOfTagSum)); // length value
+        String constructedGetAcCommandString = "80AE8000" + tagLength2d + constructedGetAcString + "00";
+        return hexToBytes(constructedGetAcCommandString);
+    }
 
     /**
      * section for getting the tags from read responses
@@ -515,6 +756,34 @@ public class EmvModules {
             }
         }
         return null;
+    }
+
+    /**
+     * gets the byte value of a tag from transceive response
+     *
+     * @param data
+     * @param search
+     * @return
+     */
+    private static byte[] getTagValueFromResult(byte[] data, byte... search) {
+        int argumentsLength = search.length;
+        if (argumentsLength < 1) return null;
+        if (argumentsLength > 2) return null;
+        if (data.length > 253) return null;
+        BerTlvParser parser = new BerTlvParser();
+        BerTlvs tlvDatas = parser.parse(data);
+        BerTlv tag;
+        if (argumentsLength == 1) {
+            tag = tlvDatas.find(new BerTag(search[0]));
+        } else {
+            tag = tlvDatas.find(new BerTag(search[0], search[1]));
+        }
+        byte[] tagBytes;
+        if (tag == null) {
+            return null;
+        } else {
+            return tag.getBytesValue();
+        }
     }
 
     private static List<TagSet> getTagSetFromResponse(@NonNull byte[] data, @NonNull String tagsFound) {
@@ -561,9 +830,10 @@ public class EmvModules {
 
     /**
      * checks if the response is longer than 3 bytes and ends with 0x9000
+     *
      * @param data
      * @return the data without 0x9000 at the end
-     *         null if response is not OK
+     * null if response is not OK
      */
     private static byte[] checkResponse(byte[] data) {
         //if (data.length < 5) return null; // not ok
