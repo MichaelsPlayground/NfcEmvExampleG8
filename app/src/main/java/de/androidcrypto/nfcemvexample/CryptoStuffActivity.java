@@ -34,6 +34,7 @@ import de.androidcrypto.nfcemvexample.johnzweng.SignedDynamicApplicationData;
 import de.androidcrypto.nfcemvexample.nfccreditcards.DolTag;
 import de.androidcrypto.nfcemvexample.sasc.ApplicationInterchangeProfile;
 import de.androidcrypto.nfcemvexample.sasc.CA;
+import de.androidcrypto.nfcemvexample.sasc.CVMList;
 import de.androidcrypto.nfcemvexample.sasc.ICCPublicKey;
 import de.androidcrypto.nfcemvexample.sasc.ICCPublicKeyCertificate;
 import de.androidcrypto.nfcemvexample.sasc.IssuerPublicKey;
@@ -498,6 +499,9 @@ decrypted: 48e26a471054d1ae93d86ab9daaa30a8036d47997e0b556101e950462f67cbc8b9203
                 writeToUiAppend(tv1, "AIP GC Voba: " + aipGcVoba.toString());
                 ApplicationInterchangeProfile aipVisaLloyds = new ApplicationInterchangeProfile((byte) 0x20, (byte) 0x00);
                 writeToUiAppend(tv1, "AIP Visa Lloyds: " + aipVisaLloyds.toString());
+
+                // CVM List is not used in qVSDC/Kernel C-3 path.
+                //CVMList cvmList = new CVMList();
             }
         });
     }
