@@ -381,7 +381,8 @@ public class ExtendedReadActivity extends AppCompatActivity implements NfcAdapte
                         }
                     } else {
                         // if (miGpo.isSuccess()) {
-                        // todo try another PDOL as this seems to be not working on DKB GiroCard ??
+                        // todo try another PDOL as this seems to be not working on DKB GiroCard aid 3 (number 4)
+                        // not working AID: a000000...32020
                         writeToUiAppend(etLog, "05 get processing options : found a strange behaviour - get processing options got wrong data to proceed... sorry");
                     }
                     writeToUiAppend(etLog, "");
