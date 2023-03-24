@@ -1,6 +1,7 @@
 package de.androidcrypto.nfcemvexample;
 
 import static de.androidcrypto.nfcemvexample.BinaryUtils.bytesToHex;
+import static de.androidcrypto.nfcemvexample.BinaryUtils.bytesToHexBlank;
 import static de.androidcrypto.nfcemvexample.BinaryUtils.bytesToHexNpe;
 import static de.androidcrypto.nfcemvexample.BinaryUtils.hexToBytes;
 import static de.androidcrypto.nfcemvexample.BinaryUtils.intToByteArrayV4;
@@ -324,6 +325,22 @@ public class ExtendedReadActivity extends AppCompatActivity implements NfcAdapte
                         writeToUiAppend(etLog, "05 get processing options response has these tags:");
                         writeToUiAppend(etLog, miGpo.dumpTsList());
 
+
+/*
+amex has a 80 12 -- Response Message Template Format 1
+I/System.out: *********************************
+I/System.out: ************ step  5 ************
+I/System.out: * get the processing options    *
+I/System.out: *********************************
+I/System.out: 05 get the processing options command length: 9 data: 80a800000383012200
+I/System.out: 05 run GPO response length: 20 data: 8012180008010100080303000805050010020200
+I/System.out: ------------------------------------
+I/System.out: 80 12 -- Response Message Template Format 1
+I/System.out:       18 00 08 01 01 00 08 03 03 00 08 05 05 00 10 02
+I/System.out:       02 00 (BINARY)
+I/System.out: ------------------------------------
+ */
+
                         // is a pan & expiration date available in gpoResponse ?
                         String panExpirationDate = EmvModules.checkForPanInResponse(miGpo.getResponse());
                         //String pan_expirationDate = readPanFromFilesFromGpo(nfc, gpoRequestResponseOk);
@@ -349,10 +366,16 @@ public class ExtendedReadActivity extends AppCompatActivity implements NfcAdapte
                         printStepHeader(etLog, 6, "read files from AFL");
                         writeToUiAppend(etLog, "06 read the files from card and get the data from each file");
                         // is an AFL list available in gpoResponse ?
-                        List<byte[]> aflList = EmvModules.checkForAflInGpoResponse(miGpo.getResponse());
+                        // List<byte[]> aflList = EmvModules.checkForAflInGpoResponseOrg(miGpo.getResponse());
+                        ModuleInfo miGpoAfl = EmvModules.checkForAflInGpoResponse(miGpo.getResponse());
+                        List<byte[]> aflList = miGpoAfl.getDataList();
                         if (aflList.size() == 0) {
                             writeToUiAppend(etLog, "Sorry - no AFL was found in the GPO response");
                         } else {
+                            // if it is a Template 1 then get the tags from it
+                            if (miGpoAfl.getPrettyPrint().equals("Template 1")) {
+                                aidTsList.addAll(miGpo.getTsList());
+                            }
                             List<TagSet> aflTsList = new ArrayList<>();
                             int aflListSize = aflList.size();
                             writeToUiAppend(etLog, "number of AFL entries: " + aflListSize);
@@ -385,6 +408,18 @@ public class ExtendedReadActivity extends AppCompatActivity implements NfcAdapte
                         // not working AID: a000000...32020
                         writeToUiAppend(etLog, "05 get processing options : found a strange behaviour - get processing options got wrong data to proceed... sorry");
                     }
+
+                    // we are searching for tag 5a (PAN) and tag 5F24 (APPLICATION EXPIRATION DATE)
+                    String panString = EmvModules.removeTrailingF(bytesToHexNpe(getTagValueFromList(aidTsList, new byte[]{(byte) 0x5a})));
+                    String expirationString = EmvModules.removeTrailingF(bytesToHexNpe(getTagValueFromList(aidTsList, new byte[]{(byte) 0x5f, (byte) 0x24})));
+                    writeToUiAppend(etLog, "");
+                    printStepHeader(etLog, 7, "print PAN & expire date");
+                    writeToUiAppend(etLog, "07 get PAN and Expiration date from getProcessingOptions");
+                    writeToUiAppend(etLog, "data for AID " + aidSelectedForAnalyze + " (" + aidSelectedForAnalyzeName + ")");
+                    writeToUiAppend(etLog, "PAN: " + panString);
+                    writeToUiAppend(etLog, "Expiration date (YYMM): " + expirationString);
+
+
                     writeToUiAppend(etLog, "");
                     printStepHeader(etLog, 9, "internal authentication");
                     //writeToUiAppend(etLog, "get the internal authentication: " + bytesToHexNpe(tag8c_CDOL1));
@@ -419,6 +454,14 @@ public class ExtendedReadActivity extends AppCompatActivity implements NfcAdapte
                             writeToUiAppend(etLog, miApplicationCryptogram.getPrettyPrint());
                             writeToUiAppend(etLog, "number of tags found: " + miApplicationCryptogram.getTsList().size());
                             aidTsList.addAll(miApplicationCryptogram.getTsList());
+
+                            // the response could be a tag 0x80 Response Message Template Format 1
+                            // for that we do need a dedicated dump tio get the individual tags
+                            writeToUiAppend(etLog, miApplicationCryptogram.dumpTsList());
+
+
+
+
                         } else {
                             writeToUiAppend(etLog, "could not get an application cryptogram");
                             writeToUiAppend(etLog, "response from card was: " + bytesToHexNpe(miApplicationCryptogram.getResponse()));
@@ -427,6 +470,16 @@ public class ExtendedReadActivity extends AppCompatActivity implements NfcAdapte
                         writeToUiAppend(etLog, "could not get an application cryptogram");
                     }
 
+                    writeToUiAppend(etLog, "");
+                    printStepHeader(etLog, 10, "data dumps");
+                    // AIP
+                    byte[] tag82_AIP = EmvModules.getTagValueFromList(aidTsList, new byte[]{(byte) 0x82});
+                    if (tag82_AIP != null) {
+                        writeToUiAppend(etLog, "Application Interchange Profile (AIP) data: " + bytesToHexBlank(tag82_AIP));
+                        writeToUiAppend(etLog, EmvModules.dumpAip(tag82_AIP));
+                    } else {
+                        writeToUiAppend(etLog, "no Application Interchange Profile (AIP) found in the tag list");
+                    }
 
 
                     // place this at the end as the next readings get no response
@@ -542,7 +595,7 @@ public class ExtendedReadActivity extends AppCompatActivity implements NfcAdapte
                             }
                             return;
                         }
-
+/*
                         System.out.println("*#*#*# some stuff");
                         writeToUiAppend(etLog, "*** generate RSA keypair ***");
                         System.out.println("*** generate RSA keypair ***");
@@ -551,6 +604,8 @@ public class ExtendedReadActivity extends AppCompatActivity implements NfcAdapte
                             System.out.println("IssuerPublicKeyCertificate start: ");
                             IssuerPublicKeyCertificate.main(null);
                             System.out.println("IssuerPublicKeyCertificate individual start: ");
+
+ */
                             /*
                             data from Visa comd m:
                             PAN is 4871 7800 8277 0574 Exp 07/25 A000000003
@@ -568,6 +623,7 @@ public class ExtendedReadActivity extends AppCompatActivity implements NfcAdapte
                             03
 
                              */
+/*
                             byte[] rid = Util.fromHexString("a0 00 00 00 03"); // visa
                             //byte[] mod = Util.fromHexString("BE9E1FA5E9A803852999C4AB432DB28600DCD9DAB76DFAAA47355A0FE37B1508AC6BF38860D3C6C2E5B12A3CAAF2A7005A7241EBAA7771112C74CF9A0634652FBCA0E5980C54A64761EA101A114E0F0B5572ADD57D010B7C9C887E104CA4EE1272DA66D997B9A90B5A6D624AB6C57E73C8F919000EB5F684898EF8C3DBEFB330C62660BED88EA78E909AFF05F6DA627B");
                             byte[] mod = Util.fromHexString("5AB54FAF4AD810B3CCA4ED42C38E1E768FCA3187ED1BE4196C6779C4633CBE88751889C12B05E10EE87CB198518793FF61E87534F66850E96239B76648429ECED4CC207608D0D2A932DD9E8C4BB0D139C4ECA59E1EF5F4708F72D80DC5B66C45F4566C91B55384DFDEABB55FAA622C6764CC9FB4C4900B6AB2CEC5ABAD9057E2CF63A881BB4EC2A5D96634D7C11366EB908A168D33AA3C544822FC83E74C104B9275B2EF1CF41375B404A260BBF8FB3D4452AF3D0630BB1EC2A01676BA588AE7820727622A6D9DF5C93A3CE807D54B79AE007C3D401F8787DC3E235E8B9AE6B1B9279328CB1CA94105434010F15EB07F487F4D5C94F4A5A7");
@@ -579,7 +635,7 @@ public class ExtendedReadActivity extends AppCompatActivity implements NfcAdapte
                         } catch (Exception e) {
                             throw new RuntimeException(e);
                         }
-
+*/
 
                         byte[] selectAidResponseOk = checkResponse(selectAidResponse);
                         if (selectAidResponseOk != null) {
@@ -591,90 +647,6 @@ public class ExtendedReadActivity extends AppCompatActivity implements NfcAdapte
                             // extended
                             tsList.addAll(getTagSetFromResponse(selectAidResponseOk, "selectAid " + aidSelectedForAnalyze));
 
-/*
-data from MasterCard AAB:
-
-SFI: 1 Record: 1
-PAN in this record ??
-70759f6c0200019f6206000000000f009f63060000000000fe563442353337353035303030303136303131305e202f5e323430333232313237393433323930303030303030303030303030303030309f6401029f65020f009f660200fe9f6b135375050000160110d24032210000000000000f9f670102
- 	9F6C Unknown tag
- 	 	0001
- 	9F62 Unknown tag
- 	 	000000000F00
- 	9F63 Unknown tag
- 	 	0000000000FE
- 	56 Unknown tag
- 	 	42353337353035303030303136303131305E202F5E32343033323231323739343332393030303030303030303030303030303030
- 	9F64 Unknown tag
- 	 	02
- 	9F65 Unknown tag
- 	 	0F00
- 	9F66 Unknown tag
- 	 	00FE
- 	9F6B Unknown tag
- 	 	5375050000160110D24032210000000000000F
- 	9F67 Unknown tag
- 	 	02
-
-SFI: 2 Record: 1
-7081a69f420209785f25032203015f24032403315a0853750500001601105f3401009f0702ffc09f080200028c279f02069f03069f1a0295055f2a029a039c019f37049f35019f45029f4c089f34039f21039f7c148d0c910a8a0295059f37049f4c088e0e000000000000000042031e031f039f0d05b4508400009f0e0500000000009f0f05b4708480005f280202809f4a018257135375050000160110d24032212794329000000f
- 	9F4A Static Data Authentication Tag List
- 	 	82
-
-SFI: 3 Record: 1
-7081909f420209785f25032203015f24032403315a0853750500001601105f3401009f0702ffc08c279f02069f03069f1a0295055f2a029a039c019f37049f35019f45029f4c089f34039f21039f7c148d0c910a8a0295059f37049f4c088e1200000000000000004203440341031e031f039f0d05bc50bc08009f0e0500000000009f0f05bc70bc98005f280202809f4a0182
- 	9F4A Static Data Authentication Tag List
- 	 	82
-
-SFI: 4 Record: 1
-7081b89f4701039f4681b03cada902afb40289fbdfea01950c498191442c1b48234dcaff66bca63cbf821a3121fa808e4275a4e894b154c1874bddb00f16276e92c73c04468253b373f1e6a9a89e2705b4670682d0adff05617a21d7684031a1cdb438e66cd98d591dc376398c8aab4f137a2226122990d9b2b4c72ded6495d637338fefa893ae7fb4eb845f8ec2e260d2385a780f9fda64b3639a9547adad806f78c9bc9f17f9d4c5b26474b9ba03892a754ffdf24df04c702f86
- 	9F47 Integrated Circuit Card (ICC) Public Key Exponent
- 	 	03
- 	9F46 Integrated Circuit Card (ICC) Public Key Certificate
- 	 	3CADA902AFB40289FBDFEA01950C498191442C1B48234DCAFF66BCA63CBF821A3121FA808E4275A4E894B154C1874BDDB00F16276E92C73C04468253B373F1E6A9A89E2705B4670682D0ADFF05617A21D7684031A1CDB438E66CD98D591DC376398C8AAB4F137A2226122990D9B2B4C72DED6495D637338FEFA893AE7FB4EB845F8EC2E260D2385A780F9FDA64B3639A9547ADAD806F78C9BC9F17F9D4C5B26474B9BA03892A754FFDF24DF04C702F86
-
-SFI: 4 Record: 2
-7081e08f01059f3201039224abfd2ebc115c3796e382be7e9863b92c266ccabc8bd014923024c80563234e8a11710a019081b004cc60769cabe557a9f2d83c7c73f8b177dbf69288e332f151fba10027301bb9a18203ba421bda9c2cc8186b975885523bf6707f287a5e88f0f6cd79a076319c1404fcdd1f4fa011f7219e1bf74e07b25e781d6af017a9404df9fd805b05b76874663ea88515018b2cb6140dc001a998016d28c4af8e49dfcc7d9cee314e72ae0d993b52cae91a5b5c76b0b33e7ac14a7294b59213ca0c50463cfb8b040bb8ac953631b80fa85a698b00228b5ff44223
- 	8F Certification Authority Public Key Index
- 	 	05
- 	9F32 Issuer Public Key Exponent
- 	 	03
- 	92 Issuer Public Key Remainder
- 	 	ABFD2EBC115C3796E382BE7E9863B92C266CCABC8BD014923024C80563234E8A11710A01
- 	90 Issuer Public Key Certificate
- 	 	04CC60769CABE557A9F2D83C7C73F8B177DBF69288E332F151FBA10027301BB9A18203BA421BDA9C2CC8186B975885523BF6707F287A5E88F0F6CD79A076319C1404FCDD1F4FA011F7219E1BF74E07B25E781D6AF017A9404DF9FD805B05B76874663EA88515018B2CB6140DC001A998016D28C4AF8E49DFCC7D9CEE314E72AE0D993B52CAE91A5B5C76B0B33E7AC14A7294B59213CA0C50463CFB8B040BB8AC953631B80FA85A698B00228B5FF44223
-
-SFI: 4 Record: 3
- 	9F46 Integrated Circuit Card (ICC) Public Key Certificate
- 	 	AEA2347A69E6D9544DFA891A761833E6E6D3A78D450142DD7C21C131E585448FBC8449FE777F1895CFB18F2983D60EED56466A688D9DA6B3FB6593726251A83132B3F953A71098EEEFCD388BB672AD5A3592D31EA145FDF6F763733BAE482455C7987E96AE6CD8CF9D5CE562E5C80A7A6A083BA85C8EB86DDAC0CA19186554DFE5AB4AEADA5BE92E30C0C16981C516C74203694FD04E2FE3A66BF590BD4BB3085FE80167E98C9745E7E4819E4BD55F2B
- 	9F47 Integrated Circuit Card (ICC) Public Key Exponent
- 	 	03
-
-data from Visa comd m:
-PAN is 4871 7800 8277 0574 Exp 07/25
-
-SFI: 2 Record: 1
-7081fb9081f85ab54faf4ad810b3cca4ed42c38e1e768fca3187ed1be4196c6779c4633cbe88751889c12b05e10ee87cb198518793ff61e87534f66850e96239b76648429eced4cc207608d0d2a932dd9e8c4bb0d139c4eca59e1ef5f4708f72d80dc5b66c45f4566c91b55384dfdeabb55faa622c6764cc9fb4c4900b6ab2cec5abad9057e2cf63a881bb4ec2a5d96634d7c11366eb908a168d33aa3c544822fc83e74c104b9275b2ef1cf41375b404a260bbf8fb3d4452af3d0630bb1ec2a01676ba588ae7820727622a6d9df5c93a3ce807d54b79ae007c3d401f8787dc3e235e8b9ae6b1b9279328cb1ca94105434010f15eb07f487f4d5c94f4a5a7
- 	90 Issuer Public Key Certificate
- 	 	5AB54FAF4AD810B3CCA4ED42C38E1E768FCA3187ED1BE4196C6779C4633CBE88751889C12B05E10EE87CB198518793FF61E87534F66850E96239B76648429ECED4CC207608D0D2A932DD9E8C4BB0D139C4ECA59E1EF5F4708F72D80DC5B66C45F4566C91B55384DFDEABB55FAA622C6764CC9FB4C4900B6AB2CEC5ABAD9057E2CF63A881BB4EC2A5D96634D7C11366EB908A168D33AA3C544822FC83E74C104B9275B2EF1CF41375B404A260BBF8FB3D4452AF3D0630BB1EC2A01676BA588AE7820727622A6D9DF5C93A3CE807D54B79AE007C3D401F8787DC3E235E8B9AE6B1B9279328CB1CA94105434010F15EB07F487F4D5C94F4A5A7
-
-SFI: 2 Record: 2
-70078f01099f320103
- 	8F Certification Authority Public Key Index
- 	 	09
- 	9F32 Issuer Public Key Exponent
- 	 	03
-
-SFI: 2 Record: 3
-7081eb9f4681b02c4b62dfaede136b9bafeddebaaf41e5f4fdc9920b077817de896e6503c69c8f80ece2559cdf721ce1b7b2bc159fe77ec8d6eb45296876fbf4a6bd4bb4a11511ebd80fdf1c7bb8e1f4a2cdb7c4db0cc6f9fda7f6696c30d3846e1b98f4c849b7385f349d280fd92d75774dcbed96a5328f657f7eceb4bfa3ec3f9f39a64414bdbf0f03b15c49cbf0475bfa6a5f2513689c195faea031ae2391998be2028aa1671b380eb19a69a6c454bd2a30d11bc63c9f4701035a0848717800827705745f24032507315f3401015f280202769f070200809f4a01829f6e04207000009f690701000000000000
-    9F46 Integrated Circuit Card (ICC) Public Key Certificate
- 	 	2C4B62DFAEDE136B9BAFEDDEBAAF41E5F4FDC9920B077817DE896E6503C69C8F80ECE2559CDF721CE1B7B2BC159FE77EC8D6EB45296876FBF4A6BD4BB4A11511EBD80FDF1C7BB8E1F4A2CDB7C4DB0CC6F9FDA7F6696C30D3846E1B98F4C849B7385F349D280FD92D75774DCBED96A5328F657F7ECEB4BFA3EC3F9F39A64414BDBF0F03B15C49CBF0475BFA6A5F2513689C195FAEA031AE2391998BE2028AA1671B380EB19A69A6C454BD2A30D11BC63C
- 	9F47 Integrated Circuit Card (ICC) Public Key Exponent
- 	 	03
-...
- 	9F4A Static Data Authentication Tag List
- 	 	82
- */
 
                             // intermediate step - get single data from card, will be printed later
                             byte[] applicationTransactionCounter = getApplicationTransactionCounter(nfc);
@@ -765,21 +737,6 @@ SFI: 2 Record: 3
                                      * (found with my American Express card)
                                      */
 
-                                    //
-
-/*
-I/System.out: ------------------------------------
-Amexco:
-I/System.out: 80 12 -- Response Message Template Format 1
-I/System.out:       18 00 08 01 01 00 08 03 03 00 08 05 05 00 10 02
-I/System.out:       02 00 (BINARY)
-I/System.out: ------------------------------------
-
-data = ArrayUtils.subarray(data, 2, data.length);
-List<Afl> listAfl = extractAfl(data);
-
-
- */
 
                                     writeToUiAppend(etLog, "");
                                     printStepHeader(etLog, 6, "read files & search PAN");
@@ -941,7 +898,6 @@ tag9f4b_SignedDynamicApplicationData = hexToBytes("2731459c144bbc637d0cac5db31ca
 tag9f10_IssuerApplicationData = hexToBytes("06011203a00000");
 tag9f26_ApplicationCryptogram = hexToBytes("bffdfe76b1b8fc4e");
   */
-
 
                                 }
                             } else {
@@ -1690,7 +1646,8 @@ tag9f26_ApplicationCryptogram = hexToBytes("bffdfe76b1b8fc4e");
         String tagLength2d = bytesToHex(intToByteArrayV4(valueOfTagSum)); // length value
         String constructedGetAcCommandString = "80AE8000" + tagLength2d + constructedGetAcString + "00";
         return hexToBytes(constructedGetAcCommandString);
-/* amex:
+/*
+amex:
 I/System.out: getApplicationCryptoResponse length: 20 data: 8012800005d116c2f20f228b7b06590203a00000
 I/System.out: ------------------------------------
 I/System.out: 80 12 -- Response Message Template Format 1

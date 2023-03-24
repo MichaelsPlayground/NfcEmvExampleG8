@@ -18,6 +18,8 @@ import com.payneteasy.tlv.BerTlv;
 import com.payneteasy.tlv.BerTlvParser;
 import com.payneteasy.tlv.BerTlvs;
 
+import org.apache.commons.lang3.ArrayUtils;
+
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -31,6 +33,7 @@ import de.androidcrypto.nfcemvexample.extended.TagNameValue;
 import de.androidcrypto.nfcemvexample.extended.TagSet;
 import de.androidcrypto.nfcemvexample.nfccreditcards.DolValues;
 import de.androidcrypto.nfcemvexample.nfccreditcards.ModuleInfo;
+import de.androidcrypto.nfcemvexample.sasc.ApplicationInterchangeProfile;
 
 public class EmvModules {
 
@@ -231,11 +234,62 @@ public class EmvModules {
      * @return the list with afl entries (each of 4 byte)
      * if no afl was found it returns an empty list
      */
-    public static List<byte[]> checkForAflInGpoResponse(byte[] gpoResponse) {
+    public static ModuleInfo checkForAflInGpoResponse(byte[] gpoResponse) {
+        ModuleInfo mi;
+        List<TagSet> tsLst = new ArrayList<>();
         List<byte[]> aflList = new ArrayList<>();
         BerTlvParser parser = new BerTlvParser();
         BerTlvs tlvs = parser.parse(gpoResponse);
-        // search for tag 0x94 Application File Locator (AFL)
+        // search for tag 0x94 Application File Locator (AFL) in tag 77 Response Message Template Format 2
+        BerTlv tag94 = tlvs.find(new BerTag(0x94));
+        if (tag94 != null) {
+            byte[] tag94Bytes = tag94.getBytesValue();
+            // split array by 4 bytes
+            List<byte[]> tag94BytesList = divideArray(tag94Bytes, 4);
+            aflList.addAll(tag94BytesList);
+            /*
+            for (int i = 0; i < tag94BytesList.size(); i++) {
+                aflList.add(tag94BytesList.get(i));
+            }
+             */
+            mi = new ModuleInfo(null, gpoResponse, true, null, aflList, "Template 2");
+            return mi;
+        } else {
+            // return an empty AFL list
+        }
+        // search for tag 0x80 = Response Message Template Format 1
+        BerTlv tag80 = tlvs.find(new BerTag(0x80));
+        if (tag80 != null) {
+            byte[] dataTemp = tag80.getBytesValue();
+            // first 2 bytes are AIP, followed by xx AFL bytes
+            byte[] tag82_AIP = ArrayUtils.subarray(dataTemp, 0, 2);
+            byte[] tag94_AFL = ArrayUtils.subarray(dataTemp, 2, dataTemp.length);
+            if (tag94_AFL != null) {
+                TagSet ts82 = new TagSet(new byte[]{(byte) 0x82}, "Application Interchange Profile (AIP)", tag82_AIP, TagValueTypeEnum.BINARY.toString(), "getProcessingOptions Template 1");
+                tsLst.add(ts82);
+                TagSet ts94 = new TagSet(new byte[]{(byte) 0x94}, "Application File Locator (AFL)", tag94_AFL, TagValueTypeEnum.BINARY.toString(), "getProcessingOptions Template 1");
+                tsLst.add(ts94);
+                List<byte[]> tag94BytesList = divideArray(tag94_AFL, 4);
+                aflList.addAll(tag94BytesList);
+                mi = new ModuleInfo(null, gpoResponse, true, tsLst, aflList, "Template 1");
+                return mi;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * checks that a tag 0x94 Application File Locator (AFL) is available in gpoResponse
+     *
+     * @param gpoResponse
+     * @return the list with afl entries (each of 4 byte)
+     * if no afl was found it returns an empty list
+     */
+    public static List<byte[]> checkForAflInGpoResponseOrg(byte[] gpoResponse) {
+        List<byte[]> aflList = new ArrayList<>();
+        BerTlvParser parser = new BerTlvParser();
+        BerTlvs tlvs = parser.parse(gpoResponse);
+        // search for tag 0x94 Application File Locator (AFL) in tag 77 Response Message Template Format 2
         BerTlv tag94 = tlvs.find(new BerTag(0x94));
         if (tag94 != null) {
             byte[] tag94Bytes = tag94.getBytesValue();
@@ -393,7 +447,6 @@ in the second byte. The fourth byte may range from zero to the value of the thir
      * overview: https://github.com/sasc999/javaemvreader/blob/master/src/main/java/sasc/emv/EMVAPDUCommands.java
      */
 
-
     /**
      * reads the single data elements "application transaction counter", "left pin try counter",
      * "last online ATC register" and "logFormat"
@@ -439,7 +492,7 @@ in the second byte. The fourth byte may range from zero to the value of the thir
     private static ModuleInfo getApplicationTransactionCounter(IsoDep nfc) {
         ModuleInfo mi;
         // we do need empty lists because we need a complete list after all reads
-        TagSet tsEmpty = new TagSet(new byte[]{(byte) 0x00F}, "empty", new byte[0], TagValueTypeEnum.TEXT.toString(), "read single data elements");
+        TagSet tsEmpty = new TagSet(new byte[]{(byte) 0x00}, "empty", new byte[0], TagValueTypeEnum.TEXT.toString(), "read single data elements");
         byte[] dsEmpty = new byte[0];
         List<TagSet> tsLstEmpty = new ArrayList<>();
         tsLstEmpty.add(tsEmpty);
@@ -476,7 +529,7 @@ in the second byte. The fourth byte may range from zero to the value of the thir
     private static ModuleInfo getLeftPinTryCounterCounter(IsoDep nfc) {
         ModuleInfo mi;
         // we do need empty lists because we need a complete list after all reads
-        TagSet tsEmpty = new TagSet(new byte[]{(byte) 0x00F}, "empty", new byte[0], TagValueTypeEnum.TEXT.toString(), "read single data elements");
+        TagSet tsEmpty = new TagSet(new byte[]{(byte) 0x00}, "empty", new byte[0], TagValueTypeEnum.TEXT.toString(), "read single data elements");
         byte[] dsEmpty = new byte[0];
         List<TagSet> tsLstEmpty = new ArrayList<>();
         tsLstEmpty.add(tsEmpty);
@@ -511,7 +564,7 @@ in the second byte. The fourth byte may range from zero to the value of the thir
     private static ModuleInfo getLastOnlineATCRegister(IsoDep nfc) {
         ModuleInfo mi;
         // we do need empty lists because we need a complete list after all reads
-        TagSet tsEmpty = new TagSet(new byte[]{(byte) 0x00F}, "empty", new byte[0], TagValueTypeEnum.TEXT.toString(), "read single data elements");
+        TagSet tsEmpty = new TagSet(new byte[]{(byte) 0x00}, "empty", new byte[0], TagValueTypeEnum.TEXT.toString(), "read single data elements");
         byte[] dsEmpty = new byte[0];
         List<TagSet> tsLstEmpty = new ArrayList<>();
         tsLstEmpty.add(tsEmpty);
@@ -546,7 +599,7 @@ in the second byte. The fourth byte may range from zero to the value of the thir
     private static ModuleInfo getLogFormat(IsoDep nfc) {
         ModuleInfo mi;
         // we do need empty lists because we need a complete list after all reads
-        TagSet tsEmpty = new TagSet(new byte[]{(byte) 0x00F}, "empty", new byte[0], TagValueTypeEnum.TEXT.toString(), "read single data elements");
+        TagSet tsEmpty = new TagSet(new byte[]{(byte) 0x00}, "empty", new byte[0], TagValueTypeEnum.TEXT.toString(), "read single data elements");
         byte[] dsEmpty = new byte[0];
         List<TagSet> tsLstEmpty = new ArrayList<>();
         tsLstEmpty.add(tsEmpty);
@@ -693,7 +746,6 @@ in the second byte. The fourth byte may range from zero to the value of the thir
 
     }
 
-
     /**
      * section for get application cryptogram
      */
@@ -720,11 +772,22 @@ in the second byte. The fourth byte may range from zero to the value of the thir
             if (response != null) {
                 responseOk = checkResponse(response);
                 if (responseOk != null) {
-                    String responseString = TlvUtil.prettyPrintAPDUResponse(responseOk);
                     List<TagSet> tsList = new ArrayList<>();
-                    tsList.addAll(getTagSetFromResponse(responseOk, "getApplicationCryptogram"));
-                    mi = new ModuleInfo(command, responseOk, true, tsList, null, responseString);
-                    return mi;
+                    BerTlvParser parser = new BerTlvParser();
+                    BerTlvs tlvs = parser.parse(responseOk);
+                    // search for tag 0x9f26 Application Cryptogram in tag 77 Response Message Template Format 2
+                    BerTlv tag94 = tlvs.find(new BerTag(0x9f, (byte) 0x26));
+                    if (tag94 != null) {
+                        String responseString = TlvUtil.prettyPrintAPDUResponse(responseOk);
+                        tsList.addAll(getTagSetFromResponse(responseOk, "getApplicationCryptogram"));
+                        mi = new ModuleInfo(command, responseOk, true, tsList, null, responseString);
+                        return mi;
+                    }
+                    // search for tag 0x80 = Response Message Template Format 1
+                    BerTlv tag80 = tlvs.find(new BerTag(0x80));
+                    if (tag80 != null) {
+                        return dumpApplicationCryptoResponseMessageTemplate1(command, responseOk);
+                    }
                 } else {
                     mi = new ModuleInfo(command, response, false, null, null, null);
                     return mi;          }
@@ -734,9 +797,9 @@ in the second byte. The fourth byte may range from zero to the value of the thir
             }
         } else {
             // no cdol1 found
-            mi = new ModuleInfo(null, null, false, null, null, null);
-            return mi;
+            return null;
         }
+        return null;
     }
 
     /**
@@ -790,6 +853,111 @@ in the second byte. The fourth byte may range from zero to the value of the thir
         String tagLength2d = bytesToHex(intToByteArrayV4(valueOfTagSum)); // length value
         String constructedGetAcCommandString = "80AE8000" + tagLength2d + constructedGetAcString + "00";
         return hexToBytes(constructedGetAcCommandString);
+    }
+
+    /**
+     * dumps the data from getApplicationCryptogram if response
+     * is tag 0x80 Response Message Template Format 1
+     * @param applicationCryptoResponseOk
+     * @return a dump string
+     */
+    public static ModuleInfo dumpApplicationCryptoResponseMessageTemplate1(byte[] applicationCryptoCommand,
+            byte[] applicationCryptoResponseOk) {
+        ModuleInfo mi;
+        List<TagSet> tsLst = new ArrayList<>();
+        // check that response is a 0x80 Response Message Template Format 1
+        byte[] respHeader = Arrays.copyOfRange(applicationCryptoResponseOk, 0, 2);
+        if (Arrays.equals(respHeader, new byte[]{(byte) 0x80, (byte) 0x12})) {
+            byte[] resp9F27 = Arrays.copyOfRange(applicationCryptoResponseOk, 2, 3);
+            byte[] resp9F36 = Arrays.copyOfRange(applicationCryptoResponseOk, 3, 5);
+            byte[] resp9F26 = Arrays.copyOfRange(applicationCryptoResponseOk, 5, 13);
+            byte[] resp9F10 = Arrays.copyOfRange(applicationCryptoResponseOk, 14, 21);
+            TagSet ts9F27 = new TagSet(new byte[]{(byte) 0x9f, (byte) 0x27}, "Cryptogram Information Data (CID)", resp9F27, TagValueTypeEnum.BINARY.toString(), "getApplicationCryptogram Template 1");
+            tsLst.add(ts9F27);
+            TagSet ts9F36 = new TagSet(new byte[]{(byte) 0x9f, (byte) 0x6}, "Application Transaction Counter (ATC)", resp9F36, TagValueTypeEnum.BINARY.toString(), "getApplicationCryptogram Template 1");
+            tsLst.add(ts9F36);
+            TagSet ts9F26 = new TagSet(new byte[]{(byte) 0x9f, (byte) 0x26}, "Application Cryptogram", resp9F26, TagValueTypeEnum.BINARY.toString(), "getApplicationCryptogram Template 1");
+            tsLst.add(ts9F26);
+            TagSet ts9F10 = new TagSet(new byte[]{(byte) 0x9f, (byte) 0x10}, "Issuer Application Data (IAD)", resp9F10, TagValueTypeEnum.BINARY.toString(), "getApplicationCryptogram Template 1");
+            tsLst.add(ts9F10);
+
+            StringBuilder sb = new StringBuilder();
+            sb.append("80 12 -- Response Message Template Format 1").append("\n");
+            sb.append("- tag 0x9F27 length 01\n  Cryptogram Information Data (CID)\n  - ").append(BinaryUtils.bytesToHexBlank(resp9F27)).append("\n");
+            sb.append("- tag 0x9F36 length 02\n  Appl. Transaction Counter (ATC)\n  - ").append(BinaryUtils.bytesToHexBlank(resp9F36)).append("\n");
+            sb.append("- tag 0x9F26 length 08\n  Application Cryptogram\n  - ").append(BinaryUtils.bytesToHexBlank(resp9F26)).append("\n");
+            sb.append("- tag 0x9F10 length 07\n  Issuer Application Data (IAD)\n  - ").append(BinaryUtils.bytesToHexBlank(resp9F10)).append("\n");
+            mi = new ModuleInfo(applicationCryptoCommand, applicationCryptoResponseOk, true, tsLst, null, sb.toString());
+            return mi;
+        } else {
+            return null;
+        }
+        /*
+                                    https://stackoverflow.com/a/35892602/8166854
+                                    if response is tag 0x80 Response Message Template Format 1
+                                    - x9F27:  # EMV, Cryptogram Information Data (CID)
+                                        val: "80" # Cryptogram Information Data (CID).
+                                        # 10______ - bits 8-7, ARQC
+                                        # _____000 - bits 3-1 (Reason/Advice/Referral Code), No information given
+                                    + x9F36: "0001" # EMV, Application Transaction Counter (ATC)
+                                    + x9F26: "0102030405060708" # EMV, Cryptogram, Application
+                                    + x9F10: "06010A03A40000" # EMV, Issuer Application Data (IAD)
+                                    8012
+                                        80
+                                          000e
+                                              03ab88079529a75c
+                                                              06590203a00000
+                                     */
+    }
+
+    /**
+     * dumps the data from getApplicationCryptogram if response
+     * is tag 0x80 Response Message Template Format 1
+     * @param applicationCryptoResponseOk
+     * @return a dump string
+     */
+    public static String dumpApplicationCryptoResponseMessageTemplate1Org(
+            byte[] applicationCryptoResponseOk) {
+        // check that response is a 0x80 Response Message Template Format 1
+        byte[] respHeader = Arrays.copyOfRange(applicationCryptoResponseOk, 0, 2);
+        if (Arrays.equals(respHeader, new byte[]{(byte) 0x80, (byte) 0x12})) {
+            byte[] resp9F27 = Arrays.copyOfRange(applicationCryptoResponseOk, 2, 3);
+            byte[] resp9F36 = Arrays.copyOfRange(applicationCryptoResponseOk, 3, 5);
+            byte[] resp9F26 = Arrays.copyOfRange(applicationCryptoResponseOk, 5, 13);
+            byte[] resp9F10 = Arrays.copyOfRange(applicationCryptoResponseOk, 14, 21);
+            StringBuilder sb = new StringBuilder();
+            sb.append("80 12 -- Response Message Template Format 1").append("\n");
+            sb.append("- tag 0x9F27 length 01\n  Cryptogram Information Data (CID)\n  - ").append(BinaryUtils.bytesToHexBlank(resp9F27)).append("\n");
+            sb.append("- tag 0x9F36 length 02\n  Appl. Transaction Counter (ATC)\n  - ").append(BinaryUtils.bytesToHexBlank(resp9F36)).append("\n");
+            sb.append("- tag 0x9F26 length 08\n  Application Cryptogram\n  - ").append(BinaryUtils.bytesToHexBlank(resp9F26)).append("\n");
+            sb.append("- tag 0x9F10 length 07\n  Issuer Application Data (IAD)\n  - ").append(BinaryUtils.bytesToHexBlank(resp9F10)).append("\n");
+            return sb.toString();
+        } else {
+            return "";
+        }
+        /*
+                                    https://stackoverflow.com/a/35892602/8166854
+                                    if response is tag 0x80 Response Message Template Format 1
+                                    - x9F27:  # EMV, Cryptogram Information Data (CID)
+                                        val: "80" # Cryptogram Information Data (CID).
+                                        # 10______ - bits 8-7, ARQC
+                                        # _____000 - bits 3-1 (Reason/Advice/Referral Code), No information given
+                                    + x9F36: "0001" # EMV, Application Transaction Counter (ATC)
+                                    + x9F26: "0102030405060708" # EMV, Cryptogram, Application
+                                    + x9F10: "06010A03A40000" # EMV, Issuer Application Data (IAD)
+
+                                    8012
+                                        80
+                                          000e
+                                              03ab88079529a75c
+                                                              06590203a00000
+                                     */
+    }
+
+    public static String dumpAip(byte[] data) {
+        if (data == null) return "";
+        if (data.length != 2) return "";
+        return new ApplicationInterchangeProfile(data[0], data[1]).toString();
     }
 
     /**
@@ -849,6 +1017,23 @@ in the second byte. The fourth byte may range from zero to the value of the thir
             tagsSet.add(tagSet);
         }
         return tagsSet;
+    }
+
+    /**
+     * remove all trailing 0xF's trailing in the 16 bytes length field tag 0x5a = PAN
+     * PAN is padded with 'F'
+     *
+     * @param input
+     * @return
+     */
+    public static String removeTrailingF(String input) {
+        int index;
+        for (index = input.length() - 1; index >= 0; index--) {
+            if (input.charAt(index) != 'f') {
+                break;
+            }
+        }
+        return input.substring(0, index + 1);
     }
 
     /**
