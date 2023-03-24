@@ -18,7 +18,6 @@ import android.nfc.tech.IsoDep;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
-import android.text.TextUtils;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -27,15 +26,14 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.github.devnied.emvnfccard.utils.TlvUtil;
+import com.payneteasy.tlv.BerTlv;
+import com.payneteasy.tlv.BerTlvParser;
+import com.payneteasy.tlv.BerTlvs;
 
 import java.io.IOException;
-
-import de.androidcrypto.nfcemvexample.cardvalidation.CardValidationResult;
-import de.androidcrypto.nfcemvexample.cardvalidation.RegexCardValidator;
-import de.androidcrypto.nfcemvexample.nfccreditcards.AidValues;
-import de.androidcrypto.nfcemvexample.nfccreditcards.PdolUtil;
-import de.androidcrypto.nfcemvexample.paymentcardgenerator.CardType;
-import de.androidcrypto.nfcemvexample.paymentcardgenerator.PaymentCardGeneratorImpl;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.List;
 
 public class BasicNfcEmvActivity extends AppCompatActivity implements NfcAdapter.ReaderCallback {
 
@@ -76,6 +74,7 @@ public class BasicNfcEmvActivity extends AppCompatActivity implements NfcAdapter
     @Override
     public void onTagDiscovered(Tag tag) {
         clearData(etLog);
+        Log.d(TAG, "NFC tag discovered");
         writeToUiAppend("NFC tag discovered");
         setLoadingLayoutVisibility(true);
         byte[] tagId = tag.getId();
@@ -94,6 +93,69 @@ public class BasicNfcEmvActivity extends AppCompatActivity implements NfcAdapter
             if (nfc != null) {
                 try {
                     nfc.connect();
+                    Log.d(TAG, "connection with card success");
+                    writeToUiAppend("connection with card success");
+                    // here we are going to start our journey through the card
+
+                    printStepHeader(1, "our journey begins");
+
+                    writeToUiAppend("abc");
+
+
+                    printStepHeader(1, "select PPSE");
+                    byte[] PPSE = "2PAY.SYS.DDF01".getBytes(StandardCharsets.UTF_8); // PPSE
+                    byte[] selectPpseCommand = selectApdu(PPSE);
+                    byte[] selectPpseResponse = nfc.transceive(selectPpseCommand);
+                    writeToUiAppend("01 select PPSE command  length " + selectPpseCommand.length + " data: " + bytesToHex(selectPpseCommand));
+                    writeToUiAppend("01 select PPSE response length " + selectPpseResponse.length + " data: " + bytesToHex(selectPpseResponse));
+                    writeToUiAppend(prettyPrintDataToString(selectPpseResponse));
+
+                    byte[] selectPpseResponseOk = checkResponse(selectPpseResponse);
+                    // proceed only when te do have a positive read result = 0x'9000' at the end of response data
+                    if (selectPpseResponseOk != null) {
+
+                        // get the tags from respond
+                        BerTlvParser parser = new BerTlvParser();
+                        BerTlvs tlvs = parser.parse(selectPpseResponseOk);
+                        List<BerTlv> selectPpseResponseTagList = tlvs.getList();
+                        int selectPpseResponseTagListSize = selectPpseResponseTagList.size();
+                        writeToUiAppend("found " + selectPpseResponseTagListSize + " tags in response");
+                        // show iterating
+                        for (int i = 0; i < selectPpseResponseTagListSize; i++) {
+                            BerTlv tlv = selectPpseResponseTagList.get(i);
+                            writeToUiAppend(tlv.toString());
+                        }
+
+
+                    } else {
+                        // if (selectPpseResponseOk != null)
+                        writeToUiAppend("the result of the reading was not successful so the workflow ends here, sorry.");
+                        startEndSequence(nfc);
+                    }
+
+                    /*
+                    https://www.europeanpaymentscouncil.eu/sites/default/files/KB/files/EPC050-16%20SCS%20Volume%207%201%20-%20Bul%2001%20-%2020160229%20-%20Book%202%20-%20EEA%20Product%20Identification%20and%20usage%20in%20Selection%20of%20Application.pdf
+                    The first byte is defined as follows.
+Value IFR Product Type
+‘01’ Debit Product
+‘02’ Credit Product
+‘03’ Commercial Product
+‘04’ Pre-paid Product
+All other values Reserved for future use
+Bytes 2 to 5 are reserved for future use by the CSG and if present, they shall be filled with '00' for the
+current version.
+Presence of Tag ‘9F0A’ with ID = ‘0001’ indicates an EEA issued card
+                     Application Selection Registered Proprietary Data (Tag ‘9F0A’),
+
+different returns
+Visa comd debit:
+MC AAB credit:
+
+                     */
+
+                    printStepHeader(12, "our journey ends");
+
+
                 } catch (IOException e) {
                     writeToUiAppend("connection with card failure");
                     writeToUiAppend(e.getMessage());
@@ -103,22 +165,74 @@ public class BasicNfcEmvActivity extends AppCompatActivity implements NfcAdapter
                     // throw new RuntimeException(e);
                     return;
                 }
-                writeToUiAppend("connection with card success");
-                // here we are going to start our journey through the card
-
-                printStepHeader(1,"our journey begins");
-
-                writeToUiAppend("abc");
-
-                printStepHeader(12,"our journey ends");
-
             }
+        } else {
+            // if (isoDepInTechList) {
+            writeToUiAppend("The discovered NFC tag does not have an IsoDep interface.");
         }
         // final cleanup
         playPing();
         writeToUiFinal(etLog);
         setLoadingLayoutVisibility(false);
     }
+
+    private void startEndSequence(IsoDep nfc) {
+        playPing();
+        writeToUiFinal(etLog);
+        setLoadingLayoutVisibility(false);
+        try {
+            nfc.close();
+        } catch (IOException e) {
+            // throw new RuntimeException(e);
+        }
+        return;
+    }
+
+    /**
+     * section for emv reading
+     */
+
+    /**
+     * build a select apdu command
+     *
+     * @param data
+     * @return
+     */
+    private byte[] selectApdu(@NonNull byte[] data) {
+        byte[] commandApdu = new byte[6 + data.length];
+        commandApdu[0] = (byte) 0x00;  // CLA
+        commandApdu[1] = (byte) 0xA4;  // INS
+        commandApdu[2] = (byte) 0x04;  // P1
+        commandApdu[3] = (byte) 0x00;  // P2
+        commandApdu[4] = (byte) (data.length & 0x0FF);       // Lc
+        System.arraycopy(data, 0, commandApdu, 5, data.length);
+        commandApdu[commandApdu.length - 1] = (byte) 0x00;  // Le
+        return commandApdu;
+    }
+
+    /**
+     * checks if the response has an 0x'9000' at the end means success
+     * and the method returns the data without 0x'9000' at the end
+     * if any other trailing bytes show up the method returns NULL
+     * @param data
+     * @return
+     */
+    private byte[] checkResponse(@NonNull byte[] data) {
+        // simple sanity check
+        if (data.length < 5) {
+            return null;
+        } // not ok
+        int status = ((0xff & data[data.length - 2]) << 8) | (0xff & data[data.length - 1]);
+        if (status != 0x9000) {
+            return null;
+        } else {
+            return Arrays.copyOfRange(data, 0, data.length - 2);
+        }
+    }
+
+    /**
+     * section for NFC
+     */
 
     private void showWirelessSettings() {
         Toast.makeText(this, "You need to enable NFC", Toast.LENGTH_SHORT).show();
@@ -216,6 +330,7 @@ public class BasicNfcEmvActivity extends AppCompatActivity implements NfcAdapter
 
     /**
      * prints a nice header for each step
+     *
      * @param step
      * @param message
      */
@@ -234,6 +349,7 @@ public class BasicNfcEmvActivity extends AppCompatActivity implements NfcAdapter
 
     /**
      * used for printing the card responses in a human readable format to a string
+     *
      * @param responseData
      * @return
      */
@@ -247,6 +363,7 @@ public class BasicNfcEmvActivity extends AppCompatActivity implements NfcAdapter
 
     /**
      * trim leading line feeds if existing
+     *
      * @param input
      * @return
      */
@@ -272,7 +389,7 @@ public class BasicNfcEmvActivity extends AppCompatActivity implements NfcAdapter
                 @Override
                 public void run() {
                     textView.setText(outputString);
-                    outputString = ""; // clear the outputString
+                    System.out.println(outputString); // print the data to console
                 }
             });
         }

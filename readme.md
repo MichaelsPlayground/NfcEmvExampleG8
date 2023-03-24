@@ -219,6 +219,8 @@ https://www.linkedin.com/pulse/emv-concept-offline-data-authentication-how-stati
 Everything EMV (PIN etc) (Binoy Baby):
 https://www.linkedin.com/pulse/cards-payments-101-everything-emv-binoy-baby
 
+Decoding EMV Contactless: https://www.linkedin.com/pulse/decoding-emv-contactless-kenny-shi
+
 John Zweng Android EMV key test: 
 https://github.com/johnzweng/android-emv-key-test
 
