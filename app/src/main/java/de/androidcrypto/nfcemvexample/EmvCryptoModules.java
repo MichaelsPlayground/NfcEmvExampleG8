@@ -46,6 +46,21 @@ public class EmvCryptoModules {
         CVMList cvmList = new CVMList(data);
         return cvmList.toString();
     }
+
+
+    // encrypt PIN Block
+    // EncryptSample.java
+    // https://gist.github.com/ozkansari/65fa143b2018bb7c2efaf44e76d89e62
+
+    // PinblockTool.java
+    // https://gist.github.com/Gilmor/de2ba62407cb14b9b569
+
+    // https://developer.mastercard.com/card-issuance/documentation/pin-block-encryption-process/
+    // https://neapay.com/online-tools/card-data-generator.html
+    // https://neapay.com/online-tools/calculate-pin-block.html
+
+
+
 }
 
 

@@ -56,6 +56,11 @@
         app:showAsAction="never"/>
 
     <item
+        android:id="@+id/action_activity_basic_nfc_emv"
+        android:title="Basic NFC EMV activity"
+        app:showAsAction="never"/>
+
+    <item
         android:id="@+id/action_export_mail"
         android:title="Export Mail"
         app:showAsAction="never"/>

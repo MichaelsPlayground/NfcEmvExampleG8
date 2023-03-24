@@ -37,6 +37,7 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
+import com.github.devnied.emvnfccard.iso7816emv.TLV;
 import com.github.devnied.emvnfccard.iso7816emv.TagAndLength;
 import com.github.devnied.emvnfccard.utils.TlvUtil;
 import com.payneteasy.tlv.BerTag;
@@ -916,6 +917,8 @@ Byte 6-7:  Card Transaction Qualifiers
                     writeToUiAppend(etLog, "03 select AID response length " + selectAidResponseOk.length + " data: " + bytesToHex(selectAidResponseOk));
                     tsList.addAll(getTagSetFromResponse(selectAidResponseOk, "selectAid " + aidSelectedName));
                     prettyPrintData(etLog, selectAidResponseOk);
+
+
                     writeToUiAppend(etLog, "");
                     printStepHeader(etLog, 4, "search for tag 0x9F38");
                     writeToUiAppend(etLog, "04 search for tag 0x9F38 in the selectAid response");
