@@ -16,6 +16,8 @@ Soundfiles: https://mobcup.net/ringtone/ping-euf272ye/download/mp3
 
 For prettyPrint: include implementation 'com.github.devnied.emvnfccard:library:3.0.1'
 
+For TLV-handling (BER-TLV): 
+
 ## Permission handling
 
 For some categories we do need permissions (declared in AndroidManifest.xml) and sometimes a 

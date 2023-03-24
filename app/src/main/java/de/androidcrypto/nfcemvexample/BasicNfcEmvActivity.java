@@ -3,10 +3,6 @@ package de.androidcrypto.nfcemvexample;
 import static de.androidcrypto.nfcemvexample.BinaryUtils.bytesToHex;
 import static de.androidcrypto.nfcemvexample.BinaryUtils.bytesToHexNpe;
 
-import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.Toolbar;
-
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
@@ -25,7 +21,13 @@ import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
+
+import com.github.devnied.emvnfccard.iso7816emv.TagAndLength;
 import com.github.devnied.emvnfccard.utils.TlvUtil;
+import com.payneteasy.tlv.BerTag;
 import com.payneteasy.tlv.BerTlv;
 import com.payneteasy.tlv.BerTlvParser;
 import com.payneteasy.tlv.BerTlvs;
@@ -34,6 +36,9 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
+
+import de.androidcrypto.nfcemvexample.extended.TagListParser;
+import de.androidcrypto.nfcemvexample.extended.TagNameValue;
 
 public class BasicNfcEmvActivity extends AppCompatActivity implements NfcAdapter.ReaderCallback {
 
@@ -116,7 +121,7 @@ public class BasicNfcEmvActivity extends AppCompatActivity implements NfcAdapter
 
                         // get the tags from respond
                         BerTlvParser parser = new BerTlvParser();
-                        BerTlvs tlvs = parser.parse(selectPpseResponseOk);
+                        BerTlvs tlvs = parser.parse(selectPpseResponseOk, 0, selectPpseResponseOk.length);
                         List<BerTlv> selectPpseResponseTagList = tlvs.getList();
                         int selectPpseResponseTagListSize = selectPpseResponseTagList.size();
                         writeToUiAppend("found " + selectPpseResponseTagListSize + " tags in response");
@@ -124,7 +129,29 @@ public class BasicNfcEmvActivity extends AppCompatActivity implements NfcAdapter
                         for (int i = 0; i < selectPpseResponseTagListSize; i++) {
                             BerTlv tlv = selectPpseResponseTagList.get(i);
                             writeToUiAppend(tlv.toString());
+                            BerTag berTag = tlv.getTag();
+                            boolean berTagIsConstructed = berTag.isConstructed();
+
                         }
+
+                        /*
+                        // devnied
+                        writeToUiAppend("");
+                        List<TagAndLength> parsedList = TlvUtil.parseTagAndLength(selectPpseResponseOk);
+                        int parsedListSize = parsedList.size();
+                        writeToUiAppend("parsedListSize: " + parsedListSize);
+                        writeToUiAppend(parsedList.toString());
+*/
+                        writeToUiAppend("");
+                        List<TagNameValue> parsedList = TagListParser.parseRespond(selectPpseResponseOk);
+                        int parsedListSize = parsedList.size();
+                        writeToUiAppend("parsedListSize: " + parsedListSize);
+                        for (int i = 0; i < parsedListSize; i++) {
+                            TagNameValue p = parsedList.get(i);
+                            writeToUiAppend("tag " + i + " : " + bytesToHexNpe(p.getTagBytes()) + " has the value " + bytesToHexNpe(p.getTagValueBytes()));
+                            writeToUiAppend("tag " + i + " : " + bytesToHexNpe(p.getTagBytes()) + " has the name " + p.getTagName());
+                        }
+
 
 
                     } else {
@@ -191,6 +218,9 @@ MC AAB credit:
     /**
      * section for emv reading
      */
+
+
+
 
     /**
      * build a select apdu command
