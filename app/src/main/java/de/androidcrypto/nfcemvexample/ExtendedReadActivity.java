@@ -480,7 +480,24 @@ I/System.out: ------------------------------------
                     } else {
                         writeToUiAppend(etLog, "no Application Interchange Profile (AIP) found in the tag list");
                     }
-
+                    // CryptogramInformationData
+                    writeToUiAppend(etLog, "");
+                    byte[] tag9f27 = EmvModules.getTagValueFromList(aidTsList, new byte[]{(byte) 0x9f, (byte) 0x27});
+                    if (tag9f27 != null) {
+                        writeToUiAppend(etLog, "Cryptogram Information Data (CID) data: " + bytesToHexBlank(tag9f27));
+                        writeToUiAppend(etLog, EmvCryptoModules.dumpCryptogramInformationData(tag9f27[0]));
+                    } else {
+                        writeToUiAppend(etLog, "no Cryptogram Information Data (CID) data found in the tag list");
+                    }
+                    // 0x8e = Cardholder Verification Method list
+                    writeToUiAppend(etLog, "");
+                    byte[] tag8e = EmvModules.getTagValueFromList(aidTsList, new byte[]{(byte) 0x8e});
+                    if (tag8e != null) {
+                        writeToUiAppend(etLog, "Cardholder Verification Method list data: " + bytesToHexBlank(tag8e));
+                        writeToUiAppend(etLog, EmvCryptoModules.dumpCvmList(tag8e));
+                    } else {
+                        writeToUiAppend(etLog, "no Cardholder Verification Method list data found in the tag list");
+                    }
 
                     // place this at the end as the next readings get no response
                     // single readings
