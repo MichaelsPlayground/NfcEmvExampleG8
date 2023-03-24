@@ -39,7 +39,6 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
-import com.github.devnied.emvnfccard.enums.TagValueTypeEnum;
 import com.github.devnied.emvnfccard.iso7816emv.TagAndLength;
 import com.github.devnied.emvnfccard.utils.TlvUtil;
 import com.google.android.material.switchmaterial.SwitchMaterial;
@@ -67,19 +66,18 @@ import java.util.List;
 import de.androidcrypto.nfcemvexample.cardvalidation.CardValidationResult;
 import de.androidcrypto.nfcemvexample.cardvalidation.RegexCardValidator;
 import de.androidcrypto.nfcemvexample.emulate.FilesModel;
-import de.androidcrypto.nfcemvexample.emulate.PureFileModel;
 import de.androidcrypto.nfcemvexample.extended.TagListParser;
 import de.androidcrypto.nfcemvexample.extended.TagNameValue;
 import de.androidcrypto.nfcemvexample.extended.TagSet;
+import de.androidcrypto.nfcemvexample.johnzweng.DecryptUtils;
+import de.androidcrypto.nfcemvexample.johnzweng.EmvKeyReader;
+import de.androidcrypto.nfcemvexample.johnzweng.LookupCaPublicKeys;
 import de.androidcrypto.nfcemvexample.nfccreditcards.AidValues;
 import de.androidcrypto.nfcemvexample.nfccreditcards.DolValues;
 import de.androidcrypto.nfcemvexample.nfccreditcards.ModuleInfo;
 import de.androidcrypto.nfcemvexample.nfccreditcards.PdolUtil;
 import de.androidcrypto.nfcemvexample.paymentcardgenerator.CardType;
 import de.androidcrypto.nfcemvexample.paymentcardgenerator.PaymentCardGeneratorImpl;
-import de.androidcrypto.nfcemvexample.sasc.CA;
-import de.androidcrypto.nfcemvexample.sasc.IssuerPublicKeyCertificate;
-import de.androidcrypto.nfcemvexample.sasc.Util;
 
 public class ExtendedReadActivity extends AppCompatActivity implements NfcAdapter.ReaderCallback {
 
@@ -902,6 +900,38 @@ I/System.out: ------------------------------------
                                     writeToUiAppend(etLog, "tag9f4b_SignedDynamicApplicationData = hexToBytes(\"" + bytesToHexNpe(tag9f4b_SignedDynamicApplicationData) + "\");");
                                     writeToUiAppend(etLog, "tag9f10_IssuerApplicationData = hexToBytes(\"" + bytesToHexNpe(tag9f10_IssuerApplicationData) + "\");");
                                     writeToUiAppend(etLog, "tag9f26_ApplicationCryptogram = hexToBytes(\"" + bytesToHexNpe(tag9f26_ApplicationCryptogram) + "\");");
+
+                                    // retrieve the Issuer Public Key
+                                    /**
+                                     * decryption of the Issuer Public Key Certificate
+                                     * @param caPublicKeyExponent        *1)
+                                     * @param caPublicKeyModulus         *1)
+                                     * @param issuerPublicKeyCertificate *2) tag 0x90
+                                     * @param issuerPublicKeyRemainder   *3) tag 0x92
+                                     * @param issuerPublicKeyExponent    *2) tag 0x9f32
+                                     * @return the recovered Issuer Public Key
+                                     *
+                                     * Notes: *1) get it from https://www.eftlab.co.uk/knowledge-base/list-of-ca-public-keys
+                                     *        *2) get it from the card
+                                     *        *3) get it from the card [optional]
+                                     */
+
+                                    // todo null check necessary
+                                    writeToUiAppend(etLog,"caAid: " + bytesToHexNpe(aidSelected) + " CAPK Index: " + bytesToHexNpe(tag8f_CertificationAuthorityPublicKeyIndex));
+                                    byte[] caAid = aidSelected.clone();
+                                    byte[] caKeyIndex = tag8f_CertificationAuthorityPublicKeyIndex.clone();
+                                    // lokup the data
+                                    byte[][] caKey = LookupCaPublicKeys.getCaPublicKey(caAid, caKeyIndex);
+                                    if (caKey == null) return;
+                                    EmvKeyReader.RecoveredIssuerPublicKey retrievedIssuerPublicKey = DecryptUtils.retrieveIssuerPublicKey(caKey[1], caKey[0], tag90_IssuerPublicKeyCertificate, tag92_IssuerPublicKeyRemainder, tag9f32_IssuerPublicKeyExponent);
+                                    if (retrievedIssuerPublicKey != null) {
+                                        writeToUiAppend(etLog, "decryption of Issuer Public Key success");
+                                        writeToUiAppend(etLog, retrievedIssuerPublicKey.dump());
+                                    } else {
+                                        writeToUiAppend(etLog, "decryption of Issuer Public Key failure");
+                                    }
+
+
  /*
  result visa comd m
 tag90_IssuerPublicKeyCertificate = hexToBytes("5ab54faf4ad810b3cca4ed42c38e1e768fca3187ed1be4196c6779c4633cbe88751889c12b05e10ee87cb198518793ff61e87534f66850e96239b76648429eced4cc207608d0d2a932dd9e8c4bb0d139c4eca59e1ef5f4708f72d80dc5b66c45f4566c91b55384dfdeabb55faa622c6764cc9fb4c4900b6ab2cec5abad9057e2cf63a881bb4ec2a5d96634d7c11366eb908a168d33aa3c544822fc83e74c104b9275b2ef1cf41375b404a260bbf8fb3d4452af3d0630bb1ec2a01676ba588ae7820727622a6d9df5c93a3ce807d54b79ae007c3d401f8787dc3e235e8b9ae6b1b9279328cb1ca94105434010f15eb07f487f4d5c94f4a5a7");
