@@ -2,6 +2,7 @@ package de.androidcrypto.nfcemvexample;
 
 import static de.androidcrypto.nfcemvexample.BinaryUtils.byteToInt;
 import static de.androidcrypto.nfcemvexample.BinaryUtils.bytesToHex;
+import static de.androidcrypto.nfcemvexample.BinaryUtils.bytesToHexNpe;
 import static de.androidcrypto.nfcemvexample.BinaryUtils.hexToBytes;
 import static de.androidcrypto.nfcemvexample.BinaryUtils.intToByteArrayV4;
 
@@ -322,8 +323,8 @@ public class MainActivity extends AppCompatActivity implements NfcAdapter.Reader
                                 writeToUiAppend(etLog, "");
                                 byte[] pdolValue = tag9f38.getBytesValue();
                                 writeToUiAppend(etLog, "found tag 0x9F38 in the selectAid with this length: " + pdolValue.length + " data: " + bytesToHex(pdolValue));
-                                // code will run for VISA and NOT for MasterCard
-                                // we are using a generalized selectGpo command
+
+
 
                                 /**
                                  * BASIC CODE

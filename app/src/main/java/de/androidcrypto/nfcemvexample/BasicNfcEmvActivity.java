@@ -1,7 +1,6 @@
 package de.androidcrypto.nfcemvexample;
 
 import static de.androidcrypto.nfcemvexample.BinaryUtils.bytesToHex;
-import static de.androidcrypto.nfcemvexample.BinaryUtils.bytesToHexNpe;
 
 import android.app.Activity;
 import android.content.ClipData;
@@ -31,7 +30,6 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
-import com.github.devnied.emvnfccard.iso7816emv.TagAndLength;
 import com.github.devnied.emvnfccard.utils.TlvUtil;
 import com.payneteasy.tlv.BerTag;
 import com.payneteasy.tlv.BerTlv;
@@ -40,12 +38,15 @@ import com.payneteasy.tlv.BerTlvs;
 
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import de.androidcrypto.nfcemvexample.extended.TagListParser;
-import de.androidcrypto.nfcemvexample.extended.TagNameValue;
+import de.androidcrypto.nfcemvexample.nfccreditcards.DolValues;
+import de.androidcrypto.nfcemvexample.sasc.DOL;
+import de.androidcrypto.nfcemvexample.sasc.TagAndLength;
 
 public class BasicNfcEmvActivity extends AppCompatActivity implements NfcAdapter.ReaderCallback {
 
@@ -111,26 +112,33 @@ public class BasicNfcEmvActivity extends AppCompatActivity implements NfcAdapter
                     writeToUiAppend("connection with card success");
                     // here we are going to start our journey through the card
 
-                    printStepHeader(1, "our journey begins");
+                    printStepHeader(0, "our journey begins");
 
                     writeToUiAppend("abc");
 
+                    /**
+                     * step 1 code start
+                     */
 
                     printStepHeader(1, "select PPSE");
                     byte[] PPSE = "2PAY.SYS.DDF01".getBytes(StandardCharsets.UTF_8); // PPSE
                     byte[] selectPpseCommand = selectApdu(PPSE);
                     byte[] selectPpseResponse = nfc.transceive(selectPpseCommand);
-                    writeToUiAppend("01 select PPSE command  length " + selectPpseCommand.length + " data: " + bytesToHex(selectPpseCommand));
-                    writeToUiAppend("01 select PPSE response length " + selectPpseResponse.length + " data: " + bytesToHex(selectPpseResponse));
+                    writeToUiAppend("01 select PPSE command  length " + selectPpseCommand.length + " data: " + bytesToHexNpe(selectPpseCommand));
+                    writeToUiAppend("01 select PPSE response length " + selectPpseResponse.length + " data: " + bytesToHexNpe(selectPpseResponse));
                     writeToUiAppend(prettyPrintDataToString(selectPpseResponse));
 
                     byte[] selectPpseResponseOk = checkResponse(selectPpseResponse);
                     // proceed only when te do have a positive read result = 0x'9000' at the end of response data
                     if (selectPpseResponseOk != null) {
 
+                        /**
+                         * step 1 code end
+                         */
+
                         // get the tags from respond
-                        BerTlvParser parser = new BerTlvParser();
-                        BerTlvs tlvs = parser.parse(selectPpseResponseOk, 0, selectPpseResponseOk.length);
+                        BerTlvParser parserA = new BerTlvParser();
+                        BerTlvs tlvs = parserA.parse(selectPpseResponseOk, 0, selectPpseResponseOk.length);
                         List<BerTlv> selectPpseResponseTagList = tlvs.getList();
                         int selectPpseResponseTagListSize = selectPpseResponseTagList.size();
                         writeToUiAppend("found " + selectPpseResponseTagListSize + " tags in response");
@@ -151,7 +159,10 @@ public class BasicNfcEmvActivity extends AppCompatActivity implements NfcAdapter
                         writeToUiAppend("parsedListSize: " + parsedListSize);
                         writeToUiAppend(parsedList.toString());
 */
+                        /*
+                        // this is working
                         writeToUiAppend("");
+                        writeToUiAppend("using TagListParser");
                         List<TagNameValue> parsedList = TagListParser.parseRespond(selectPpseResponseOk);
                         int parsedListSize = parsedList.size();
                         writeToUiAppend("parsedListSize: " + parsedListSize);
@@ -160,6 +171,154 @@ public class BasicNfcEmvActivity extends AppCompatActivity implements NfcAdapter
                             writeToUiAppend("tag " + i + " : " + bytesToHexNpe(p.getTagBytes()) + " has the value " + bytesToHexNpe(p.getTagValueBytes()));
                             writeToUiAppend("tag " + i + " : " + bytesToHexNpe(p.getTagBytes()) + " has the name " + p.getTagName());
                         }
+
+                         */
+
+                        /**
+                         * step 2 code start
+                        */
+
+                        writeToUiAppend("");
+                        printStepHeader(2, "search applications on card");
+                        writeToUiAppend("02 analyze select PPSE response and search for tag 0x4F (applications on card)");
+
+                        BerTlvParser parser = new BerTlvParser();
+                        BerTlvs tlv4Fs = parser.parse(selectPpseResponseOk);
+                        // by searching for tag 4f
+                        List<BerTlv> tag4fList = tlv4Fs.findAll(new BerTag(0x4F));
+                        if (tag4fList.size() < 1) {
+                            writeToUiAppend("there is no tag 0x4F available, stopping here");
+                            setLoadingLayoutVisibility(false);
+                            try {
+                                nfc.close();
+                            } catch (IOException e) {
+                                throw new RuntimeException(e);
+                            }
+                            return;
+                        }
+                        writeToUiAppend("Found tag 0x4F " + tag4fList.size() + (tag4fList.size()==1?" time:":" times:"));
+                        ArrayList<byte[]> aidList = new ArrayList<>();
+                        for (int i4f = 0; i4f < tag4fList.size(); i4f++) {
+                            BerTlv tlv4f = tag4fList.get(i4f);
+                            byte[] tlv4fBytes = tlv4f.getBytesValue();
+                            aidList.add(tlv4fBytes);
+                            writeToUiAppend("application Id (AID): " + bytesToHexNpe(tlv4fBytes));
+                        }
+
+                        /**
+                         * step 2 code end
+                         */
+
+                        /**
+                         * step 3 code start
+                         */
+
+                        // step 03: iterating through aidList by selecting AID
+                        for (int aidNumber = 0; aidNumber < tag4fList.size(); aidNumber++) {
+                            byte[] aidSelected = aidList.get(aidNumber);
+                            writeToUiAppend("");
+                            printStepHeader(3, "select application by AID");
+                            writeToUiAppend("03 select application by AID " + bytesToHexNpe(aidSelected) + " (number " + (aidNumber + 1) + ")");
+                            byte[] selectAidCommand = selectApdu(aidSelected);
+                            byte[] selectAidResponse = nfc.transceive(selectAidCommand);
+                            writeToUiAppend("");
+                            writeToUiAppend("03 select AID command  length " + selectAidCommand.length + " data: " + bytesToHexNpe(selectAidCommand));
+                            writeToUiAppend("03 select AID response length " + selectAidResponse.length + " data: " + bytesToHexNpe(selectAidResponse));
+                            writeToUiAppend(prettyPrintDataToString(selectAidResponse));
+
+                        //}
+                            /**
+                             * step 3 code end
+                             */
+
+                            // intermediate step - get single data from card, will be printed later
+                            writeToUiAppend("");
+                            writeToUiAppend("get single data elements");
+                            byte[] applicationTransactionCounter = getApplicationTransactionCounter(nfc);
+                            byte[] pinTryCounter = getPinTryCounter(nfc);
+                            byte[] lastOnlineATCRegister = getLastOnlineATCRegister(nfc);
+                            byte[] logFormat = getLogFormat(nfc);
+                            // print single data
+                            writeToUiAppend(dumpSingleData(applicationTransactionCounter, pinTryCounter, lastOnlineATCRegister, logFormat));
+                            writeToUiAppend("");
+
+
+                            /**
+                             * step 4 code start
+                             */
+
+                            byte[] selectAidResponseOk = checkResponse(selectAidResponse);
+                            if (selectAidResponseOk != null) {
+                                writeToUiAppend("");
+                                printStepHeader(4, "search for tag 0x9F38");
+                                writeToUiAppend("04 search for tag 0x9F38 in the selectAid response");
+                                /**
+                                 * note: different behaviour between VisaCard, Mastercard and German GiroCards
+                                 * Mastercard has NO PDOL, Visa gives PDOL in tag 9F38
+                                 * next step: search for tag 9F38 Processing Options Data Object List (PDOL)
+                                 */
+                                BerTlvs tlvsAid = parser.parse(selectAidResponseOk);
+                                BerTlv tag9f38 = tlvsAid.find(new BerTag(0x9F, 0x38));
+                                byte[] gpoRequestCommand;
+                                if (tag9f38 != null) {
+                                    /**
+                                     * the following code is for VisaCards and (German) GiroCards as we found a PDOL
+                                     */
+                                    writeToUiAppend("");
+                                    writeToUiAppend("### processing the VisaCard and GiroCard path ###");
+                                    writeToUiAppend("");
+                                    byte[] pdolValue = tag9f38.getBytesValue();
+                                    writeToUiAppend("found tag 0x9F38 in the selectAid with this length: " + pdolValue.length + " data: " + bytesToHexNpe(pdolValue));
+
+                                    // using code from DOL.java
+                                    DOL pdol = new DOL(DOL.Type.PDOL, pdolValue);
+                                    writeToUiAppend("");
+                                    writeToUiAppend(pdol.toString());
+
+                                    // using TagAndLength
+                                    List<TagAndLength> pdolList = pdol.getTagAndLengthList();
+                                    int pdolListSize = pdolList.size();
+                                    writeToUiAppend("The card is requesting " + pdolListSize + (pdolListSize==1?" tag":" tags") + " with length:");
+                                    for (int i = 0; i < pdolListSize; i++) {
+                                        TagAndLength pdolEntry = pdolList.get(i);
+                                        //writeToUiAppend("tag " + (i + 1) + " : " + pdolEntry.getTag().getName() + " [" +
+                                        writeToUiAppend("tag " + String.format("%02d", i + 1) + ": " + pdolEntry.getTag().getName() + " [" +
+                                                bytesToHexNpe(pdolEntry.getTag().getTagBytes()) +
+                                                "] length " + String.valueOf(pdolEntry.getLength()));
+                                    }
+
+                                    gpoRequestCommand = getGpoFromPdol(pdolValue);
+                                } else { // if (tag9f38 != null) {
+                                    /**
+                                     * MasterCard code
+                                     */
+                                    writeToUiAppend("");
+                                    writeToUiAppend("### processing the MasterCard path ###");
+                                    writeToUiAppend("");
+
+                                    writeToUiAppend("No PDOL found in the selectAid response, generating a 'null' PDOL");
+                                    gpoRequestCommand = getGpoFromPdol(new byte[0]); // empty PDOL
+                                }
+
+                                writeToUiAppend("");
+                                printStepHeader(5, "get the processing options");
+                                writeToUiAppend("05 get the processing options command length: " + gpoRequestCommand.length + " data: " + bytesToHex(gpoRequestCommand));
+
+
+
+                            } else { // if (selectAidResponseOk != null) {
+                                writeToUiAppend("the selecting AID command failed");
+                            }
+
+                            /**
+                             * step 4 code end
+                             */
+
+                        } // for (int aidNumber = 0; aidNumber < tag4fList.size(); aidNumber++) {
+
+                        /**
+                         * step 3 code end
+                         */
 
 
 
@@ -189,7 +348,7 @@ MC AAB credit:
 
                      */
 
-                    printStepHeader(12, "our journey ends");
+                    printStepHeader(99, "our journey ends");
 
 
                 } catch (IOException e) {
@@ -228,8 +387,223 @@ MC AAB credit:
      * section for emv reading
      */
 
+    /**
+     * step 5 code start
+     */
 
 
+    /**
+     * step xx code start
+     */
+
+    /**
+     * section for single read commands
+     * overview: https://github.com/sasc999/javaemvreader/blob/master/src/main/java/sasc/emv/EMVAPDUCommands.java
+     */
+
+    // Get the data of ATC(Application Transaction Counter, tag '9F36')), template 77 or 80
+    private byte[] getApplicationTransactionCounter(IsoDep nfc) {
+        byte[] cmd = new byte[]{(byte) 0x80, (byte) 0xCA, (byte) 0x9F, (byte) 0x36, (byte) 0x00};
+        byte[] result = new byte[0];
+        try {
+            result = nfc.transceive(cmd);
+        } catch (IOException e) {
+            System.out.println("* getApplicationTransactionCounter failed");
+            return null;
+        }
+        System.out.println("*** getATC: " + bytesToHexNpe(result));
+        // e.g. visa returns 9f360200459000
+        // e.g. visa returns 9f36020045 9000
+        byte[] resultOk = checkResponse(result);
+        if (resultOk == null) {
+            return null;
+        } else {
+            return getTagValueFromResult(resultOk, (byte) 0x9f, (byte) 0x36);
+        }
+    }
+
+    private byte[] getPinTryCounter(IsoDep nfc) {
+        byte[] cmd = new byte[]{(byte) 0x80, (byte) 0xCA, (byte) 0x9F, (byte) 0x17, (byte) 0x00};
+        byte[] result = new byte[0];
+        try {
+            result = nfc.transceive(cmd);
+        } catch (IOException e) {
+            System.out.println("* getPinTryCounterCounter failed");
+            return null;
+        }
+        byte[] resultOk = checkResponse(result);
+        if (resultOk == null) {
+            return null;
+        } else {
+            return getTagValueFromResult(resultOk, (byte) 0x9f, (byte) 0x17);
+        }
+    }
+
+    private byte[] getLastOnlineATCRegister(IsoDep nfc) {
+        byte[] cmd = new byte[]{(byte) 0x80, (byte) 0xCA, (byte) 0x9F, (byte) 0x13, (byte) 0x00};
+        byte[] result = new byte[0];
+        try {
+            result = nfc.transceive(cmd);
+        } catch (IOException e) {
+            System.out.println("* getLastOnlineATCRegister failed");
+            return null;
+        }
+        byte[] resultOk = checkResponse(result);
+        if (resultOk == null) {
+            return null;
+        } else {
+            return getTagValueFromResult(resultOk, (byte) 0x9f, (byte) 0x13);
+        }
+    }
+
+    private byte[] getLogFormat(IsoDep nfc) {
+        byte[] cmd = new byte[]{(byte) 0x80, (byte) 0xCA, (byte) 0x9F, (byte) 0x4F, (byte) 0x00};
+        byte[] result = new byte[0];
+        try {
+            result = nfc.transceive(cmd);
+        } catch (IOException e) {
+            System.out.println("* getLastOnlineATCRegister failed");
+            return null;
+        }
+        byte[] resultOk = checkResponse(result);
+        if (resultOk == null) {
+            return null;
+        } else {
+            return getTagValueFromResult(resultOk, (byte) 0x9f, (byte) 0x4F);
+        }
+    }
+
+    /**
+     * gets the byte value of a tag from transceive response
+     *
+     * @param data
+     * @param search
+     * @return
+     */
+    private byte[] getTagValueFromResult(byte[] data, byte... search) {
+        int argumentsLength = search.length;
+        if (argumentsLength < 1) return null;
+        if (argumentsLength > 2) return null;
+        if (data.length > 253) return null;
+        BerTlvParser parser = new BerTlvParser();
+        BerTlvs tlvDatas = parser.parse(data);
+        BerTlv tag;
+        if (argumentsLength == 1) {
+            tag = tlvDatas.find(new BerTag(search[0]));
+        } else {
+            tag = tlvDatas.find(new BerTag(search[0], search[1]));
+        }
+        byte[] tagBytes;
+        if (tag == null) {
+            return null;
+        } else {
+            return tag.getBytesValue();
+        }
+    }
+
+    /**
+     * printout of 4 single data elements
+     * this method is Null Pointer Exception (NPE) safe
+     * @param applicationTransactionCounter
+     * @param pinTryCounter
+     * @param lastOnlineATCRegister
+     * @param logFormat
+     * @return
+     */
+    private String dumpSingleData(byte[] applicationTransactionCounter, byte[] pinTryCounter, byte[] lastOnlineATCRegister, byte[] logFormat) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("single data retrieved from card").append("\n");
+        if (applicationTransactionCounter != null) {
+            sb.append("applicationTransactionCounter: ").append(bytesToHex(applicationTransactionCounter)).append(" (hex), ").append(BinaryUtils.intFromByteArrayV4(applicationTransactionCounter)).append(" (dec)").append("\n");
+        } else {
+            sb.append("applicationTransactionCounter: NULL").append("\n");
+        }
+        if (pinTryCounter != null) {
+            sb.append("pinTryCounter: ").append(bytesToHex(pinTryCounter)).append("\n");
+        } else {
+            sb.append("pinTryCounter: NULL").append("\n");
+        }
+        if (lastOnlineATCRegister != null) {
+            sb.append("lastOnlineATCRegister: ").append(bytesToHex(lastOnlineATCRegister)).append("\n");
+        } else {
+            sb.append("lastOnlineATCRegister: NULL").append("\n");
+        }
+        if (logFormat != null) {
+            sb.append("logFormat: ").append(bytesToHex(logFormat)).append("\n");
+        } else {
+            sb.append("logFormat: NULL").append("\n");
+        }
+        return sb.toString();
+    }
+
+    /**
+     * step xx code end
+     */
+
+
+    /**
+     * DOL utilities
+     */
+
+    private byte[] getGpoFromPdol(@NonNull byte[] pdol) {
+        // get the tags in a list
+        List<com.github.devnied.emvnfccard.iso7816emv.TagAndLength> tagAndLength = TlvUtil.parseTagAndLength(pdol);
+        int tagAndLengthSize = tagAndLength.size();
+        if (tagAndLengthSize < 1) {
+            // there are no pdols in the list
+            //Log.e(TAG, "there are no PDOLs in the pdol array, aborted");
+            //return null;
+            // returning an empty PDOL
+            String tagLength2d = "00"; // length value
+            String tagLength2dAnd2 = "02"; // length value + 2
+            String constructedGpoCommandString = "80A80000" + tagLength2dAnd2 + "83" + tagLength2d + "" + "00";
+            return hexToBytes(constructedGpoCommandString);
+        }
+        int valueOfTagSum = 0; // total length
+        StringBuilder sb = new StringBuilder(); // takes the default values of the tags
+        DolValues dolValues = new DolValues();
+        for (int i = 0; i < tagAndLengthSize; i++) {
+            // get a single tag
+            com.github.devnied.emvnfccard.iso7816emv.TagAndLength tal = tagAndLength.get(i); // eg 9f3704
+            byte[] tagToSearch = tal.getTag().getTagBytes(); // gives the tag 9f37
+            int lengthOfTag = tal.getLength(); // 4
+            valueOfTagSum += tal.getLength(); // add it to the sum
+            // now we are trying to find a default value
+            byte[] defaultValue = dolValues.getDolValue(tagToSearch);
+            byte[] usedValue = new byte[0];
+            if (defaultValue != null) {
+                if (defaultValue.length > lengthOfTag) {
+                    // cut it to correct length
+                    usedValue = Arrays.copyOfRange(defaultValue, 0, lengthOfTag);
+                    Log.i(TAG, "asked for tag: " + bytesToHexNpe(tal.getTag().getTagBytes()) + " default is too long, cut to: " + bytesToHexNpe(usedValue));
+                } else if (defaultValue.length < lengthOfTag) {
+                    // increase length
+                    usedValue = new byte[lengthOfTag];
+                    System.arraycopy(defaultValue, 0, usedValue, 0, defaultValue.length);
+                    Log.i(TAG, "asked for tag: " + bytesToHexNpe(tal.getTag().getTagBytes()) + " default is too short, increased to: " + bytesToHexNpe(usedValue));
+                } else {
+                    // correct length
+                    usedValue = defaultValue.clone();
+                    Log.i(TAG, "asked for tag: " + bytesToHexNpe(tal.getTag().getTagBytes()) + " default found: " + bytesToHexNpe(usedValue));
+                }
+            } else {
+                // defaultValue is null means the tag was not found in our tags database for default values
+                usedValue = new byte[lengthOfTag];
+                Log.i(TAG, "asked for tag: " + bytesToHexNpe(tal.getTag().getTagBytes()) + " NO default found, generate zeroed: " + bytesToHexNpe(usedValue));
+            }
+            // now usedValue does have the correct length
+            sb.append(bytesToHexNpe(usedValue));
+        }
+        String constructedGpoString = sb.toString();
+        String tagLength2d = bytesToHexNpe(intToByteArray(valueOfTagSum)); // length value
+        String tagLength2dAnd2 = bytesToHexNpe(intToByteArray(valueOfTagSum + 2)); // length value + 2
+        String constructedGpoCommandString = "80A80000" + tagLength2dAnd2 + "83" + tagLength2d + constructedGpoString + "00";
+        return hexToBytes(constructedGpoCommandString);
+    }
+
+    /**
+     * step 5 code end
+    */
 
     /**
      * build a select apdu command
@@ -267,6 +641,59 @@ MC AAB credit:
         } else {
             return Arrays.copyOfRange(data, 0, data.length - 2);
         }
+    }
+
+    /**
+     * section for conversion utils
+     */
+
+    /**
+     * converts a byte array to a hex encoded string
+     * This method is Null Pointer Exception (NPE) safe
+     * @param bytes
+     * @return hex encoded string
+     */
+    public static String bytesToHexNpe(byte[] bytes) {
+        if (bytes != null) {
+            StringBuffer result = new StringBuffer();
+            for (byte b : bytes)
+                result.append(Integer.toString((b & 0xff) + 0x100, 16).substring(1));
+            return result.toString();
+        } else {
+            return "";
+        }
+    }
+
+    /**
+     * converts a hex encoded string to a byte array
+     * @param str
+     * @return
+     */
+    public static byte[] hexToBytes(String str) {
+        byte[] bytes = new byte[str.length() / 2];
+        for (int i = 0; i < bytes.length; i++) {
+            bytes[i] = (byte) Integer.parseInt(str.substring(2 * i, 2 * i + 2),
+                    16);
+        }
+        return bytes;
+    }
+
+    /**
+     * converts a byte to int
+     * @param b
+     * @return
+     */
+    public static int byteToInt(byte b) {
+        return (int) b & 0xFF;
+    }
+
+    /**
+     * converts an integer to a byte array
+     * @param value
+     * @return
+     */
+    public static byte[] intToByteArray(int value) {
+        return new BigInteger(String.valueOf(value)).toByteArray();
     }
 
     /**

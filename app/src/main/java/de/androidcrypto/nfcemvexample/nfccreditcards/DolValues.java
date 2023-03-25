@@ -12,7 +12,7 @@ public class DolValues {
 
     private List<DolTag> dolList = new ArrayList<>();
     // used in PDOL
-    //private final DolTag t9f66 = setTag(new byte[]{(byte) 0x9f, (byte) 0x66}, "Terminal Transaction Qualifiers", hexBlankToBytes("A0 00 00 00")); // runs on all my cards
+    //private final DolTag t9f66 = setTag(new byte[]{(byte) 0x9f, (byte) 0x66}, "Terminal Transaction Qualifiers", hexBlankToBytes("A0 00 00 00")); // runs on all my cards but not returns not all afl
     // test for visa comd, seems to be the better option ()
     // online decoder: https://paymentcardtools.com/emv-tag-decoders/ttq
     //private final DolTag t9f66 = setTag(new byte[]{(byte) 0x9f, (byte) 0x66}, "Terminal Transaction Qualifiers", hexBlankToBytes("B7 60 40 00")); // does not run with Lloyds Visa
