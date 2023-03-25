@@ -301,13 +301,16 @@ I/System.out: tag 08: Transaction Type [9c] length 1
 I/System.out: tag 09: Unpredictable Number [9f37] length 4
  */
 /*
-VisaCard information about tags:
-Terminal Transaction Qualifiers [9f66] C-3 Kernel 3 v2.10 page 108 + 109
-Amount, Authorised (Numeric) [9f02]    C-3 Kernel 3 v2.10 page 81
-Amount, Other (Numeric) [9f03]         C-3 Kernel 3 v2.10 page 81
-Terminal Country Code [9f1a]           C-3 Kernel 3 v2.10 page 107
-
-
+VisaCard information about tags           EMV book                           Example data (hex):
+Terminal Transaction Qualifiers [9f66]    C-3 Kernel 3 v2.10 page 108 + 109  A0 00 00 00
+Amount, Authorised (Numeric) [9f02]       C-3 Kernel 3 v2.10 page 81         00 00 00 00 10 00
+Amount, Other (Numeric) [9f03]            C-3 Kernel 3 v2.10 page 81         00 00 00 00 00 00
+Terminal Country Code [9f1a]              C-3 Kernel 3 v2.10 page 107        09 78 ( = 'EUR')
+Terminal Verification Results (TVR) [95]  C-3 Kernel 3 v2.10 page 107        00 00 00 00 00
+Transaction Currency Code [5f2a]          C-3 Kernel 3 v2.10 page 107        09 78 ( = 'EUR')
+Transaction Date [9a]                     C-3 Kernel 3 v2.10 page 110        23 03 01 ( = March 1st. 2023)
+Transaction Type [9c]                     C-3 Kernel 3 v2.10 page 110        00
+Unpredictable Number [9f37]               C-3 Kernel 3 v2.10 page 110        38 39 30 31
 
  */
 
@@ -343,19 +346,98 @@ Terminal Country Code [9f1a]           C-3 Kernel 3 v2.10 page 107
                                  */
 
                                 byte[] gpoRequestResponse = nfc.transceive(gpoRequestCommand);
+                                byte[] gpoRequestResponseOk;
                                 if (gpoRequestResponse != null) {
                                     writeToUiAppend("05 get the processing options response length: " + gpoRequestResponse.length + " data: " + bytesToHex(gpoRequestResponse));
-                                    byte[] gpoRequestResponseOk = checkResponse(gpoRequestResponse);
+                                    gpoRequestResponseOk = checkResponse(gpoRequestResponse);
                                     if (gpoRequestResponseOk != null) {
                                         writeToUiAppend(prettyPrintDataToString(gpoRequestResponse));
-
-
                                     }
                                 }
+/*
+MasterCard:
+I/System.out: 77 16 -- Response Message Template Format 2
+I/System.out:       82 02 -- Application Interchange Profile
+I/System.out:             19 80 (BINARY)
+I/System.out:       94 10 -- Application File Locator (AFL)
+I/System.out:             08 01 01 00 10 01 02 01 18 01 02 00 20 01 02 00 (BINARY)
+I/System.out: 90 00 -- Command successfully executed (OK)
 
+VisaCard:
+I/System.out: 77 81 C6 -- Response Message Template Format 2
+I/System.out:          82 02 -- Application Interchange Profile
+I/System.out:                20 20 (BINARY)
+I/System.out:          94 04 -- Application File Locator (AFL)
+I/System.out:                10 01 03 00 (BINARY)
+I/System.out:          57 13 -- Track 2 Equivalent Data
+I/System.out:                48 71 78 00 82 77 05 74 D2 50 72 21 13 28 66 21
+I/System.out:                01 00 0F (BINARY)
+I/System.out:          9F 10 07 -- Issuer Application Data
+I/System.out:                   06 01 12 03 A0 00 00 (BINARY)
+I/System.out:          9F 26 08 -- Application Cryptogram
+I/System.out:                   1C 5F 09 BB E2 7F 15 4B (BINARY)
+I/System.out:          9F 27 01 -- Cryptogram Information Data
+I/System.out:                   80 (BINARY)
+I/System.out:          9F 36 02 -- Application Transaction Counter (ATC)
+I/System.out:                   00 AE (BINARY)
+I/System.out:          9F 6C 02 -- Mag Stripe Application Version Number (Card)
+I/System.out:                   04 00 (BINARY)
+I/System.out:          9F 4B 81 80 -- Signed Dynamic Application Data
+I/System.out:                      04 5D B0 BC FE 88 E1 9E B2 B6 92 05 A6 4D AC 26
+I/System.out:                      7A 46 CC AD 06 C5 E7 DA 1F 73 C8 C4 EE 30 9C D1
+I/System.out:                      DD 8A 52 58 C5 D9 C3 DD 22 21 21 19 13 1E 5E 9F
+I/System.out:                      56 37 85 25 7E 9E D5 7D 31 69 14 FE FD 1C 10 F4
+I/System.out:                      2D 89 58 55 26 63 E8 72 D4 85 33 F9 6D E0 31 BC
+I/System.out:                      77 50 DA 08 D6 E1 13 18 0C D7 52 02 40 BF A0 59
+I/System.out:                      69 B0 F0 C3 D1 1E F0 60 C5 75 8D 85 D0 F8 E4 FF
+I/System.out:                      5A CC 8F 35 C6 5B 4A 2B EB 0D B5 08 48 6A 14 92 (BINARY)
+I/System.out: 90 00 -- Command successfully executed (OK)
+
+GiroCard (3 AIDs):
+AID a00000005945430100
+I/System.out: 77 1E -- Response Message Template Format 2
+I/System.out:       82 02 -- Application Interchange Profile
+I/System.out:             19 80 (BINARY)
+I/System.out:       94 18 -- Application File Locator (AFL)
+I/System.out:             18 01 01 00 20 01 01 00 20 04 04 00 08 05 05 01
+I/System.out:             08 07 07 01 08 03 03 01 (BINARY)
+I/System.out: 90 00 -- Command successfully executed (OK)
+AID a0000003591010028001
+I/System.out: 77 1E -- Response Message Template Format 2
+I/System.out:       82 02 -- Application Interchange Profile
+I/System.out:             19 80 (BINARY)
+I/System.out:       94 18 -- Application File Locator (AFL)
+I/System.out:             18 01 01 00 20 01 01 00 20 04 04 00 08 05 05 01
+I/System.out:             08 07 07 01 08 03 03 01 (BINARY)
+I/System.out: 90 00 -- Command successfully executed (OK)
+AID d27600002547410100
+I/System.out: 77 0A -- Response Message Template Format 2
+I/System.out:       82 02 -- Application Interchange Profile
+I/System.out:             18 00 (BINARY)
+I/System.out:       94 04 -- Application File Locator (AFL)
+I/System.out:             08 02 05 00 (BINARY)
+I/System.out: 90 00 -- Command successfully executed (OK)
+
+American Express Card:
+I/System.out: 80 12 -- Response Message Template Format 1
+I/System.out:       18 00 08 01 01 00 08 03 03 00 08 05 05 00 10 02
+I/System.out:       02 00 (BINARY)
+I/System.out: 90 00 -- Command successfully executed (OK)
+
+ */
                                 /**
                                  * step 5 code end
                                  */
+
+                                /**
+                                 * step 6 code start
+                                 */
+
+
+                                /**
+                                 * step 6 code start
+                                 */
+
 
                             } else { // if (selectAidResponseOk != null) {
                                 writeToUiAppend("the selecting AID command failed");
