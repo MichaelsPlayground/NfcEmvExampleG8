@@ -72,6 +72,7 @@ import de.androidcrypto.nfcemvexample.extended.TagSet;
 import de.androidcrypto.nfcemvexample.johnzweng.DecryptUtils;
 import de.androidcrypto.nfcemvexample.johnzweng.EmvKeyReader;
 import de.androidcrypto.nfcemvexample.johnzweng.LookupCaPublicKeys;
+import de.androidcrypto.nfcemvexample.johnzweng.SignedDynamicApplicationData;
 import de.androidcrypto.nfcemvexample.nfccreditcards.AidValues;
 import de.androidcrypto.nfcemvexample.nfccreditcards.DolValues;
 import de.androidcrypto.nfcemvexample.nfccreditcards.ModuleInfo;
@@ -851,11 +852,14 @@ I/System.out: ------------------------------------
                                     if (getApplicationCryptoResponseOk != null) {
                                         tsList.addAll(getTagSetFromResponse(getApplicationCryptoResponseOk, "getApplicationCrypto"));
                                     }
+
+                                    /*
                                     writeToUiAppend(etLog, "---- tagSet list ----");
                                     for (int i = 0; i < tsList.size(); i++) {
                                         writeToUiAppend(etLog, "--- tag nr " + i + " ---");
                                         writeToUiAppend(etLog, tsList.get(i).dump());
                                     }
+*/
 
                                     // here we are starting the crypto stuff and try to decrypt some data from the card
                                     // we do need the content of some tags:
@@ -916,13 +920,17 @@ I/System.out: ------------------------------------
                                      *        *3) get it from the card [optional]
                                      */
 
+                                    writeToUiAppend(etLog,"retrieve Issuer Public Key");
                                     // todo null check necessary
                                     writeToUiAppend(etLog,"caAid: " + bytesToHexNpe(aidSelected) + " CAPK Index: " + bytesToHexNpe(tag8f_CertificationAuthorityPublicKeyIndex));
                                     byte[] caAid = aidSelected.clone();
                                     byte[] caKeyIndex = tag8f_CertificationAuthorityPublicKeyIndex.clone();
-                                    // lokup the data
+                                    // lookup the data
                                     byte[][] caKey = LookupCaPublicKeys.getCaPublicKey(caAid, caKeyIndex);
-                                    if (caKey == null) return;
+                                    if (caKey[0] == null) {
+                                        writeToUiAppend(etLog, "could not find a CA Public Key in library");
+                                        return;
+                                    }
                                     EmvKeyReader.RecoveredIssuerPublicKey retrievedIssuerPublicKey = DecryptUtils.retrieveIssuerPublicKey(caKey[1], caKey[0], tag90_IssuerPublicKeyCertificate, tag92_IssuerPublicKeyRemainder, tag9f32_IssuerPublicKeyExponent);
                                     if (retrievedIssuerPublicKey != null) {
                                         writeToUiAppend(etLog, "decryption of Issuer Public Key success");
@@ -931,6 +939,62 @@ I/System.out: ------------------------------------
                                         writeToUiAppend(etLog, "decryption of Issuer Public Key failure");
                                     }
 
+                                    /**
+                                     * decryption of the ICC Public Key Certificate
+                                     * @param issuerPublicKeyExponent  *1)
+                                     * @param issuerPublicKeyModulus   *1)
+                                     * @param iccPublicKeyCertificate  *2) tag 0x9f46
+                                     * @param iccPublicKeyRemainder    *3) tag 0x9f48
+                                     * @param iccPublicKeyExponent     *2) tag 0x9f47
+                                     * @return the recovered Issuer Public Key
+                                     *
+                                     * Notes: *1) get it from RecoveredIssuerPublicKey retrieveIssuerPublicKey
+                                     *        *2) get it from the card
+                                     *        *3) get it from the card [optional]
+                                     */
+
+                                    EmvKeyReader.RecoveredIccPublicKey retrievedIccPublicKey = null;
+                                    if (retrievedIssuerPublicKey != null) {
+                                        writeToUiAppend(etLog, "retrieve ICC Public Key");
+                                        // check if we do have an IssuerPublicKeyRemainder,
+                                        byte[] issuerPublicKeyModulus = DecryptUtils.concatenateModulus(retrievedIssuerPublicKey.getLeftMostPubKeyDigits(), tag92_IssuerPublicKeyRemainder);
+
+                                        retrievedIccPublicKey = DecryptUtils.retrieveIccPublicKey(tag9f32_IssuerPublicKeyExponent,
+                                                issuerPublicKeyModulus, tag9f46_IccPublicKeyCertificate,
+                                                tag9f48_IccPublicKeyRemainder, tag9f47_IccPublicKeyExponent);
+                                        if (retrievedIccPublicKey != null) {
+                                            writeToUiAppend(etLog, "decryption of ICC Public Key success");
+                                            writeToUiAppend(etLog, retrievedIccPublicKey.dump());
+                                        } else {
+                                            writeToUiAppend(etLog, "decryption of ICC Public Key failure");
+                                        }
+                                    }
+
+                                    /**
+                                     * decrypt data with ICC Public Key
+                                     * @param iccPublicKeyExponent                     *1)
+                                     * @param iccPublicKeyModulus                      *1)
+                                     * @param data, eg. SignedDynamicApplicationData   *2)
+                                     * @return the decrypted data
+                                     *
+                                     * Notes: *1) get it from RecoveredIccPublicKey retrieveIccPublicKey
+                                     *        *2) get it from the card
+                                     */
+                                    if (retrievedIccPublicKey != null) {
+                                        writeToUiAppend(etLog, "decrypt SignedDynamicApplicationData");
+                                        // check if we do have an IssuerPublicKeyRemainder,
+                                        byte[] iccPublicKeyModulus = DecryptUtils.concatenateModulus(retrievedIccPublicKey.getLeftMostPubKeyDigits(), tag9f48_IccPublicKeyRemainder);
+
+                                        byte[] decryptedSignedDynamicApplicationData = DecryptUtils.decryptDataWithIccPublicKey(tag9f47_IccPublicKeyExponent,
+                                                iccPublicKeyModulus, tag9f4b_SignedDynamicApplicationData);
+                                        if (decryptedSignedDynamicApplicationData != null) {
+                                            writeToUiAppend(etLog, "decryption of SignedDynamicApplicationData success");
+                                            SignedDynamicApplicationData signedDynamicApplicationData = new SignedDynamicApplicationData(decryptedSignedDynamicApplicationData);
+                                            writeToUiAppend(etLog, "parsed SignedDynamicApplicationData\n" + signedDynamicApplicationData.dump());
+                                        } else {
+                                            writeToUiAppend(etLog, "decryption of SignedDynamicApplicationData failure");
+                                        }
+                                    }
 
  /*
  result visa comd m

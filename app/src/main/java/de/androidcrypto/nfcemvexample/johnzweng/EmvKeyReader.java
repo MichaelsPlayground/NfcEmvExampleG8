@@ -624,13 +624,13 @@ I/System.out: dataTrailer: 188
 
     /**
      * Manually perform RSA operation: data ^ exponent mod modulus
-     *
+     * uses byte[] as input instead of BigInteger
      * @param dataBytes           data bytes to operate on
      * @param expBytes            exponent
      * @param modBytes            modulus
      * @return data ^ exponent mod modulus
      */
-    private static byte[] calculateRSA(byte[] dataBytes, byte[] expBytes, byte[] modBytes) throws EmvParsingException {
+    public static byte[] calculateRSA(byte[] dataBytes, byte[] expBytes, byte[] modBytes) throws EmvParsingException {
         int inBytesLength = dataBytes.length;
         if (expBytes[0] >= (byte) 0x80) {
             //Prepend 0x00 to modulus
