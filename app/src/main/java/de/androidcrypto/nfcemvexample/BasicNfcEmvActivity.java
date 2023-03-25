@@ -287,6 +287,32 @@ public class BasicNfcEmvActivity extends AppCompatActivity implements NfcAdapter
                                                 "] length " + String.valueOf(pdolEntry.getLength()));
                                     }
 
+/*
+VisaCard:
+I/System.out: The card is requesting 9 tags with length:
+I/System.out: tag 01: Terminal Transaction Qualifiers [9f66] length 4
+I/System.out: tag 02: Amount, Authorised (Numeric) [9f02] length 6
+I/System.out: tag 03: Amount, Other (Numeric) [9f03] length 6
+I/System.out: tag 04: Terminal Country Code [9f1a] length 2
+I/System.out: tag 05: Terminal Verification Results (TVR) [95] length 5
+I/System.out: tag 06: Transaction Currency Code [5f2a] length 2
+I/System.out: tag 07: Transaction Date [9a] length 3
+I/System.out: tag 08: Transaction Type [9c] length 1
+I/System.out: tag 09: Unpredictable Number [9f37] length 4
+ */
+/*
+VisaCard information about tags:
+Terminal Transaction Qualifiers [9f66] C-3 Kernel 3 v2.10 page 108 + 109
+Amount, Authorised (Numeric) [9f02]    C-3 Kernel 3 v2.10 page 81
+Amount, Other (Numeric) [9f03]         C-3 Kernel 3 v2.10 page 81
+Terminal Country Code [9f1a]           C-3 Kernel 3 v2.10 page 107
+
+
+
+ */
+
+
+
                                     gpoRequestCommand = getGpoFromPdol(pdolValue);
                                 } else { // if (tag9f38 != null) {
                                     /**
@@ -302,9 +328,34 @@ public class BasicNfcEmvActivity extends AppCompatActivity implements NfcAdapter
 
                                 writeToUiAppend("");
                                 printStepHeader(5, "get the processing options");
-                                writeToUiAppend("05 get the processing options command length: " + gpoRequestCommand.length + " data: " + bytesToHex(gpoRequestCommand));
+                                writeToUiAppend("05 get the processing options  command length: " + gpoRequestCommand.length + " data: " + bytesToHex(gpoRequestCommand));
+
+                                /**
+                                 * step 5 code starts
+                                 */
+
+                                /**
+                                 * WARNING: each get processing options request increases the icc internal
+                                 * 'application transaction counter'. If the 2 byte long counter reaches the
+                                 * maximum of '65535' (0xFFFF) the card will no longer accept any read commands
+                                 * and the card is irretrievable damaged.
+                                 * DO NOT RUN THIS COMMAND IN A LOOP !
+                                 */
+
+                                byte[] gpoRequestResponse = nfc.transceive(gpoRequestCommand);
+                                if (gpoRequestResponse != null) {
+                                    writeToUiAppend("05 get the processing options response length: " + gpoRequestResponse.length + " data: " + bytesToHex(gpoRequestResponse));
+                                    byte[] gpoRequestResponseOk = checkResponse(gpoRequestResponse);
+                                    if (gpoRequestResponseOk != null) {
+                                        writeToUiAppend(prettyPrintDataToString(gpoRequestResponse));
 
 
+                                    }
+                                }
+
+                                /**
+                                 * step 5 code end
+                                 */
 
                             } else { // if (selectAidResponseOk != null) {
                                 writeToUiAppend("the selecting AID command failed");
@@ -313,6 +364,8 @@ public class BasicNfcEmvActivity extends AppCompatActivity implements NfcAdapter
                             /**
                              * step 4 code end
                              */
+
+
 
                         } // for (int aidNumber = 0; aidNumber < tag4fList.size(); aidNumber++) {
 
