@@ -920,6 +920,7 @@ I/System.out: ------------------------------------
                                      *        *3) get it from the card [optional]
                                      */
 
+                                    writeToUiAppend(etLog,"");
                                     writeToUiAppend(etLog,"retrieve Issuer Public Key");
                                     // todo null check necessary
                                     writeToUiAppend(etLog,"caAid: " + bytesToHexNpe(aidSelected) + " CAPK Index: " + bytesToHexNpe(tag8f_CertificationAuthorityPublicKeyIndex));
@@ -953,6 +954,7 @@ I/System.out: ------------------------------------
                                      *        *3) get it from the card [optional]
                                      */
 
+                                    writeToUiAppend(etLog,"");
                                     EmvKeyReader.RecoveredIccPublicKey retrievedIccPublicKey = null;
                                     if (retrievedIssuerPublicKey != null) {
                                         writeToUiAppend(etLog, "retrieve ICC Public Key");
@@ -980,6 +982,7 @@ I/System.out: ------------------------------------
                                      * Notes: *1) get it from RecoveredIccPublicKey retrieveIccPublicKey
                                      *        *2) get it from the card
                                      */
+                                    writeToUiAppend(etLog,"");
                                     if (retrievedIccPublicKey != null) {
                                         writeToUiAppend(etLog, "decrypt SignedDynamicApplicationData");
                                         // check if we do have an IssuerPublicKeyRemainder,

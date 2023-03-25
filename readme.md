@@ -59,6 +59,8 @@ https://github.com/Mohamdaoui/SmartCardReader (Kotlin)
 
 https://developer.visa.com/identity/user/register
 
+American Express: C-4 Kernel 4 v2.10
+
 https://stackoverflow.com/questions/35881046/get-processing-options-response with Template 1:
 ```plaintext
 GET PROCESSING OPTIONS
