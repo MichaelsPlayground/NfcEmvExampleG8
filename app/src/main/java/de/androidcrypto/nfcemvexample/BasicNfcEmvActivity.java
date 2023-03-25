@@ -3,11 +3,13 @@ package de.androidcrypto.nfcemvexample;
 import static de.androidcrypto.nfcemvexample.BinaryUtils.bytesToHex;
 import static de.androidcrypto.nfcemvexample.BinaryUtils.bytesToHexNpe;
 
+import android.app.Activity;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.media.MediaPlayer;
+import android.net.Uri;
 import android.nfc.NfcAdapter;
 import android.nfc.Tag;
 import android.nfc.tech.IsoDep;
@@ -21,6 +23,10 @@ import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResult;
+import androidx.activity.result.ActivityResultCallback;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
@@ -33,6 +39,7 @@ import com.payneteasy.tlv.BerTlvParser;
 import com.payneteasy.tlv.BerTlvs;
 
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
@@ -48,6 +55,8 @@ public class BasicNfcEmvActivity extends AppCompatActivity implements NfcAdapter
     private NfcAdapter mNfcAdapter;
 
     private String outputString = ""; // used for the UI output
+    private String exportString = ""; // used for exporting the log to a text file
+    private String exportStringFileName = "emv.html";
     private final String stepSeparatorString = "*********************************";
     private final String lineSeparatorString = "---------------------------------";
 
@@ -405,6 +414,7 @@ MC AAB credit:
     private void clearData(final TextView textView) {
         runOnUiThread(() -> {
             outputString = "";
+            exportString = "";
             textView.setText("");
         });
     }
@@ -422,6 +432,91 @@ MC AAB credit:
                     System.out.println(outputString); // print the data to console
                 }
             });
+        }
+    }
+
+    private void provideTextViewDataForExport(TextView textView) {
+        exportString = textView.getText().toString();
+    }
+
+    private void writeToUiToast(String message) {
+        runOnUiThread(() -> {
+            Toast.makeText(getApplicationContext(),
+                    message,
+                    Toast.LENGTH_SHORT).show();
+        });
+    }
+
+    /**
+     * section OptionsMenu export text file methods
+     */
+
+    private void exportTextFile() {
+        provideTextViewDataForExport(etLog);
+        if (exportString.isEmpty()) {
+            writeToUiToast("Scan a tag first before writing files :-)");
+            return;
+        }
+        writeStringToExternalSharedStorage();
+    }
+
+    private void writeStringToExternalSharedStorage() {
+        Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("*/*");
+        // Optionally, specify a URI for the file that should appear in the
+        // system file picker when it loads.
+        //boolean pickerInitialUri = false;
+        //intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI, pickerInitialUri);
+        // get filename from edittext
+        String filename = exportStringFileName;
+        // sanity check
+        if (filename.equals("")) {
+            writeToUiToast("scan a tag before writing the content to a file :-)");
+            return;
+        }
+        intent.putExtra(Intent.EXTRA_TITLE, filename);
+        selectTextFileActivityResultLauncher.launch(intent);
+    }
+
+    ActivityResultLauncher<Intent> selectTextFileActivityResultLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            new ActivityResultCallback<ActivityResult>() {
+                @Override
+                public void onActivityResult(ActivityResult result) {
+                    if (result.getResultCode() == Activity.RESULT_OK) {
+                        // There are no request codes
+                        Intent resultData = result.getData();
+                        // The result data contains a URI for the document or directory that
+                        // the user selected.
+                        Uri uri = null;
+                        if (resultData != null) {
+                            uri = resultData.getData();
+                            // Perform operations on the document using its URI.
+                            try {
+                                // get file content from edittext
+                                String fileContent = exportString;
+                                System.out.println("## data to write: " + exportString);
+                                writeTextToUri(uri, fileContent);
+                                writeToUiToast("file written to external shared storage: " + uri.toString());
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                                writeToUiToast("ERROR: " + e.toString());
+                                return;
+                            }
+                        }
+                    }
+                }
+            });
+
+    private void writeTextToUri(Uri uri, String data) throws IOException {
+        try {
+            System.out.println("** data to write: " + data);
+            OutputStreamWriter outputStreamWriter = new OutputStreamWriter(getApplicationContext().getContentResolver().openOutputStream(uri));
+            outputStreamWriter.write(data);
+            outputStreamWriter.close();
+        } catch (IOException e) {
+            System.out.println("Exception File write failed: " + e.toString());
         }
     }
 
@@ -444,6 +539,16 @@ MC AAB credit:
                 // show toast only on Android versions < 13
                 if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.S_V2)
                     Toast.makeText(getApplicationContext(), "copied", Toast.LENGTH_SHORT).show();
+                return false;
+            }
+        });
+
+        MenuItem mExportTextFile = menu.findItem(R.id.action_export_text_file);
+        mExportTextFile.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
+            @Override
+            public boolean onMenuItemClick(MenuItem item) {
+                Log.i(TAG, "mExportTextFile");
+                exportTextFile();
                 return false;
             }
         });
