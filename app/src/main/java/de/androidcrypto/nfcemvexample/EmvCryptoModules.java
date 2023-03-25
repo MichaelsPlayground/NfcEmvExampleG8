@@ -42,7 +42,7 @@ public class EmvCryptoModules {
     public static String dumpCvmList(byte[] data) {
         // source: https://github.com/maciejsszmigiero/javaemvreader/blob/master/src/main/java/sasc/emv/CVMList.java
         // sample 00 00 00 00 00 00 00 00 42 03 1E 03 1F 03
-        data = BinaryUtils.hexBlankToBytes("00 00 00 00 00 00 00 00 42 03 1E 03 1F 03");
+        // data = BinaryUtils.hexBlankToBytes("00 00 00 00 00 00 00 00 42 03 1E 03 1F 03");
         CVMList cvmList = new CVMList(data);
         return cvmList.toString();
     }

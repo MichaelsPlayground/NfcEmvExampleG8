@@ -869,8 +869,8 @@ List<Afl> listAfl = extractAfl(data);
     }
 
     /**
-     * remove all trailing 0xF's trailing in the 10 length fiel tag 0x5a = PAN
-     * PAN is padded with 'F'
+     * remove all trailing 0xF's trailing in the 16 byte length field tag 0x5a = PAN and in Track2EquivalentData
+     * PAN is padded with 'F' if not of length 16
      *
      * @param input
      * @return

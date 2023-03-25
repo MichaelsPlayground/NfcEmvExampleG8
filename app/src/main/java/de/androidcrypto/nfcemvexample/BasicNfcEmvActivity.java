@@ -294,11 +294,13 @@ Das von der DK definierte TA 7.2 enthält hauptsächlich neue Anforderungen an d
 Kontaktloses Bezahlen & Akzeptanz von girocards, die in mobilen Wallets gespeichert sind:
 NFC-Kernel des POS-Terminals wird von Mastercard-Kernel auf girocard eigenen Kernel umgestellt
 
-
+girocard Kernel 2A
 MasterCard AID kernel 2
 Visa AID kernel 3
 American Express AID kernel 4
-
+JCB Kernel 5
+Discover Kernel 6
+UnionPay Kernel 7
 */
 
 /*
@@ -368,6 +370,10 @@ Unpredictable Number [9f37]               C-3 Kernel 3 v2.10 page 110        38 
                                         writeToUiAppend(prettyPrintDataToString(gpoRequestResponse));
                                     }
                                 }
+
+                                // todo: if a (Visa-) card doesn't like the gpoRequest we should try with another 'Terminal Transaction Qualifiers' value,
+                                // todo: e.q. 'A0 00 00 00' or 'B7 60 40 00' instead of '27 00 00 00'
+
 /*
 MasterCard:
 77 16 -- Response Message Template Format 2
@@ -377,7 +383,7 @@ MasterCard:
             08 01 01 00 10 01 02 01 18 01 02 00 20 01 02 00 (BINARY)
 90 00 -- Command successfully executed (OK)
 
-VisaCard:
+VisaCard comd M using "Terminal Transaction Qualifiers", hexBlankToBytes("27 00 00 00")):
 77 81 C6 -- Response Message Template Format 2
          82 02 -- Application Interchange Profile
                20 20 (BINARY)
@@ -405,6 +411,62 @@ VisaCard:
                      77 50 DA 08 D6 E1 13 18 0C D7 52 02 40 BF A0 59
                      69 B0 F0 C3 D1 1E F0 60 C5 75 8D 85 D0 F8 E4 FF
                      5A CC 8F 35 C6 5B 4A 2B EB 0D B5 08 48 6A 14 92 (BINARY)
+90 00 -- Command successfully executed (OK)
+
+VisaCard comd M using "Terminal Transaction Qualifiers", hexBlankToBytes("A0 00 00 00"));
+77 81 C6 -- Response Message Template Format 2
+         82 02 -- Application Interchange Profile
+               20 20 (BINARY)
+         94 04 -- Application File Locator (AFL)
+               10 05 05 00 (BINARY)
+         57 13 -- Track 2 Equivalent Data
+               48 71 78 00 82 77 05 74 D2 50 72 21 13 28 66 21
+               01 00 0F (BINARY)
+         9F 10 07 -- Issuer Application Data
+                  06 01 12 03 A0 00 00 (BINARY)
+         9F 26 08 -- Application Cryptogram
+                  8C 17 05 B7 71 75 24 12 (BINARY)
+         9F 27 01 -- Cryptogram Information Data
+                  80 (BINARY)
+         9F 36 02 -- Application Transaction Counter (ATC)
+                  00 AF (BINARY)
+         9F 6C 02 -- Mag Stripe Application Version Number (Card)
+                  04 00 (BINARY)
+         9F 4B 81 80 -- Signed Dynamic Application Data
+                     00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+                     identical 5 lines
+                     00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+                     00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 (BINARY)
+90 00 -- Command successfully executed (OK)
+
+VisaCard comd M using "Terminal Transaction Qualifiers", hexBlankToBytes("B7 60 40 00"));
+77 81 C6 -- Response Message Template Format 2
+         82 02 -- Application Interchange Profile
+               20 20 (BINARY)
+         94 04 -- Application File Locator (AFL)
+               10 01 03 00 (BINARY)
+         57 13 -- Track 2 Equivalent Data
+               48 71 78 00 82 77 05 74 D2 50 72 21 13 28 66 21
+               01 00 0F (BINARY)
+         9F 10 07 -- Issuer Application Data
+                  06 01 12 03 A0 00 00 (BINARY)
+         9F 26 08 -- Application Cryptogram
+                  97 03 20 D9 80 6F 97 F4 (BINARY)
+         9F 27 01 -- Cryptogram Information Data
+                  80 (BINARY)
+         9F 36 02 -- Application Transaction Counter (ATC)
+                  00 B1 (BINARY)
+         9F 6C 02 -- Mag Stripe Application Version Number (Card)
+                  84 00 (BINARY)
+         9F 4B 81 80 -- Signed Dynamic Application Data
+                     0C B9 DD 65 9A 5C 64 24 29 B4 8D 87 0D 2B EF BD
+                     F3 07 D8 9C 54 73 53 32 D8 9B D4 C2 B8 DC 77 78
+                     AB C8 D9 F8 9C 9D 32 F4 B8 14 94 BE 7F D8 E5 CE
+                     02 74 03 77 0E AF B5 2B 36 C9 8A 20 FC 47 17 6D
+                     02 CC 0E 79 A3 C2 EF 83 F8 35 63 BF F6 91 65 16
+                     DC A9 19 D4 5C 35 43 29 6C E7 C1 3B 7B ED DC 05
+                     B1 96 F0 77 FB 07 F6 09 28 62 6C E0 6B 8D F3 30
+                     1D 0B E3 D4 FC A1 8A 46 54 47 35 F8 A2 B8 26 D7 (BINARY)
 90 00 -- Command successfully executed (OK)
 
 GiroCard (3 AIDs):
@@ -451,31 +513,86 @@ American Express Card:
 
                                 /**
                                  * We do have 3 scenarios to work with:
-                                 * a) the response contains a Track 2 Equivalent Data tag (tag 50x7)
+                                 * a) the response contains a Track 2 Equivalent Data tag (tag 0x57)
                                  * b) the response is of type 'Response Message Template Format 1' (tag 0x80)
                                  * c) the response is of type 'Response Message Template Format 2' (tag 0x77)
                                  */
+                                //System.out.println("*** gpoResponse ***");
+                                //System.out.println(prettyPrintDataToString(gpoRequestResponse));
+                                BerTlvs tlvsGpo = parser.parse(gpoRequestResponse);
+                                byte[] aflBytes = null;
 
                                 /**
                                  * workflow a)
                                  * The response contains a Track 2 Equivalent Data tag and from this we can directly
                                  * retrieve the Primary Application Number (PAN, here the Credit Card Number)
+                                 * found using a VisaCard
                                  */
+
+                                BerTlv tag57 = tlvsGpo.find(new BerTag(0x57));
+                                if (tag57 != null) {
+                                    writeToUiAppend("");
+                                    writeToUiAppend("workflow a)");
+                                    writeToUiAppend("the response contains a Track 2 Equivalent Data tag [tag 0x57]");
+                                    byte[] gpoResponseTag57 = tag57.getBytesValue();
+                                    writeToUiAppend("found tag 0x57 in the gpoResponse length: " + gpoResponseTag57.length + " data: " + bytesToHexNpe(gpoResponseTag57));
+                                    String pan = getPanFromTrack2EquivalentData(gpoResponseTag57);
+                                    String expDate = getExpirationDateFromTrack2EquivalentData(gpoResponseTag57);
+                                    writeToUiAppend("found a PAN " + pan + " with Expiration date: " + expDate);
+                                }
 
                                 /**
                                  * workflow b)
                                  * The response is of type 'Response Message Template Format 1' and we need to know
                                  * the meaning of each byte, so we need to parse the content to get the data for the
                                  * 'Application File Locator' (AFL).
+                                 * found using a American Express Card
                                  */
+
+                                BerTlv tag80 = tlvsGpo.find(new BerTag(0x80));
+                                if (tag80 != null) {
+                                    writeToUiAppend("");
+                                    writeToUiAppend("workflow b)");
+                                    writeToUiAppend("the response is of type 'Response Message Template Format 1' [tag 0x80]");
+                                    byte[] gpoResponseTag80 = tag80.getBytesValue();
+                                    writeToUiAppend("found tag 0x80 in the gpoResponse length: " + gpoResponseTag80.length + " data: " + bytesToHexNpe(gpoResponseTag80));
+                                    // tag80 contains the AIP (2 bytes) and AFL (multiple of 4 bytes)
+                                    // amexco:
+                                    // complete: 180008010100080303000805050010020200
+                                    // afl:      08010100080303000805050010020200
+                                    aflBytes = Arrays.copyOfRange(gpoResponseTag80,2, gpoResponseTag80.length);
+                                }
+
 
                                 /**
                                  * workflow c)
                                  * The response is of type 'Response Message Template Format 2' and we need to find
                                  * tag 0x94; the content is the 'Application File Locator' (AFL)
+                                 * found using a MasterCard
                                  */
 
+                                BerTlv tag77 = tlvsGpo.find(new BerTag(0x77));
+                                if (tag77 != null) {
+                                    writeToUiAppend("");
+                                    writeToUiAppend("workflow c)");
+                                    writeToUiAppend("the response is of type 'Response Message Template Format 2' [tag 0x77]");
+                                    writeToUiAppend("found tag 0x77 in the gpoResponse");
+                                }
+                                BerTlv tag94 = tlvsGpo.find(new BerTag(0x94));
+                                if (tag94 != null) {
+                                    writeToUiAppend("found 'AFL' [tag 0x94] in the response of type 'Response Message Template Format 2' [tag 0x77]");
+                                    byte[] gpoResponseTag94 = tag94.getBytesValue();
+                                    writeToUiAppend("found tag 0x94 in the gpoResponse length: " + gpoResponseTag94.length + " data: " + bytesToHexNpe(gpoResponseTag94));
+                                    // tag94 contains the AFL
+                                    // comd:   10010300
+                                    // mc old: 08010100100102011801020020010200
+                                    // girocard voba aid 1 a00000005945430100: 180101002001010020040400080505010807070108030301
+                                    aflBytes = gpoResponseTag94;
+                                }
 
+                                writeToUiAppend("");
+                                writeToUiAppend("found this AFL data in the gpoResponse to read from: " + bytesToHexNpe(aflBytes));
+                                
 
                                 /**
                                  * step 6 code end
@@ -586,6 +703,45 @@ MC AAB credit:
     /**
      * step xx code start
      */
+
+
+    private String getPanFromTrack2EquivalentData(byte[] track2Data) {
+        if (track2Data != null) {
+            String track2DataString = bytesToHex(track2Data);
+            int posSeparator = track2DataString.toUpperCase().indexOf("D");
+            return removeTrailingF(track2DataString.substring(0, posSeparator));
+        } else {
+            return "";
+        }
+    }
+
+    private String getExpirationDateFromTrack2EquivalentData(byte[] track2Data) {
+        if (track2Data != null) {
+            String track2DataString = bytesToHex(track2Data);
+            int posSeparator = track2DataString.toUpperCase().indexOf("D");
+            return track2DataString.substring((posSeparator + 1), (posSeparator + 5));
+        } else {
+            return "";
+        }
+    }
+
+    /**
+     * remove all trailing 0xF's trailing in the 16 byte length field tag 0x5a = PAN and in Track2EquivalentData
+     * PAN is padded with 'F' if not of length 16
+     *
+     * @param input
+     * @return
+     */
+    private String removeTrailingF(String input) {
+        int index;
+        for (index = input.length() - 1; index >= 0; index--) {
+            if (input.charAt(index) != 'f') {
+                break;
+            }
+        }
+        return input.substring(0, index + 1);
+    }
+
 
     /**
      * section for single read commands
