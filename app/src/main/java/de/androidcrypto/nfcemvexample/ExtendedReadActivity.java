@@ -459,8 +459,6 @@ I/System.out: ------------------------------------
                             writeToUiAppend(etLog, miApplicationCryptogram.dumpTsList());
 
 
-
-
                         } else {
                             writeToUiAppend(etLog, "could not get an application cryptogram");
                             writeToUiAppend(etLog, "response from card was: " + bytesToHexNpe(miApplicationCryptogram.getResponse()));
@@ -514,8 +512,7 @@ I/System.out: ------------------------------------
                     }
 
 
-
-                // for (int aidNumber = 0; aidNumber < moduleFoundAids; aidNumber++) {
+                    // for (int aidNumber = 0; aidNumber < moduleFoundAids; aidNumber++) {
                 }
 
                 printStepHeader(etLog, 9, "end experimental module");
@@ -920,85 +917,85 @@ I/System.out: ------------------------------------
                                      *        *3) get it from the card [optional]
                                      */
 
-                                    writeToUiAppend(etLog,"");
-                                    writeToUiAppend(etLog,"retrieve Issuer Public Key");
+                                    writeToUiAppend(etLog, "");
+                                    writeToUiAppend(etLog, "retrieve Issuer Public Key");
                                     // todo null check necessary
-                                    writeToUiAppend(etLog,"caAid: " + bytesToHexNpe(aidSelected) + " CAPK Index: " + bytesToHexNpe(tag8f_CertificationAuthorityPublicKeyIndex));
+                                    writeToUiAppend(etLog, "caAid: " + bytesToHexNpe(aidSelected) + " CAPK Index: " + bytesToHexNpe(tag8f_CertificationAuthorityPublicKeyIndex));
                                     byte[] caAid = aidSelected.clone();
                                     byte[] caKeyIndex = tag8f_CertificationAuthorityPublicKeyIndex.clone();
                                     // lookup the data
                                     byte[][] caKey = LookupCaPublicKeys.getCaPublicKey(caAid, caKeyIndex);
                                     if (caKey[0] == null) {
                                         writeToUiAppend(etLog, "could not find a CA Public Key in library");
-                                        return;
-                                    }
-                                    EmvKeyReader.RecoveredIssuerPublicKey retrievedIssuerPublicKey = DecryptUtils.retrieveIssuerPublicKey(caKey[1], caKey[0], tag90_IssuerPublicKeyCertificate, tag92_IssuerPublicKeyRemainder, tag9f32_IssuerPublicKeyExponent);
-                                    if (retrievedIssuerPublicKey != null) {
-                                        writeToUiAppend(etLog, "decryption of Issuer Public Key success");
-                                        writeToUiAppend(etLog, retrievedIssuerPublicKey.dump());
+
                                     } else {
-                                        writeToUiAppend(etLog, "decryption of Issuer Public Key failure");
-                                    }
+                                        EmvKeyReader.RecoveredIssuerPublicKey retrievedIssuerPublicKey = DecryptUtils.retrieveIssuerPublicKey(caKey[1], caKey[0], tag90_IssuerPublicKeyCertificate, tag92_IssuerPublicKeyRemainder, tag9f32_IssuerPublicKeyExponent);
+                                        if (retrievedIssuerPublicKey != null) {
+                                            writeToUiAppend(etLog, "decryption of Issuer Public Key success");
+                                            writeToUiAppend(etLog, retrievedIssuerPublicKey.dump());
+                                        } else {
+                                            writeToUiAppend(etLog, "decryption of Issuer Public Key failure");
+                                        }
 
-                                    /**
-                                     * decryption of the ICC Public Key Certificate
-                                     * @param issuerPublicKeyExponent  *1)
-                                     * @param issuerPublicKeyModulus   *1)
-                                     * @param iccPublicKeyCertificate  *2) tag 0x9f46
-                                     * @param iccPublicKeyRemainder    *3) tag 0x9f48
-                                     * @param iccPublicKeyExponent     *2) tag 0x9f47
-                                     * @return the recovered Issuer Public Key
-                                     *
-                                     * Notes: *1) get it from RecoveredIssuerPublicKey retrieveIssuerPublicKey
-                                     *        *2) get it from the card
-                                     *        *3) get it from the card [optional]
-                                     */
+                                        /**
+                                         * decryption of the ICC Public Key Certificate
+                                         * @param issuerPublicKeyExponent  *1)
+                                         * @param issuerPublicKeyModulus   *1)
+                                         * @param iccPublicKeyCertificate  *2) tag 0x9f46
+                                         * @param iccPublicKeyRemainder    *3) tag 0x9f48
+                                         * @param iccPublicKeyExponent     *2) tag 0x9f47
+                                         * @return the recovered Issuer Public Key
+                                         *
+                                         * Notes: *1) get it from RecoveredIssuerPublicKey retrieveIssuerPublicKey
+                                         *        *2) get it from the card
+                                         *        *3) get it from the card [optional]
+                                         */
 
-                                    writeToUiAppend(etLog,"");
-                                    EmvKeyReader.RecoveredIccPublicKey retrievedIccPublicKey = null;
-                                    if (retrievedIssuerPublicKey != null) {
-                                        writeToUiAppend(etLog, "retrieve ICC Public Key");
-                                        // check if we do have an IssuerPublicKeyRemainder,
-                                        byte[] issuerPublicKeyModulus = DecryptUtils.concatenateModulus(retrievedIssuerPublicKey.getLeftMostPubKeyDigits(), tag92_IssuerPublicKeyRemainder);
+                                        writeToUiAppend(etLog, "");
+                                        EmvKeyReader.RecoveredIccPublicKey retrievedIccPublicKey = null;
+                                        if (retrievedIssuerPublicKey != null) {
+                                            writeToUiAppend(etLog, "retrieve ICC Public Key");
+                                            // check if we do have an IssuerPublicKeyRemainder,
+                                            byte[] issuerPublicKeyModulus = DecryptUtils.concatenateModulus(retrievedIssuerPublicKey.getLeftMostPubKeyDigits(), tag92_IssuerPublicKeyRemainder);
 
-                                        retrievedIccPublicKey = DecryptUtils.retrieveIccPublicKey(tag9f32_IssuerPublicKeyExponent,
-                                                issuerPublicKeyModulus, tag9f46_IccPublicKeyCertificate,
-                                                tag9f48_IccPublicKeyRemainder, tag9f47_IccPublicKeyExponent);
+                                            retrievedIccPublicKey = DecryptUtils.retrieveIccPublicKey(tag9f32_IssuerPublicKeyExponent,
+                                                    issuerPublicKeyModulus, tag9f46_IccPublicKeyCertificate,
+                                                    tag9f48_IccPublicKeyRemainder, tag9f47_IccPublicKeyExponent);
+                                            if (retrievedIccPublicKey != null) {
+                                                writeToUiAppend(etLog, "decryption of ICC Public Key success");
+                                                writeToUiAppend(etLog, retrievedIccPublicKey.dump());
+                                            } else {
+                                                writeToUiAppend(etLog, "decryption of ICC Public Key failure");
+                                            }
+                                        }
+
+                                        /**
+                                         * decrypt data with ICC Public Key
+                                         * @param iccPublicKeyExponent                     *1)
+                                         * @param iccPublicKeyModulus                      *1)
+                                         * @param data, eg. SignedDynamicApplicationData   *2)
+                                         * @return the decrypted data
+                                         *
+                                         * Notes: *1) get it from RecoveredIccPublicKey retrieveIccPublicKey
+                                         *        *2) get it from the card
+                                         */
+                                        writeToUiAppend(etLog, "");
                                         if (retrievedIccPublicKey != null) {
-                                            writeToUiAppend(etLog, "decryption of ICC Public Key success");
-                                            writeToUiAppend(etLog, retrievedIccPublicKey.dump());
-                                        } else {
-                                            writeToUiAppend(etLog, "decryption of ICC Public Key failure");
+                                            writeToUiAppend(etLog, "decrypt SignedDynamicApplicationData");
+                                            // check if we do have an IssuerPublicKeyRemainder,
+                                            byte[] iccPublicKeyModulus = DecryptUtils.concatenateModulus(retrievedIccPublicKey.getLeftMostPubKeyDigits(), tag9f48_IccPublicKeyRemainder);
+
+                                            byte[] decryptedSignedDynamicApplicationData = DecryptUtils.decryptDataWithIccPublicKey(tag9f47_IccPublicKeyExponent,
+                                                    iccPublicKeyModulus, tag9f4b_SignedDynamicApplicationData);
+                                            if (decryptedSignedDynamicApplicationData != null) {
+                                                writeToUiAppend(etLog, "decryption of SignedDynamicApplicationData success");
+                                                SignedDynamicApplicationData signedDynamicApplicationData = new SignedDynamicApplicationData(decryptedSignedDynamicApplicationData);
+                                                writeToUiAppend(etLog, "parsed SignedDynamicApplicationData\n" + signedDynamicApplicationData.dump());
+                                            } else {
+                                                writeToUiAppend(etLog, "decryption of SignedDynamicApplicationData failure");
+                                            }
                                         }
                                     }
-
-                                    /**
-                                     * decrypt data with ICC Public Key
-                                     * @param iccPublicKeyExponent                     *1)
-                                     * @param iccPublicKeyModulus                      *1)
-                                     * @param data, eg. SignedDynamicApplicationData   *2)
-                                     * @return the decrypted data
-                                     *
-                                     * Notes: *1) get it from RecoveredIccPublicKey retrieveIccPublicKey
-                                     *        *2) get it from the card
-                                     */
-                                    writeToUiAppend(etLog,"");
-                                    if (retrievedIccPublicKey != null) {
-                                        writeToUiAppend(etLog, "decrypt SignedDynamicApplicationData");
-                                        // check if we do have an IssuerPublicKeyRemainder,
-                                        byte[] iccPublicKeyModulus = DecryptUtils.concatenateModulus(retrievedIccPublicKey.getLeftMostPubKeyDigits(), tag9f48_IccPublicKeyRemainder);
-
-                                        byte[] decryptedSignedDynamicApplicationData = DecryptUtils.decryptDataWithIccPublicKey(tag9f47_IccPublicKeyExponent,
-                                                iccPublicKeyModulus, tag9f4b_SignedDynamicApplicationData);
-                                        if (decryptedSignedDynamicApplicationData != null) {
-                                            writeToUiAppend(etLog, "decryption of SignedDynamicApplicationData success");
-                                            SignedDynamicApplicationData signedDynamicApplicationData = new SignedDynamicApplicationData(decryptedSignedDynamicApplicationData);
-                                            writeToUiAppend(etLog, "parsed SignedDynamicApplicationData\n" + signedDynamicApplicationData.dump());
-                                        } else {
-                                            writeToUiAppend(etLog, "decryption of SignedDynamicApplicationData failure");
-                                        }
-                                    }
-
  /*
  result visa comd m
 tag90_IssuerPublicKeyCertificate = hexToBytes("5ab54faf4ad810b3cca4ed42c38e1e768fca3187ed1be4196c6779c4633cbe88751889c12b05e10ee87cb198518793ff61e87534f66850e96239b76648429eced4cc207608d0d2a932dd9e8c4bb0d139c4eca59e1ef5f4708f72d80dc5b66c45f4566c91b55384dfdeabb55faa622c6764cc9fb4c4900b6ab2cec5abad9057e2cf63a881bb4ec2a5d96634d7c11366eb908a168d33aa3c544822fc83e74c104b9275b2ef1cf41375b404a260bbf8fb3d4452af3d0630bb1ec2a01676ba588ae7820727622a6d9df5c93a3ce807d54b79ae007c3d401f8787dc3e235e8b9ae6b1b9279328cb1ca94105434010f15eb07f487f4d5c94f4a5a7");
@@ -1020,7 +1017,7 @@ tag9f26_ApplicationCryptogram = hexToBytes("bffdfe76b1b8fc4e");
                             }
                         }
                     }
-                }
+                } // for - loop AIDs
                 // print the complete Log
                 writeToUiFinal(etLog);
                 setLoadingLayoutVisibility(false);
