@@ -637,7 +637,7 @@ American Express Card:
                                     byte offl = tag94BytesListEntry[3]; // offline authorization
                                     int sfiNew = (byte) sfiOrg | 0x04; // add 4 = set bit 3
                                     int numberOfRecordsToRead = (byteToInt(recL) - byteToInt(rec1) + 1);
-                                    writeToUiAppend("for SFI " + sfiOrg + " we read " + numberOfRecordsToRead + (numberOfRecordsToRead == 1 ? " record" : " records"));
+                                    writeToUiAppend("for SFI " + byteToHex(sfiOrg) + " we read " + numberOfRecordsToRead + (numberOfRecordsToRead == 1 ? " record" : " records"));
                                     // read records
                                     byte[] readRecordResponse = new byte[0];
                                     for (int iRecord = (int) rec1; iRecord <= (int) recL; iRecord++) {
@@ -705,6 +705,13 @@ American Express Card:
                                 /**
                                  * step 7 code start
                                  */
+
+
+                                writeToUiAppend(stepSeparatorString);
+                                /**
+                                 * step xx code end read log entry
+                                 */
+
 
                             } else { // if (selectAidResponseOk != null) {
                                 writeToUiAppend("the selecting AID command failed");
@@ -1131,6 +1138,16 @@ MC AAB credit:
      */
     public static int byteToInt(byte b) {
         return (int) b & 0xFF;
+    }
+
+    /**
+     * converts a byte to its hex string representation
+     * @param data
+     * @return
+     */
+    public static String byteToHex(byte data) {
+            int hex = data & 0xFF;
+            return Integer.toHexString(hex);
     }
 
     /**

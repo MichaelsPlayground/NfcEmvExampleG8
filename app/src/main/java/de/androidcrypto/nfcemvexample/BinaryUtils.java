@@ -287,4 +287,14 @@ public class BinaryUtils {
         return value;
     }
 
+    /**
+     * returns a byte to its hex string representation
+     * @param data
+     * @return
+     */
+    public static String byteToHex(byte data) {
+        int hex = data & 0xFF;
+        return Integer.toHexString(hex);
+    }
+
 }

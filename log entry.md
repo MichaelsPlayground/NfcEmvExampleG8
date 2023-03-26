@@ -1,86 +1,44 @@
-# I can not find the CA Public Keys for there AID's:
+# Log Entry
+
+```plaintext
+code for DKB - not working: 
+                                /**
+                                 * step xx code start read log entry
+                                 */
+                                // this manually forced for DKB Girocard:
+                                writeToUiAppend(stepSeparatorString);
+                                writeToUiAppend("DKB log file entries 19 0A");
+                                byte[] tag94BytesListEntry = hexToBytes("25010A00");
+                                byte sfiOrg = tag94BytesListEntry[0];
+                                byte rec1 = tag94BytesListEntry[1];
+                                byte recL = tag94BytesListEntry[2];
+                                byte offl = tag94BytesListEntry[3]; // offline authorization
+                                int sfiNew = (byte) sfiOrg | 0x04; // add 4 = set bit 3
+                                int numberOfRecordsToRead = (byteToInt(recL) - byteToInt(rec1) + 1);
+                                writeToUiAppend("for SFI " + byteToHex(sfiOrg) + " we read " + numberOfRecordsToRead + (numberOfRecordsToRead == 1 ? " record" : " records"));
+                                // read records
+                                byte[] readRecordResponse = new byte[0];
+                                for (int iRecord = (int) rec1; iRecord <= (int) recL; iRecord++) {
+                                    byte[] cmd = hexToBytes("00B2000400");
+                                    cmd[2] = (byte) (iRecord & 0x0FF);
+                                    cmd[3] |= (byte) (sfiNew & 0x0FF);
+                                    writeToUiAppend("readRecord  command length: " + cmd.length + " data: " + bytesToHex(cmd));
+                                    readRecordResponse = nfc.transceive(cmd);
+                                    byte[] readRecordResponseTag5a = null;
+                                    byte[] readRecordResponseTag5f24 = null;
+                                    if (readRecordResponse != null) {
+                                        writeToUiAppend("readRecord response length: " + readRecordResponse.length + " data: " + bytesToHex(readRecordResponse));
+                                        writeToUiAppend(prettyPrintDataToString(readRecordResponse));
+                                        System.out.println("readRecord response length: " + readRecordResponse.length + " data: " + bytesToHex(readRecordResponse));
+                                        System.out.println(prettyPrintDataToString(readRecordResponse));
+
+                                    } else {
+                                        writeToUiAppend("readRecord response was NULL");
+                                    }
+                                }
+```
 
 
-DKB:
-AID: a0000000032020 = Visa International Vpay
-caKeyIndex: 06
-
-DKB:
-AID: a0000000032010 = Visa International Vpay
-caKeyIndex: 06
-
-Voba
-AID: a00000005945430100 = Zentraler Kreditausschuss (ZKA) Girocard Electronic Cash
-caKeyIndex: 05
-
-DKB:
-AID: a00000005945430100 = Zentraler Kreditausschuss (ZKA) Girocard Electronic Cash
-caKeyIndex: 06
-
-Voba
-AID: a0000003591010028001 = Euro Alliance of Payment Schemes s.c.r.l. – EAPS Girocard EAPS
-caKeyIndex: 05
-
-DKB:
-AID: a0000003591010028001 = Euro Alliance of Payment Schemes s.c.r.l. – EAPS Girocard EAPS
-caKeyIndex: 06
-
-Voba
-AID: d27600002547410100 = ZKA Girocard ATM
-caKeyIndex: 05
-
-DKB:
-AID: d27600002547410100 = ZKA Girocard ATM
-caKeyIndex: 06
-
-
-short:
-RID: a000000003 caKeyIndex: 06 AID: a0000000032020 = Visa International Vpay
-RID: a000000003 caKeyIndex: 06 AID: a0000000032010 = Visa International Vpay
-RID: a000000059 caKeyIndex: 05 AID: a00000005945430100 = Zentraler Kreditausschuss (ZKA) Girocard Electronic Cash
-RID: a000000059 caKeyIndex: 06 AID: a00000005945430100 = Zentraler Kreditausschuss (ZKA) Girocard Electronic Cash
-RID: a000000359 caKeyIndex: 05 AID: a0000003591010028001 = Euro Alliance of Payment Schemes s.c.r.l. – EAPS Girocard EAPS
-RID: a000000359 caKeyIndex: 06 AID: a0000003591010028001 = Euro Alliance of Payment Schemes s.c.r.l. – EAPS Girocard EAPS
-RID: d276000025 caKeyIndex: 05 AID: d27600002547410100 = ZKA Girocard ATM
-RID: d276000025 caKeyIndex: 06 AID: d27600002547410100 = ZKA Girocard ATM
-
-Dear Sirs and Madams, 
-I'm a software developer from Germany working on an article series about reading a payment card with an Android Device over NFC.
-
-To get some data decrypted after retrieval from the card I need to know the CA Public Keys for the RID / CA Public Key Index
-(Certification Authorities Public Key index) combination.
-
-For all major credit cards like American Express, MasterCard and VisaCard the keys are published on the (public available) 
-"official" website https://www.eftlab.co.uk/knowledge-base/list-of-ca-public-keys. 
-
-Unfortunately the CA Public keys are not listed for those needed to work with German payment cards ("GiroCards") and I'm kindly  
-asking if you could provide the keys. 
-
-I do need the keys for these RID & CA Public Key index combinations:
-
-RID: a000000003 caKeyIndex: 06 AID: a0000000032020       Visa International Vpay
-RID: a000000003 caKeyIndex: 06 AID: a0000000032010       Visa International Vpay
-RID: a000000059 caKeyIndex: 05 AID: a00000005945430100   Zentraler Kreditausschuss (ZKA) Girocard Electronic Cash
-RID: a000000059 caKeyIndex: 06 AID: a00000005945430100   Zentraler Kreditausschuss (ZKA) Girocard Electronic Cash
-RID: a000000359 caKeyIndex: 05 AID: a0000003591010028001 Euro Alliance of Payment Schemes s.c.r.l. – EAPS Girocard EAPS
-RID: a000000359 caKeyIndex: 06 AID: a0000003591010028001 Euro Alliance of Payment Schemes s.c.r.l. – EAPS Girocard EAPS
-RID: d276000025 caKeyIndex: 05 AID: d27600002547410100   ZKA Girocard ATM
-RID: d276000025 caKeyIndex: 06 AID: d27600002547410100   ZKA Girocard ATM
-
-Thanks a lot for your kindly help.
-Kind regards
-Michael Fehr
-androidcrypto@gmx.de
-
-26.03.2023 over: https://www.eftlab.co.uk/contact-us
-
-https://www.emvco.com/registered-ids/?tax%5Bregistered-ids_categories%5D%5B73%5D%5B%5D=119
-Girocard Scheme (represented by Euro Kartensysteme GmbH)
-2A
-sabine.sieberling@eurokartensysteme.de
-
-
-/*
 Log Entry found in EMV 4.3 Book 3
 
 https://mvallim.github.io/emv-qrcode/docs/EMV_v4.3_Book_3_Application_Specification_20120607062110791.pdf
@@ -186,4 +144,4 @@ been passed to the card in the PDOL or CDOL data.
      0x46 = 70 dec
     fa5d049dd913369a828e12e6d6b106829cf30e94b7910cc77f885062adb73aac1c1ee636653af378d51f7b38431097f433feb2f7bc396ad3e39e2e21706bb7bb3d333a1254797e856fc5999e5eec9c97ffebcd049cb7c888293320cd5c15cc819e52800d8c7cd74c6cd019a000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000009000
 ```
-*/
+
