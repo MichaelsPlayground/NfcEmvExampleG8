@@ -14,6 +14,8 @@ import android.nfc.Tag;
 import android.nfc.tech.IsoDep;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.VibrationEffect;
+import android.os.Vibrator;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.Menu;
@@ -91,6 +93,7 @@ public class BasicNfcEmvActivity extends AppCompatActivity implements NfcAdapter
         clearData(etLog);
         Log.d(TAG, "NFC tag discovered");
         writeToUiAppend("NFC tag discovered");
+        playPing();
         setLoadingLayoutVisibility(true);
         byte[] tagId = tag.getId();
         writeToUiAppend("TagId: " + bytesToHexNpe(tagId));
@@ -176,7 +179,7 @@ public class BasicNfcEmvActivity extends AppCompatActivity implements NfcAdapter
 
                         /**
                          * step 2 code start
-                        */
+                         */
 
                         writeToUiAppend("");
                         printStepHeader(2, "search applications on card");
@@ -189,6 +192,7 @@ public class BasicNfcEmvActivity extends AppCompatActivity implements NfcAdapter
                         if (tag4fList.size() < 1) {
                             writeToUiAppend("there is no tag 0x4F available, stopping here");
                             setLoadingLayoutVisibility(false);
+                            vibrate();
                             try {
                                 nfc.close();
                             } catch (IOException e) {
@@ -196,7 +200,7 @@ public class BasicNfcEmvActivity extends AppCompatActivity implements NfcAdapter
                             }
                             return;
                         }
-                        writeToUiAppend("Found tag 0x4F " + tag4fList.size() + (tag4fList.size()==1?" time:":" times:"));
+                        writeToUiAppend("Found tag 0x4F " + tag4fList.size() + (tag4fList.size() == 1 ? " time:" : " times:"));
                         ArrayList<byte[]> aidList = new ArrayList<>();
                         for (int i4f = 0; i4f < tag4fList.size(); i4f++) {
                             BerTlv tlv4f = tag4fList.get(i4f);
@@ -226,7 +230,7 @@ public class BasicNfcEmvActivity extends AppCompatActivity implements NfcAdapter
                             writeToUiAppend("03 select AID response length " + selectAidResponse.length + " data: " + bytesToHexNpe(selectAidResponse));
                             writeToUiAppend(prettyPrintDataToString(selectAidResponse));
 
-                        //}
+                            //}
                             /**
                              * step 3 code end
                              */
@@ -278,7 +282,7 @@ public class BasicNfcEmvActivity extends AppCompatActivity implements NfcAdapter
                                     // using TagAndLength
                                     List<TagAndLength> pdolList = pdol.getTagAndLengthList();
                                     int pdolListSize = pdolList.size();
-                                    writeToUiAppend("The card is requesting " + pdolListSize + (pdolListSize==1?" tag":" tags") + " with length:");
+                                    writeToUiAppend("The card is requesting " + pdolListSize + (pdolListSize == 1 ? " tag" : " tags") + " with length:");
                                     for (int i = 0; i < pdolListSize; i++) {
                                         TagAndLength pdolEntry = pdolList.get(i);
                                         //writeToUiAppend("tag " + (i + 1) + " : " + pdolEntry.getTag().getName() + " [" +
@@ -329,7 +333,6 @@ Transaction Type [9c]                     C-3 Kernel 3 v2.10 page 110        00
 Unpredictable Number [9f37]               C-3 Kernel 3 v2.10 page 110        38 39 30 31
 
  */
-
 
 
                                     gpoRequestCommand = getGpoFromPdol(pdolValue);
@@ -539,6 +542,13 @@ American Express Card:
                                     String pan = getPanFromTrack2EquivalentData(gpoResponseTag57);
                                     String expDate = getExpirationDateFromTrack2EquivalentData(gpoResponseTag57);
                                     writeToUiAppend("found a PAN " + pan + " with Expiration date: " + expDate);
+                                    writeToUiAppend("");
+                                    printStepHeader(7, "print PAN & expire date");
+                                    writeToUiAppend("07 get PAN and Expiration date from tag 0x57 (Track 2 Equivalent Data)");
+                                    writeToUiAppend("data for AID " + aidSelected);
+                                    writeToUiAppend("PAN: " + pan);
+                                    writeToUiAppend("Expiration date (YYMM): " + expDate);
+                                    writeToUiAppend("");
                                 }
 
                                 /**
@@ -560,7 +570,7 @@ American Express Card:
                                     // amexco:
                                     // complete: 180008010100080303000805050010020200
                                     // afl:      08010100080303000805050010020200
-                                    aflBytes = Arrays.copyOfRange(gpoResponseTag80,2, gpoResponseTag80.length);
+                                    aflBytes = Arrays.copyOfRange(gpoResponseTag80, 2, gpoResponseTag80.length);
                                 }
 
 
@@ -592,7 +602,91 @@ American Express Card:
 
                                 writeToUiAppend("");
                                 writeToUiAppend("found this AFL data in the gpoResponse to read from: " + bytesToHexNpe(aflBytes));
-                                
+
+                                List<byte[]> tag94BytesList = divideArray(aflBytes, 4);
+                                int tag94BytesListLength = tag94BytesList.size();
+                                //writeToUiAppend(etLog, "tag94Bytes divided into " + tag94BytesListLength + " arrays");
+                                writeToUiAppend("");
+                                writeToUiAppend("The AFL contains " + tag94BytesListLength + (tag94BytesListLength == 1 ? " entry to read" : " entries to read"));
+
+                                // the AFL is a 4 byte long byte array, so I your aflBytes array is 12 bytes long there are three sets to read.
+
+                                /**
+                                 * now we are going to read the specified files from the card. The system is as follows:
+                                 * The first byte is the SFI, the second byte the first record to read,
+                                 * the third byte is the last record to read and byte 4 gives the number
+                                 * of sectors involved in offline authorization.
+                                 * Here an example: 10 01 03 00
+                                 * SFI:             10
+                                 * first record:       01
+                                 * last record:           03
+                                 * offline:                  00
+                                 * means that we are asked to read 3 records (number 1, 2 and 3) from SFI 10
+                                 *
+                                 * The fourth byte codes the number of records involved in offline data
+                                 * authentication starting with the record number coded in the second byte. The
+                                 * fourth byte may range from zero to the value of the third byte less the value of
+                                 * the second byte plus 1.
+                                 */
+
+                                for (int i = 0; i < tag94BytesListLength; i++) {
+                                    byte[] tag94BytesListEntry = tag94BytesList.get(i);
+                                    byte sfiOrg = tag94BytesListEntry[0];
+                                    byte rec1 = tag94BytesListEntry[1];
+                                    byte recL = tag94BytesListEntry[2];
+                                    byte offl = tag94BytesListEntry[3]; // offline authorization
+                                    int sfiNew = (byte) sfiOrg | 0x04; // add 4 = set bit 3
+                                    int numberOfRecordsToRead = (byteToInt(recL) - byteToInt(rec1) + 1);
+                                    writeToUiAppend("for SFI " + sfiOrg + " we read " + numberOfRecordsToRead + (numberOfRecordsToRead == 1 ? " record" : " records"));
+                                    // read records
+                                    byte[] readRecordResponse = new byte[0];
+                                    for (int iRecord = (int) rec1; iRecord <= (int) recL; iRecord++) {
+                                        byte[] cmd = hexToBytes("00B2000400");
+                                        cmd[2] = (byte) (iRecord & 0x0FF);
+                                        cmd[3] |= (byte) (sfiNew & 0x0FF);
+                                        writeToUiAppend("readRecord  command length: " + cmd.length + " data: " + bytesToHex(cmd));
+                                        readRecordResponse = nfc.transceive(cmd);
+                                        byte[] readRecordResponseTag5a = null;
+                                        byte[] readRecordResponseTag5f24 = null;
+                                        if (readRecordResponse != null) {
+                                            writeToUiAppend("readRecord response length: " + readRecordResponse.length + " data: " + bytesToHex(readRecordResponse));
+                                            writeToUiAppend(prettyPrintDataToString(readRecordResponse));
+                                            System.out.println("readRecord response length: " + readRecordResponse.length + " data: " + bytesToHex(readRecordResponse));
+                                            System.out.println(prettyPrintDataToString(readRecordResponse));
+
+                                            // checking for PAN and Expiration Date
+                                            try {
+                                                BerTlvs tlvsReadRecord = parser.parse(readRecordResponse);
+                                                BerTlv tag5a = tlvsReadRecord.find(new BerTag(0x5a));
+                                                if (tag5a != null) {
+                                                    readRecordResponseTag5a = tag5a.getBytesValue();
+                                                    writeToUiAppend("found tag 0x5a in the readRecordResponse length: " + readRecordResponseTag5a.length + " data: " + bytesToHexNpe(readRecordResponseTag5a));
+                                                }
+                                                BerTlv tag5f24 = tlvsReadRecord.find(new BerTag(0x5f, 0x24));
+                                                if (tag5f24 != null) {
+                                                    readRecordResponseTag5f24 = tag5f24.getBytesValue();
+                                                    writeToUiAppend("found tag 0x5f24 in the readRecordResponse length: " + readRecordResponseTag5f24.length + " data: " + bytesToHexNpe(readRecordResponseTag5f24));
+                                                }
+                                                if (readRecordResponseTag5a != null) {
+                                                    String readRecordPanString = removeTrailingF(bytesToHexNpe(readRecordResponseTag5a));
+                                                    String readRecordExpirationDateString = bytesToHexNpe(readRecordResponseTag5f24);
+                                                    writeToUiAppend("");
+                                                    printStepHeader(7, "print PAN & expire date");
+                                                    writeToUiAppend("07 get PAN and Expiration date from tag 0x57 (Track 2 Equivalent Data)");
+                                                    writeToUiAppend("data for AID " + bytesToHexNpe(aidSelected));
+                                                    writeToUiAppend("PAN: " + readRecordPanString);
+                                                    writeToUiAppend("Expiration date (YYMM): " + readRecordExpirationDateString);
+                                                    writeToUiAppend("");
+                                                }
+                                            } catch (RuntimeException e) {
+                                                System.out.println("Runtime Exception: " + e.getMessage());
+                                            }
+                                        } else {
+                                            writeToUiAppend("readRecord response was NULL");
+                                        }
+                                    }
+                                }
+
 
                                 /**
                                  * step 6 code end
@@ -621,13 +715,11 @@ American Express Card:
                              */
 
 
-
                         } // for (int aidNumber = 0; aidNumber < tag4fList.size(); aidNumber++) {
 
                         /**
                          * step 3 code end
                          */
-
 
 
                     } else {
@@ -657,12 +749,14 @@ MC AAB credit:
                      */
 
                     printStepHeader(99, "our journey ends");
+                    vibrate();
 
 
                 } catch (IOException e) {
                     writeToUiAppend("connection with card failure");
                     writeToUiAppend(e.getMessage());
-                    playPing();
+                    // playPing();
+                    vibrate();
                     writeToUiFinal(etLog);
                     setLoadingLayoutVisibility(false);
                     // throw new RuntimeException(e);
@@ -851,6 +945,7 @@ MC AAB credit:
     /**
      * printout of 4 single data elements
      * this method is Null Pointer Exception (NPE) safe
+     *
      * @param applicationTransactionCounter
      * @param pinTryCounter
      * @param lastOnlineATCRegister
@@ -950,7 +1045,7 @@ MC AAB credit:
 
     /**
      * step 5 code end
-    */
+     */
 
     /**
      * build a select apdu command
@@ -974,6 +1069,7 @@ MC AAB credit:
      * checks if the response has an 0x'9000' at the end means success
      * and the method returns the data without 0x'9000' at the end
      * if any other trailing bytes show up the method returns NULL
+     *
      * @param data
      * @return
      */
@@ -997,6 +1093,7 @@ MC AAB credit:
     /**
      * converts a byte array to a hex encoded string
      * This method is Null Pointer Exception (NPE) safe
+     *
      * @param bytes
      * @return hex encoded string
      */
@@ -1013,6 +1110,7 @@ MC AAB credit:
 
     /**
      * converts a hex encoded string to a byte array
+     *
      * @param str
      * @return
      */
@@ -1027,6 +1125,7 @@ MC AAB credit:
 
     /**
      * converts a byte to int
+     *
      * @param b
      * @return
      */
@@ -1036,11 +1135,30 @@ MC AAB credit:
 
     /**
      * converts an integer to a byte array
+     *
      * @param value
      * @return
      */
     public static byte[] intToByteArray(int value) {
         return new BigInteger(String.valueOf(value)).toByteArray();
+    }
+
+    /**
+     * splits a byte array in chunks
+     *
+     * @param source
+     * @param chunksize
+     * @return a List<byte[]> with sets of chunksize
+     */
+    private static List<byte[]> divideArray(byte[] source, int chunksize) {
+        List<byte[]> result = new ArrayList<byte[]>();
+        int start = 0;
+        while (start < source.length) {
+            int end = Math.min(source.length, start + chunksize);
+            result.add(Arrays.copyOfRange(source, start, end));
+            start += chunksize;
+        }
+        return result;
     }
 
     /**
@@ -1107,6 +1225,19 @@ MC AAB credit:
             }
         });
     }
+
+    /**
+     * vibrate
+     */
+    private void vibrate() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            ((Vibrator) getSystemService(VIBRATOR_SERVICE)).vibrate(VibrationEffect.createOneShot(150, 10));
+        } else {
+            Vibrator v = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+            v.vibrate(200);
+        }
+    }
+
 
     /**
      * play a sound when reading is done
