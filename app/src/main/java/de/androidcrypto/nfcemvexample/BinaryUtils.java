@@ -97,6 +97,19 @@ public class BinaryUtils {
     }
 
     /**
+     * converts a byte array to a hex encoded string
+     * This method is Null Pointer Exception (NPE) safe
+     * @param bytes
+     * @return hex encoded string with a blank after each value
+     */
+    public static String bytesToHexBlankNpe(byte[] bytes) {
+        if (bytes == null) return "";
+        StringBuffer result = new StringBuffer();
+        for (byte b : bytes) result.append(Integer.toString((b & 0xff) + 0x100, 16).substring(1)).append(" ");
+        return result.toString();
+    }
+
+    /**
      * converts a byte array to a formatted string with address, hex encoded values and ascii values
      * @param data
      * @param address int 0 as default, could be start address (offset)

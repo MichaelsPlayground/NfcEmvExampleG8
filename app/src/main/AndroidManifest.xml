@@ -3,7 +3,8 @@
     xmlns:tools="http://schemas.android.com/tools">
     <!-- needed for NFC -->
     <uses-permission android:name="android.permission.NFC" />
-    <uses-permission android:name="android.permission.VIBRATE" /> <!-- for sending an email intent -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- for sending an email intent -->
     <queries>
         <intent>
             <action android:name="android.intent.action.SENDTO" />

@@ -1,6 +1,7 @@
 package de.androidcrypto.nfcemvexample;
 
 import static de.androidcrypto.nfcemvexample.BinaryUtils.bytesToHex;
+import static de.androidcrypto.nfcemvexample.BinaryUtils.bytesToHexBlank;
 
 import android.app.Activity;
 import android.content.ClipData;
@@ -47,8 +48,6 @@ import java.util.Arrays;
 import java.util.List;
 
 import de.androidcrypto.nfcemvexample.nfccreditcards.DolValues;
-import de.androidcrypto.nfcemvexample.sasc.DOL;
-import de.androidcrypto.nfcemvexample.sasc.TagAndLength;
 
 public class BasicNfcEmvActivity extends AppCompatActivity implements NfcAdapter.ReaderCallback {
 
@@ -117,7 +116,6 @@ public class BasicNfcEmvActivity extends AppCompatActivity implements NfcAdapter
 
                     printStepHeader(0, "our journey begins");
 
-                    writeToUiAppend("abc");
 
                     /**
                      * step 1 code start
@@ -272,9 +270,28 @@ public class BasicNfcEmvActivity extends AppCompatActivity implements NfcAdapter
                                     writeToUiAppend("### processing the VisaCard and GiroCard path ###");
                                     writeToUiAppend("");
                                     byte[] pdolValue = tag9f38.getBytesValue();
-                                    writeToUiAppend("found tag 0x9F38 in the selectAid with this length: " + pdolValue.length + " data: " + bytesToHexNpe(pdolValue));
+                                    writeToUiAppend("found tag 0x9F38 (PDOL) in the selectAid with this length: " + pdolValue.length + " data: " + bytesToHexNpe(pdolValue));
 
-                                    // using code from DOL.java
+                                    /*
+                                    // using modified code from DOL.java sasc999, now returning List<com.github.devnied.emvnfccard.iso7816emv.TagAndLength>
+                                    DOL pdol = new DOL(DOL.Type.PDOL, pdolValue);
+                                    writeToUiAppend("");
+                                    writeToUiAppend(pdol.toString());
+
+                                    // using TagAndLength
+                                    List<com.github.devnied.emvnfccard.iso7816emv.TagAndLength> pdolList = pdol.getTagAndLengthList();
+                                    int pdolListSize = pdolList.size();
+                                    writeToUiAppend("The card is requesting " + pdolListSize + (pdolListSize == 1 ? " tag" : " tags") + " with length:");
+                                    for (int i = 0; i < pdolListSize; i++) {
+                                        com.github.devnied.emvnfccard.iso7816emv.TagAndLength pdolEntry = pdolList.get(i);
+                                        //writeToUiAppend("tag " + (i + 1) + " : " + pdolEntry.getTag().getName() + " [" +
+                                        writeToUiAppend("tag " + String.format("%02d", i + 1) + ": " + pdolEntry.getTag().getName() + " [" +
+                                                bytesToHexNpe(pdolEntry.getTag().getTagBytes()) +
+                                                "] length " + String.valueOf(pdolEntry.getLength()));
+                                    }
+*/
+                                    /*
+                                    // using code from DOL.java in sasc package
                                     DOL pdol = new DOL(DOL.Type.PDOL, pdolValue);
                                     writeToUiAppend("");
                                     writeToUiAppend(pdol.toString());
@@ -290,7 +307,7 @@ public class BasicNfcEmvActivity extends AppCompatActivity implements NfcAdapter
                                                 bytesToHexNpe(pdolEntry.getTag().getTagBytes()) +
                                                 "] length " + String.valueOf(pdolEntry.getLength()));
                                     }
-
+                                    */
 /*
 https://epay.de/regulatorische-anforderungen-fuer-pos-terminals/
 Was ist neu an der TA 7.2- und DC POS 3.0-Terminalzertifizierung?
@@ -298,6 +315,7 @@ Das von der DK definierte TA 7.2 enthält hauptsächlich neue Anforderungen an d
 Kontaktloses Bezahlen & Akzeptanz von girocards, die in mobilen Wallets gespeichert sind:
 NFC-Kernel des POS-Terminals wird von Mastercard-Kernel auf girocard eigenen Kernel umgestellt
 
+JCB + Visa Kernel 1
 girocard Kernel 2A
 MasterCard AID kernel 2
 Visa AID kernel 3
@@ -335,7 +353,13 @@ Unpredictable Number [9f37]               C-3 Kernel 3 v2.10 page 110        38 
  */
 
 
-                                    gpoRequestCommand = getGpoFromPdol(pdolValue);
+                                    //gpoRequestCommand = getGpoFromPdol(pdolValue);
+                                    byte[][] gpoRequestCommandArray = getGpoFromPdolExtended(pdolValue, 0);
+                                    gpoRequestCommand = gpoRequestCommandArray[0];
+                                    String pdolRequestString = new String(gpoRequestCommandArray[1], StandardCharsets.UTF_8);
+                                    writeToUiAppend("");
+                                    writeToUiAppend(pdolRequestString);
+
                                 } else { // if (tag9f38 != null) {
                                     /**
                                      * MasterCard code
@@ -345,7 +369,12 @@ Unpredictable Number [9f37]               C-3 Kernel 3 v2.10 page 110        38 
                                     writeToUiAppend("");
 
                                     writeToUiAppend("No PDOL found in the selectAid response, generating a 'null' PDOL");
-                                    gpoRequestCommand = getGpoFromPdol(new byte[0]); // empty PDOL
+                                    //gpoRequestCommand = getGpoFromPdol(new byte[0]); // empty PDOL
+                                    byte[][] gpoRequestCommandArray = getGpoFromPdolExtended(new byte[0], 0);
+                                    gpoRequestCommand = gpoRequestCommandArray[0];
+                                    String pdolRequestString = new String(gpoRequestCommandArray[1], StandardCharsets.UTF_8);
+                                    writeToUiAppend("");
+                                    writeToUiAppend(pdolRequestString);
                                 }
 
                                 writeToUiAppend("");
@@ -363,8 +392,9 @@ Unpredictable Number [9f37]               C-3 Kernel 3 v2.10 page 110        38 
                                  * and the card is irretrievable damaged.
                                  * DO NOT RUN THIS COMMAND IN A LOOP !
                                  */
-
+                                System.out.println("*** gpoRequestCommand: " + bytesToHexNpe(gpoRequestCommand));
                                 byte[] gpoRequestResponse = nfc.transceive(gpoRequestCommand);
+                                System.out.println("*** gpoRequestResponse: " + bytesToHexNpe(gpoRequestResponse));
                                 byte[] gpoRequestResponseOk;
                                 if (gpoRequestResponse != null) {
                                     writeToUiAppend("05 get the processing options response length: " + gpoRequestResponse.length + " data: " + bytesToHex(gpoRequestResponse));
@@ -672,7 +702,7 @@ American Express Card:
                                                     String readRecordExpirationDateString = bytesToHexNpe(readRecordResponseTag5f24);
                                                     writeToUiAppend("");
                                                     printStepHeader(7, "print PAN & expire date");
-                                                    writeToUiAppend("07 get PAN and Expiration date from tag 0x57 (Track 2 Equivalent Data)");
+                                                    writeToUiAppend("07 get PAN and Expiration date from tags 0x5a and 0x5f24");
                                                     writeToUiAppend("data for AID " + bytesToHexNpe(aidSelected));
                                                     writeToUiAppend("PAN: " + readRecordPanString);
                                                     writeToUiAppend("Expiration date (YYMM): " + readRecordExpirationDateString);
@@ -856,10 +886,9 @@ MC AAB credit:
         try {
             result = nfc.transceive(cmd);
         } catch (IOException e) {
-            System.out.println("* getApplicationTransactionCounter failed");
+            Log.e(TAG, "* getApplicationTransactionCounter failed");
             return null;
         }
-        System.out.println("*** getATC: " + bytesToHexNpe(result));
         // e.g. visa returns 9f360200459000
         // e.g. visa returns 9f36020045 9000
         byte[] resultOk = checkResponse(result);
@@ -876,7 +905,7 @@ MC AAB credit:
         try {
             result = nfc.transceive(cmd);
         } catch (IOException e) {
-            System.out.println("* getPinTryCounterCounter failed");
+            Log.e(TAG, "* getPinTryCounterCounter failed");
             return null;
         }
         byte[] resultOk = checkResponse(result);
@@ -893,7 +922,7 @@ MC AAB credit:
         try {
             result = nfc.transceive(cmd);
         } catch (IOException e) {
-            System.out.println("* getLastOnlineATCRegister failed");
+            Log.e(TAG, "* getLastOnlineATCRegister failed");
             return null;
         }
         byte[] resultOk = checkResponse(result);
@@ -910,7 +939,7 @@ MC AAB credit:
         try {
             result = nfc.transceive(cmd);
         } catch (IOException e) {
-            System.out.println("* getLastOnlineATCRegister failed");
+            Log.e(TAG, "* getLastOnlineATCRegister failed");
             return null;
         }
         byte[] resultOk = checkResponse(result);
@@ -1048,6 +1077,109 @@ MC AAB credit:
         String tagLength2dAnd2 = bytesToHexNpe(intToByteArray(valueOfTagSum + 2)); // length value + 2
         String constructedGpoCommandString = "80A80000" + tagLength2dAnd2 + "83" + tagLength2d + constructedGpoString + "00";
         return hexToBytes(constructedGpoCommandString);
+    }
+
+    /**
+     * construct the getProcessingOptions command using the provided pdol
+     * the default ttq is null, but another ttq can used if default ttq gives no result for later sending
+     * @param pdol
+     * @param ttq
+     * @return a byte[][] array
+     * [0] = getProcessingOptions command
+     * [1] = text table with requested tags from pdol with length and value
+     */
+    private byte[][] getGpoFromPdolExtended(@NonNull byte[] pdol, int ttq) {
+
+        // todo implement alternative ttq
+
+        byte[][] result = new byte[2][];
+
+        // get the tags in a list
+        List<com.github.devnied.emvnfccard.iso7816emv.TagAndLength> tagAndLength = TlvUtil.parseTagAndLength(pdol);
+        int tagAndLengthSize = tagAndLength.size();
+        StringBuilder returnString = new StringBuilder();
+        returnString.append("The card is requesting " + tagAndLengthSize + (tagAndLengthSize == 1 ? " tag" : " tags")).append(" in the PDOL").append("\n");
+        returnString.append("\n");
+        returnString.append("Tag  Tag Name                        Length Value").append("\n");
+        returnString.append("-----------------------------------------------------").append("\n");
+        if (tagAndLengthSize < 1) {
+            returnString.append("     no PDOL provided, returning an empty command").append("\n");
+            returnString.append("-----------------------------------------------------");
+            // there are no pdols in the list
+            //Log.e(TAG, "there are no PDOLs in the pdol array, aborted");
+            //return null;
+            // returning an empty PDOL
+            String tagLength2d = "00"; // length value
+            String tagLength2dAnd2 = "02"; // length value + 2
+            String constructedGpoCommandString = "80A80000" + tagLength2dAnd2 + "83" + tagLength2d + "" + "00";
+            result[0] = hexToBytes(constructedGpoCommandString);
+            result[1] = returnString.toString().getBytes(StandardCharsets.UTF_8);
+            return result;
+            //return hexToBytes(constructedGpoCommandString);
+        }
+        int valueOfTagSum = 0; // total length
+        StringBuilder sb = new StringBuilder(); // takes the default values of the tags
+        DolValues dolValues = new DolValues();
+        for (int i = 0; i < tagAndLengthSize; i++) {
+            // get a single tag
+            com.github.devnied.emvnfccard.iso7816emv.TagAndLength tal = tagAndLength.get(i); // eg 9f3704
+            byte[] tagToSearch = tal.getTag().getTagBytes(); // gives the tag 9f37
+            int lengthOfTag = tal.getLength(); // 4
+            String nameOfTag = tal.getTag().getName();
+            valueOfTagSum += tal.getLength(); // add it to the sum
+            // now we are trying to find a default value
+            byte[] defaultValue = dolValues.getDolValue(tagToSearch);
+            byte[] usedValue = new byte[0];
+            if (defaultValue != null) {
+                if (defaultValue.length > lengthOfTag) {
+                    // cut it to correct length
+                    usedValue = Arrays.copyOfRange(defaultValue, 0, lengthOfTag);
+                    Log.i(TAG, "asked for tag: " + bytesToHexNpe(tal.getTag().getTagBytes()) + " default is too long, cut to: " + bytesToHexNpe(usedValue));
+                } else if (defaultValue.length < lengthOfTag) {
+                    // increase length
+                    usedValue = new byte[lengthOfTag];
+                    System.arraycopy(defaultValue, 0, usedValue, 0, defaultValue.length);
+                    Log.i(TAG, "asked for tag: " + bytesToHexNpe(tal.getTag().getTagBytes()) + " default is too short, increased to: " + bytesToHexNpe(usedValue));
+                } else {
+                    // correct length
+                    usedValue = defaultValue.clone();
+                    Log.i(TAG, "asked for tag: " + bytesToHexNpe(tal.getTag().getTagBytes()) + " default found: " + bytesToHexNpe(usedValue));
+                }
+            } else {
+                // defaultValue is null means the tag was not found in our tags database for default values
+                usedValue = new byte[lengthOfTag];
+                Log.i(TAG, "asked for tag: " + bytesToHexNpe(tal.getTag().getTagBytes()) + " NO default found, generate zeroed: " + bytesToHexNpe(usedValue));
+            }
+            // now usedValue does have the correct length
+            sb.append(bytesToHexNpe(usedValue));
+            returnString.append(trimStringRight(bytesToHexNpe(tagToSearch),5)).append(trimStringRight(nameOfTag, 36)).append(trimStringRight(String.valueOf(lengthOfTag), 3)).append(bytesToHexBlank(usedValue)).append("\n");
+        }
+        returnString.append("-----------------------------------------------------").append("\n");
+        String constructedGpoString = sb.toString();
+        String tagLength2d = bytesToHexNpe(intToByteArray(valueOfTagSum)); // length value
+        String tagLength2dAnd2 = bytesToHexNpe(intToByteArray(valueOfTagSum + 2)); // length value + 2
+        String constructedGpoCommandString = "80A80000" + tagLength2dAnd2 + "83" + tagLength2d + constructedGpoString + "00";
+        result[0] = hexToBytes(constructedGpoCommandString);
+        result[1] = returnString.toString().getBytes(StandardCharsets.UTF_8);
+        return result;
+        //return hexToBytes(constructedGpoCommandString);
+    }
+
+    /**
+     * add blanks to a string on right side up to a length of len
+     * if the data.length >= len one character is deleted to get minimum one blank
+     * @param data
+     * @param len
+     * @return
+     */
+    private String trimStringRight(String data, int len) {
+        if (data.length() >= len) {
+            data = data.substring(0, (len - 1));
+        }
+        while (data.length() < len) {
+            data = data + " ";
+        }
+        return data;
     }
 
     /**
@@ -1254,7 +1386,6 @@ MC AAB credit:
             v.vibrate(200);
         }
     }
-
 
     /**
      * play a sound when reading is done

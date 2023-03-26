@@ -16,7 +16,20 @@ Soundfiles: https://mobcup.net/ringtone/ping-euf272ye/download/mp3
 
 For prettyPrint: include implementation 'com.github.devnied.emvnfccard:library:3.0.1'
 
-For TLV-handling (BER-TLV): 
+Source: https://github.com/devnied/EMV-NFC-Paycard-Enrollment
+
+written by Julien Millau (devnied)
+
+For TLV-handling (BER-TLV): implementation 'com.payneteasy:ber-tlv:1.0-11'
+
+Source: https://github.com/evsinev/ber-tlv
+
+Screenshot of the running app after startup:
+![server_view_after_starting](docs/server00.png?raw=true)
+
+EMV Book 4.3 Kernel 3 version 2.10: [PDF](docs/books/C-3-Kernel-3-v2.10.pdf?raw=true)
+
+![server_view_after_starting](docs/server00.png?raw=true)
 
 ## Permission handling
 
