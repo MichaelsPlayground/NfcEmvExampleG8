@@ -446,22 +446,26 @@ I/System.out: ------------------------------------
                         printStepHeader(etLog, 10, "application crypto");
                         writeToUiAppend(etLog, "get the application cryptogram from CDOL1: " + bytesToHexNpe(tag8c_CDOL1));
                         ModuleInfo miApplicationCryptogram = EmvModules.getApplicationCryptogram(nfc, tag8c_CDOL1);
-                        if (miApplicationCryptogram.isSuccess()) {
-                            writeToUiAppend(etLog, "10 get application cryptogram command length " + miApplicationCryptogram.getCommand().length + " data: " + bytesToHex(miApplicationCryptogram.getCommand()));
-                            writeToUiAppend(etLog, "10 get application cryptogram response length " + miApplicationCryptogram.getResponse().length + " data: " + bytesToHex(miApplicationCryptogram.getResponse()));
-                            //writeToUiAppend(etLog, miApplicationCryptogram.dumpTsList());
-                            writeToUiAppend(etLog, miApplicationCryptogram.getPrettyPrint());
-                            writeToUiAppend(etLog, "number of tags found: " + miApplicationCryptogram.getTsList().size());
-                            aidTsList.addAll(miApplicationCryptogram.getTsList());
+                        if (miApplicationCryptogram != null) {
+                            if (miApplicationCryptogram.isSuccess()) {
+                                writeToUiAppend(etLog, "10 get application cryptogram command length " + miApplicationCryptogram.getCommand().length + " data: " + bytesToHex(miApplicationCryptogram.getCommand()));
+                                writeToUiAppend(etLog, "10 get application cryptogram response length " + miApplicationCryptogram.getResponse().length + " data: " + bytesToHex(miApplicationCryptogram.getResponse()));
+                                //writeToUiAppend(etLog, miApplicationCryptogram.dumpTsList());
+                                writeToUiAppend(etLog, miApplicationCryptogram.getPrettyPrint());
+                                writeToUiAppend(etLog, "number of tags found: " + miApplicationCryptogram.getTsList().size());
+                                aidTsList.addAll(miApplicationCryptogram.getTsList());
 
-                            // the response could be a tag 0x80 Response Message Template Format 1
-                            // for that we do need a dedicated dump tio get the individual tags
-                            writeToUiAppend(etLog, miApplicationCryptogram.dumpTsList());
+                                // the response could be a tag 0x80 Response Message Template Format 1
+                                // for that we do need a dedicated dump tio get the individual tags
+                                writeToUiAppend(etLog, miApplicationCryptogram.dumpTsList());
 
 
+                            } else {
+                                writeToUiAppend(etLog, "could not get an application cryptogram");
+                                writeToUiAppend(etLog, "response from card was: " + bytesToHexNpe(miApplicationCryptogram.getResponse()));
+                            }
                         } else {
                             writeToUiAppend(etLog, "could not get an application cryptogram");
-                            writeToUiAppend(etLog, "response from card was: " + bytesToHexNpe(miApplicationCryptogram.getResponse()));
                         }
                     } else {
                         writeToUiAppend(etLog, "could not get an application cryptogram");
@@ -927,6 +931,13 @@ I/System.out: ------------------------------------
                                     byte[][] caKey = LookupCaPublicKeys.getCaPublicKey(caAid, caKeyIndex);
                                     if (caKey[0] == null) {
                                         writeToUiAppend(etLog, "could not find a CA Public Key in library");
+
+                                        writeToUiAppend(etLog, lineSeparatorString);
+                                        writeToUiAppend(etLog,"Unknown CA Public Key");
+                                        writeToUiAppend(etLog,"AID: " + aidSelectedForAnalyze + " = " + aidSelectedForAnalyzeName);
+                                        writeToUiAppend(etLog, "caKeyIndex: " + bytesToHexNpe(caKeyIndex));
+                                        writeToUiAppend(etLog, lineSeparatorString);
+
 
                                     } else {
                                         EmvKeyReader.RecoveredIssuerPublicKey retrievedIssuerPublicKey = DecryptUtils.retrieveIssuerPublicKey(caKey[1], caKey[0], tag90_IssuerPublicKeyCertificate, tag92_IssuerPublicKeyRemainder, tag9f32_IssuerPublicKeyExponent);

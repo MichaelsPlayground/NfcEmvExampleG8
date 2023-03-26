@@ -33,6 +33,11 @@ public class LookupCaPublicKeys {
 
     // VisaCard
 
+    private static final byte[] caPublicKeyVisa06Rid = hexToBytes("A000000003");
+    private static final byte[] caPublicKeyVisa06Index = hexToBytes("06");
+    private static final byte[] caPublicKeyVisa06Modulus = hexToBytes("F934FC032BE59B609A9A649E04446F1B365D1D23A1E6574E490170527EDF32F398326159B39B63D07E95E6276D7FCBB786925182BC0667FBD8F6566B361CA41A38DDF227091B87FA4F47BAC780AC47E15A6A0FB65393EB3473E8D193A07EB579");
+    private static final byte[] caPublicKeyVisa06Exponent = hexToBytes(("03"));
+
     private static final byte[] caPublicKeyVisa08Rid = hexToBytes("A000000003");
     private static final byte[] caPublicKeyVisa08Index = hexToBytes("08");
     private static final byte[] caPublicKeyVisa08Modulus = hexToBytes("9D912248DE0A4E39C1A7DDE3F6D2588992C1A4095AFBD1824D1BA74847F2BC4926D2EFD904B4B54954CD189A54C5D1179654F8F9B0D2AB5F0357EB642FEDA95D3912C6576945FAB897E7062CAA44A4AA06B8FE6E3DBA18AF6AE3738E30429EE9BE03427C9D64F695FA8CAB4BFE376853EA34AD1D76BFCAD15908C077FFE6DC5521ECEF5D278A96E26F57359FFAEDA19434B937F1AD999DC5C41EB11935B44C18100E857F431A4A5A6BB65114F174C2D7B59FDF237D6BB1DD0916E644D709DED56481477C75D95CDD68254615F7740EC07F330AC5D67BCD75BF23D28A140826C026DBDE971A37CD3EF9B8DF644AC385010501EFC6509D7A41");
@@ -75,6 +80,10 @@ public class LookupCaPublicKeys {
         if ((Arrays.equals(rid, caPublicKeyMc06Rid)  && (Arrays.equals(caPublicKeyIndex, caPublicKeyMc06Index)))){
             caKey[0] = caPublicKeyMc06Modulus;
             caKey[1] = caPublicKeyMc06Exponent;
+        }
+        if ((Arrays.equals(rid, caPublicKeyVisa06Rid)  && (Arrays.equals(caPublicKeyIndex, caPublicKeyVisa06Index)))){
+            caKey[0] = caPublicKeyVisa06Modulus;
+            caKey[1] = caPublicKeyVisa06Exponent;
         }
         if ((Arrays.equals(rid, caPublicKeyVisa08Rid)  && (Arrays.equals(caPublicKeyIndex, caPublicKeyVisa08Index)))){
             caKey[0] = caPublicKeyVisa08Modulus;
