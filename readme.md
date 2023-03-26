@@ -29,7 +29,7 @@ Screenshot of the running app after startup:
 
 EMV Book 4.3 Kernel 3 version 2.10: ![PDF](docs/books/C-3-Kernel-3-v2.10.pdf?raw=true)
 
-![server_view_after_starting](docs/server00.png?raw=true)
+![pdf](docs/server00.png?raw=true)
 
 ## Permission handling
 
