@@ -29,6 +29,10 @@ Screenshot of the running app after startup:
 
 EMV Book 4.3 Kernel 3 version 2.10: ![PDF](docs/books/C-3-Kernel-3-v2.10.pdf?raw=true)
 
+EMV Book 4.3 Kernel 3 version 2.10: https://docs.google.com/viewer?url=https://raw.githubusercontent.com/dirask/dirask-tutorials/master/dirask-tutorials-java/src/main/java/com/dirask/java_coding_convention/Java_Coding_Style_Guide.pdf
+
+
+
 ![pdf](docs/server00.png?raw=true)
 
 ## Permission handling
