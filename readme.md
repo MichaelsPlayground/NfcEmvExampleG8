@@ -71,6 +71,8 @@ Resource to find codes like Country Code, Currency Code etc: https://github.com/
 
 Complete list of APDU responses: https://www.eftlab.com/knowledge-base/complete-list-of-apdu-responses
 
+Complete list of Application Identifiers (AID): https://www.eftlab.com/knowledge-base/complete-list-of-application-identifiers-aid
+
 ## Permission handling
 
 For some categories we do need permissions (declared in AndroidManifest.xml) and sometimes a 
