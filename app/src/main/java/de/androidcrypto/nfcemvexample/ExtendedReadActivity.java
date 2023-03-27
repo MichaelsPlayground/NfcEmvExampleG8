@@ -86,6 +86,8 @@ import de.androidcrypto.nfcemvexample.sasc.Pan;
 import de.androidcrypto.nfcemvexample.sasc.TerminalTransactionQualifiers;
 import de.androidcrypto.nfcemvexample.sasc.TerminalVerificationResults;
 import de.androidcrypto.nfcemvexample.sasc.Track2EquivalentData;
+import de.androidcrypto.nfcemvexample.sasc.TransactionStatusInformation;
+import de.androidcrypto.nfcemvexample.sasc.TransactionType;
 
 public class ExtendedReadActivity extends AppCompatActivity implements NfcAdapter.ReaderCallback {
 
@@ -1076,6 +1078,21 @@ I/System.out: ------------------------------------
                                     } else {
                                         writeToUiAppend(etLog, "tag 0x57 Track2EquivalentData is NULL");
                                     }
+                                    writeToUiAppend(etLog, "");
+
+                                    // TransactionStatusInformation
+                                    TransactionStatusInformation tsi;
+                                    tsi = new TransactionStatusInformation((byte)0x68, (byte)0x00);
+                                    writeToUiAppend(etLog, tsi.toString());
+                                    tsi = new TransactionStatusInformation((byte)0xE8, (byte)0x00);
+                                    writeToUiAppend(etLog, tsi.toString()); //VISA Comfort Hotel
+                                    tsi = new TransactionStatusInformation((byte)0xF8, (byte)0x00);
+                                    writeToUiAppend(etLog, "");
+
+                                    // TransactionType
+                                    System.out.println(new TransactionType((byte)0x01));
+                                    writeToUiAppend(etLog, "");
+
 
                                     writeToUiAppend(etLog, "");
 
