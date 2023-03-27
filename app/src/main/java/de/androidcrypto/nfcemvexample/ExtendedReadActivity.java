@@ -79,6 +79,13 @@ import de.androidcrypto.nfcemvexample.nfccreditcards.ModuleInfo;
 import de.androidcrypto.nfcemvexample.nfccreditcards.PdolUtil;
 import de.androidcrypto.nfcemvexample.paymentcardgenerator.CardType;
 import de.androidcrypto.nfcemvexample.paymentcardgenerator.PaymentCardGeneratorImpl;
+import de.androidcrypto.nfcemvexample.sasc.ApplicationInterchangeProfile;
+import de.androidcrypto.nfcemvexample.sasc.ApplicationUsageControl;
+import de.androidcrypto.nfcemvexample.sasc.IIN_DB;
+import de.androidcrypto.nfcemvexample.sasc.Pan;
+import de.androidcrypto.nfcemvexample.sasc.TerminalTransactionQualifiers;
+import de.androidcrypto.nfcemvexample.sasc.TerminalVerificationResults;
+import de.androidcrypto.nfcemvexample.sasc.Track2EquivalentData;
 
 public class ExtendedReadActivity extends AppCompatActivity implements NfcAdapter.ReaderCallback {
 
@@ -471,34 +478,7 @@ I/System.out: ------------------------------------
                         writeToUiAppend(etLog, "could not get an application cryptogram");
                     }
 
-                    writeToUiAppend(etLog, "");
-                    printStepHeader(etLog, 10, "data dumps");
-                    // AIP
-                    byte[] tag82_AIP = EmvModules.getTagValueFromList(aidTsList, new byte[]{(byte) 0x82});
-                    if (tag82_AIP != null) {
-                        writeToUiAppend(etLog, "Application Interchange Profile (AIP) data: " + bytesToHexBlank(tag82_AIP));
-                        writeToUiAppend(etLog, EmvModules.dumpAip(tag82_AIP));
-                    } else {
-                        writeToUiAppend(etLog, "no Application Interchange Profile (AIP) found in the tag list");
-                    }
-                    // CryptogramInformationData
-                    writeToUiAppend(etLog, "");
-                    byte[] tag9f27 = EmvModules.getTagValueFromList(aidTsList, new byte[]{(byte) 0x9f, (byte) 0x27});
-                    if (tag9f27 != null) {
-                        writeToUiAppend(etLog, "Cryptogram Information Data (CID) data: " + bytesToHexBlank(tag9f27));
-                        writeToUiAppend(etLog, EmvCryptoModules.dumpCryptogramInformationData(tag9f27[0]));
-                    } else {
-                        writeToUiAppend(etLog, "no Cryptogram Information Data (CID) data found in the tag list");
-                    }
-                    // 0x8e = Cardholder Verification Method list
-                    writeToUiAppend(etLog, "");
-                    byte[] tag8e = EmvModules.getTagValueFromList(aidTsList, new byte[]{(byte) 0x8e});
-                    if (tag8e != null) {
-                        writeToUiAppend(etLog, "Cardholder Verification Method list data: " + bytesToHexBlank(tag8e));
-                        writeToUiAppend(etLog, EmvCryptoModules.dumpCvmList(tag8e));
-                    } else {
-                        writeToUiAppend(etLog, "no Cardholder Verification Method list data found in the tag list");
-                    }
+
 
                     // place this at the end as the next readings get no response
                     // single readings
@@ -1008,7 +988,99 @@ I/System.out: ------------------------------------
                                         }
                                     }
 
-                                    // check for Application Usage Control, ApplicationInterchangeProfile, CryptogramInformationData (SASC)
+
+                                    writeToUiAppend(etLog, "");
+                                    printStepHeader(etLog, 10, "data dumps");
+                                    writeToUiAppend(etLog, "");
+                                    // AIP
+                                    byte[] tag82_AIP = EmvModules.getTagValueFromList(aidTsList, new byte[]{(byte) 0x82});
+                                    if (tag82_AIP != null) {
+                                        writeToUiAppend(etLog, "Application Interchange Profile (AIP) data: " + bytesToHexBlank(tag82_AIP));
+                                        writeToUiAppend(etLog, EmvModules.dumpAip(tag82_AIP));
+                                    } else {
+                                        writeToUiAppend(etLog, "no Application Interchange Profile (AIP) found in the tag list");
+                                    }
+                                    writeToUiAppend(etLog, "");
+                                    // CryptogramInformationData
+                                    writeToUiAppend(etLog, "");
+                                    byte[] tag9f27 = EmvModules.getTagValueFromList(aidTsList, new byte[]{(byte) 0x9f, (byte) 0x27});
+                                    if (tag9f27 != null) {
+                                        writeToUiAppend(etLog, "Cryptogram Information Data (CID) data: " + bytesToHexBlank(tag9f27));
+                                        writeToUiAppend(etLog, EmvCryptoModules.dumpCryptogramInformationData(tag9f27[0]));
+                                    } else {
+                                        writeToUiAppend(etLog, "no Cryptogram Information Data (CID) data found in the tag list");
+                                    }
+                                    writeToUiAppend(etLog, "");
+                                    // 0x8e = Cardholder Verification Method list
+                                    writeToUiAppend(etLog, "");
+                                    byte[] tag8e = EmvModules.getTagValueFromList(aidTsList, new byte[]{(byte) 0x8e});
+                                    if (tag8e != null) {
+                                        writeToUiAppend(etLog, "Cardholder Verification Method list data: " + bytesToHexBlank(tag8e));
+                                        writeToUiAppend(etLog, EmvCryptoModules.dumpCvmList(tag8e));
+                                    } else {
+                                        writeToUiAppend(etLog, "no Cardholder Verification Method list data found in the tag list");
+                                    }
+
+                                    writeToUiAppend(etLog, "");
+                                    // 9f07 = application Usage Control, MC found in read record
+                                    byte[] tag9f07_auc = getTagValueFromList(aidTsList, new byte[]{(byte) 0x9f, (byte) 0x07});
+                                    if (tag9f07_auc != null) {
+                                        writeToUiAppend(etLog, "tag 0x9f07 Application Usage Control: " + bytesToHexNpe(tag9f07_auc));
+                                        ApplicationUsageControl auc = new ApplicationUsageControl(tag9f07_auc[0], tag9f07_auc[1]);
+                                        writeToUiAppend(etLog, auc.toString());
+                                    } else {
+                                        writeToUiAppend(etLog, "tag 0x9f07 Application Usage Control is NULL");
+                                    }
+
+                                    writeToUiAppend(etLog, "");
+                                    // 5a = PAN
+                                    // you need a file in the resources folder: iin_bin_list.txt
+                                    IIN_DB.initialize();
+                                    byte[] tag5a_pan = EmvModules.getTagValueFromList(aidTsList, new byte[]{(byte) 0x5a});
+                                    if (tag5a_pan != null) {
+                                        writeToUiAppend(etLog, "tag 0x5a PAN: " + bytesToHexNpe(tag5a_pan));
+                                        Pan pan = new Pan(tag5a_pan);
+                                        writeToUiAppend(etLog, pan.toString());
+                                    } else {
+                                        writeToUiAppend(etLog, "tag 0x5a PAN is NULL");
+                                    }
+                                    writeToUiAppend(etLog, "");
+
+                                    // Terminal TransactionQualifiers
+                                    writeToUiAppend(etLog, "build Terminal TransactionQualifiers");
+                                    TerminalTransactionQualifiers ttq = new TerminalTransactionQualifiers();
+                                    ttq.setContactlessEMVmodeSupported(true);
+                                    ttq.setReaderIsOfflineOnly(true);
+                                    writeToUiAppend(etLog, ttq.toString());
+                                    writeToUiAppend(etLog, "data: " + bytesToHexNpe(ttq.getBytes()));
+                                    writeToUiAppend(etLog, "");
+
+                                    writeToUiAppend(etLog, "");
+                                    // TerminalVerificationResults
+                                    writeToUiAppend(etLog, "build TerminalVerificationResults");
+                                    TerminalVerificationResults tvr = new TerminalVerificationResults();
+                                    tvr.setICCDataMissing(true);
+                                    tvr.setPinEntryRequired_PINPadPresent_ButPINWasNotEntered(true);
+                                    writeToUiAppend(etLog, tvr.toString());
+                                    tvr.setPinEntryRequired_PINPadPresent_ButPINWasNotEntered(false);
+                                    tvr.setNewCard(true);
+                                    writeToUiAppend(etLog, tvr.toString());
+
+                                    writeToUiAppend(etLog, "");
+                                    // 57 = Track2EquivalentData
+                                    byte[] tag57_t2ed = getTagValueFromList(aidTsList, new byte[]{(byte) 0x57});
+                                    if (tag57_t2ed != null) {
+                                        writeToUiAppend(etLog, "tag 0x57 Track2EquivalentData: " + bytesToHexNpe(tag57_t2ed));
+                                        Track2EquivalentData track2EquivalentData = new Track2EquivalentData(tag57_t2ed);
+                                        writeToUiAppend(etLog, track2EquivalentData.toString());
+                                    } else {
+                                        writeToUiAppend(etLog, "tag 0x57 Track2EquivalentData is NULL");
+                                    }
+
+                                    writeToUiAppend(etLog, "");
+
+
+
 
  /*
  result visa comd m

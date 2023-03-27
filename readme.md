@@ -73,6 +73,13 @@ Complete list of APDU responses: https://www.eftlab.com/knowledge-base/complete-
 
 Complete list of Application Identifiers (AID): https://www.eftlab.com/knowledge-base/complete-list-of-application-identifiers-aid
 
+
+Additional software: https://github.com/sasc999/javaemvreader
+
+Newer versions: https://github.com/maciejsszmigiero/javaemvreader
+
+Test as add-ons: ApplicationInterchangeProfile.java
+
 ## Permission handling
 
 For some categories we do need permissions (declared in AndroidManifest.xml) and sometimes a 
