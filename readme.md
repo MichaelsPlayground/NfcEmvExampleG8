@@ -65,7 +65,11 @@ Kernel 7 (UnionPay) version 2.9.1: ![Download PDF](docs/books/C-7-Kernel-7-v2-9-
 
 Kernel 8 (unknown) version 1.0: ![Download PDF](docs/books/C-8-Kernel-8-V1.0.pdf?raw=true)
 
+Online BER-TLV decoder: https://emvlab.org/tlvutils/
+
 Resource to find codes like Country Code, Currency Code etc: https://github.com/binaryfoo/emv-bertlv/tree/master/src/main/resources
+
+Complete list of APDU responses: https://www.eftlab.com/knowledge-base/complete-list-of-apdu-responses
 
 ## Permission handling
 
