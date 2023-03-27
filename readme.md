@@ -45,8 +45,11 @@ EMV Contactless Book A (Architecture and General Rqmtsn) version 2.10: ![Downloa
 
 EMV Contactless Book B (Entry Point Specification) version 2.10: ![Download PDF](docs/books/EMV-Contactless-Book-B-Entry-Point-Specification-v2.10.pdf?raw=true)
 
+EMV Contactless Book C see below Kernel 1..8
 
-Kernel 1 (Master- & VisaCard old ?) version ?: not available
+EMV Contactless Book D (Communication Protocol) version 2.6: ![Download PDF](docs/books/D_EMV_Contactless_Communication_Protocol_v2.6_20160301114325655.pdf?raw=true) 
+
+Kernel 1 (Master- & VisaCard old ?) version 2.6: ![Download PDF](docs/books/C-1_Kernel_1_v2.6_20160512101416661.pdf?raw=true) 
 
 Kernel 2 (MasterCard) version 2.10: ![Download PDF](docs/books/C-2-Kernel-2-v2.10.pdf?raw=true)
 
@@ -58,7 +61,7 @@ Kernel 5 (JCB) version 2.10: ![Download PDF](docs/books/C-5_Kernel-5-v2.10.pdf?r
 
 Kernel 6 (Discover) version 2.6: ![Download PDF](docs/books/C-6_Kernel_6_v2.6_20160512101849195.pdf?raw=true)
 
-Kernel 7 (UnionPay) version ?: not available: C-7_Kernel_7_v2.6_20160512101943350.pdf
+Kernel 7 (UnionPay) version 2.9.1: ![Download PDF](docs/books/C-7-Kernel-7-v2-9-1.pdf?raw=true)
 
 Kernel 8 (unknown) version 1.0: ![Download PDF](docs/books/C-8-Kernel-8-V1.0.pdf?raw=true)
 
