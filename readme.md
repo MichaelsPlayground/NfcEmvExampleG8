@@ -27,13 +27,42 @@ Source: https://github.com/evsinev/ber-tlv
 Screenshot of the running app after startup:
 ![server_view_after_starting](docs/server00.png?raw=true)
 
-EMV Book 4.3 Kernel 3 version 2.10: ![PDF](docs/books/C-3-Kernel-3-v2.10.pdf?raw=true)
+You should always get new newest documentation or specification from the original Website: https://www.emvco.com/specifications/
 
-EMV Book 4.3 Kernel 3 version 2.10: https://docs.google.com/viewer?url=https://raw.githubusercontent.com/michaelsplayground/nfcemvexamples/master/docs/books/C-3-Kernel-3-v2.10.pdf.pdf
+I have download some specifications and provide them here:
 
-EMV Book 4.3 Kernel 3 version 2.10: https://docs.google.com/viewer?url=https://raw.githubusercontent.com/dirask/dirask-tutorials/master/dirask-tutorials-java/src/main/java/com/dirask/java_coding_convention/Java_Coding_Style_Guide.pdf
+EMV Book 1 (ICC to Terminal Interface): ![Download PDF](docs/books/EMV_v4.3_Book_1_ICC_to_Terminal_Interface_2012060705394541.pdf?raw=true)
+
+EMV Book 2 (Security and Key Management): ![Download PDF](docs/books/EMV_v4.3_Book_2_Security_and_Key_Management_20120607061923900.pdf?raw=true)
+
+EMV Book 3 (Application Specification): ![Download PDF](docs/books/EMV_v4.4_Book_3_Application_Specification.pdf?raw=true)
+
+EMV Book 4 (Other Interfaces): ![Download PDF](docs/books/EMV_v4.4_Book_4_Other_Interfaces.pdf?raw=true)
+
+EMV Level 1 Contactless (Interface Specification) version 3.2: ![Download PDF](docs/books/EMV-Level-1-Contactless-Interface-Specification-V3.2.pdf?raw=true)
+
+EMV Contactless Book A (Architecture and General Rqmtsn) version 2.10: ![Download PDF](docs/books/EMV-Contactless-Book-A-Architecture-and-General-Rqmts-v2.10.pdf?raw=true)
+
+EMV Contactless Book B (Entry Point Specification) version 2.10: ![Download PDF](docs/books/EMV-Contactless-Book-B-Entry-Point-Specification-v2.10.pdf?raw=true)
 
 
+Kernel 1 (Master- & VisaCard old ?) version ?: not available
+
+Kernel 2 (MasterCard) version 2.10: ![Download PDF](docs/books/C-2-Kernel-2-v2.10.pdf?raw=true)
+
+Kernel 3 (VisaCard) version 2.10: ![Download PDF](docs/books/C-3-Kernel-3-v2.10.pdf?raw=true)
+
+Kernel 4 (American Express) version 2.10: ![Download PDF](docs/books/C-4-Kernel-4-v2.10.pdf?raw=true)
+
+Kernel 5 (JCB) version 2.10: ![Download PDF](docs/books/C-5_Kernel-5-v2.10.pdf?raw=true)
+
+Kernel 6 (Discover) version 2.6: ![Download PDF](docs/books/C-6_Kernel_6_v2.6_20160512101849195.pdf?raw=true)
+
+Kernel 7 (UnionPay) version ?: not available: C-7_Kernel_7_v2.6_20160512101943350.pdf
+
+Kernel 8 (unknown) version 1.0: ![Download PDF](docs/books/C-8-Kernel-8-V1.0.pdf?raw=true)
+
+Resource to find codes like Country Code, Currency Code etc: https://github.com/binaryfoo/emv-bertlv/tree/master/src/main/resources
 
 ## Permission handling
 
