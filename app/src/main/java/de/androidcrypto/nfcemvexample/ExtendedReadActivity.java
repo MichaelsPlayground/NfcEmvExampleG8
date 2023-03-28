@@ -955,6 +955,7 @@ I/System.out: ------------------------------------
                                                     issuerPublicKeyModulus, tag9f46_IccPublicKeyCertificate,
                                                     tag9f48_IccPublicKeyRemainder, tag9f47_IccPublicKeyExponent);
                                             if (retrievedIccPublicKey != null) {
+                                                writeToUiAppend(etLog, "");
                                                 writeToUiAppend(etLog, "decryption of ICC Public Key success");
                                                 writeToUiAppend(etLog, retrievedIccPublicKey.dump());
                                             } else {
@@ -974,6 +975,7 @@ I/System.out: ------------------------------------
                                          */
                                         writeToUiAppend(etLog, "");
                                         if (retrievedIccPublicKey != null) {
+                                            writeToUiAppend(etLog, "");
                                             writeToUiAppend(etLog, "decrypt SignedDynamicApplicationData");
                                             // check if we do have an IssuerPublicKeyRemainder,
                                             byte[] iccPublicKeyModulus = DecryptUtils.concatenateModulus(retrievedIccPublicKey.getLeftMostPubKeyDigits(), tag9f48_IccPublicKeyRemainder);

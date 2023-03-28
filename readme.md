@@ -123,6 +123,16 @@ https://developer.visa.com/identity/user/register
 
 American Express: C-4 Kernel 4 v2.10
 
+decryption of ICC Public Key success
+Recovered Data Header:                    106
+Recovered Data Header Byte:               6a
+Certificate Format:                       4
+Application Pan:                          4263540122270050ffff
+Certificate Expiration Date:              0625
+Certificate Serial Number:                26e44b
+Hash Algorithm Indicator                  1
+ICC Public Key Algorithm Indicator:       1
+
 https://stackoverflow.com/questions/35881046/get-processing-options-response with Template 1:
 ```plaintext
 GET PROCESSING OPTIONS
