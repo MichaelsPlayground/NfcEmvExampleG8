@@ -643,37 +643,41 @@ public class ExportEmulationDataActivity extends AppCompatActivity implements Nf
     private String checkForPanInResponse(byte[] response) {
         String pan = "";
         String expirationDate = "";
-        BerTlvParser parser = new BerTlvParser();
-        BerTlvs tlvs = parser.parse(response);
-        // 57 Track 2 Equivalent Data field as well
-        // 5a = Application Primary Account Number (PAN)
-        // 5F34 = Application Primary Account Number (PAN) Sequence Number
-        // 5F25  = Application Effective Date (card valid from)
-        // 5F24 = Application Expiration Date
-        // search for track 2 equivalent data
-        BerTlv tag57 = tlvs.find(new BerTag(0x57));
-        if (tag57 != null) {
-            Log.d(TAG, "found tag 0x57 track 2 equivalent data and extract pan and expiration date");
-            byte[] tag57Bytes = tag57.getBytesValue();
-            String track2DataString = bytesToHex(tag57Bytes);
-            int posSeparator = track2DataString.toUpperCase().indexOf("D");
-            pan = track2DataString.substring(0, posSeparator);
-            expirationDate = track2DataString.substring((posSeparator + 1), (posSeparator + 5));
-            return pan + "_" + expirationDate;
-        }
-        // search for pan
-        BerTlv tag5a = tlvs.find(new BerTag(0x5a));
-        if (tag5a != null) {
-            Log.d(TAG, "found tag 0x5a Application Primary Account Number (PAN)");
-            byte[] tag5aBytes = tag5a.getBytesValue();
-            pan = removeTrailingF(bytesToHex(tag5aBytes));
-        }
-        // search for expiration date
-        BerTlv tag5f24 = tlvs.find(new BerTag(0x5f, 0x24));
-        if (tag5f24 != null) {
-            Log.d(TAG, "found tag 0x5f24 Application Expiration Date");
-            byte[] tag5f24Bytes = tag5f24.getBytesValue();
-            expirationDate = bytesToHex(tag5f24Bytes);
+        try {
+            BerTlvParser parser = new BerTlvParser();
+            BerTlvs tlvs = parser.parse(response);
+            // 57 Track 2 Equivalent Data field as well
+            // 5a = Application Primary Account Number (PAN)
+            // 5F34 = Application Primary Account Number (PAN) Sequence Number
+            // 5F25  = Application Effective Date (card valid from)
+            // 5F24 = Application Expiration Date
+            // search for track 2 equivalent data
+            BerTlv tag57 = tlvs.find(new BerTag(0x57));
+            if (tag57 != null) {
+                Log.d(TAG, "found tag 0x57 track 2 equivalent data and extract pan and expiration date");
+                byte[] tag57Bytes = tag57.getBytesValue();
+                String track2DataString = bytesToHex(tag57Bytes);
+                int posSeparator = track2DataString.toUpperCase().indexOf("D");
+                pan = track2DataString.substring(0, posSeparator);
+                expirationDate = track2DataString.substring((posSeparator + 1), (posSeparator + 5));
+                return pan + "_" + expirationDate;
+            }
+            // search for pan
+            BerTlv tag5a = tlvs.find(new BerTag(0x5a));
+            if (tag5a != null) {
+                Log.d(TAG, "found tag 0x5a Application Primary Account Number (PAN)");
+                byte[] tag5aBytes = tag5a.getBytesValue();
+                pan = removeTrailingF(bytesToHex(tag5aBytes));
+            }
+            // search for expiration date
+            BerTlv tag5f24 = tlvs.find(new BerTag(0x5f, 0x24));
+            if (tag5f24 != null) {
+                Log.d(TAG, "found tag 0x5f24 Application Expiration Date");
+                byte[] tag5f24Bytes = tag5f24.getBytesValue();
+                expirationDate = bytesToHex(tag5f24Bytes);
+            }
+        } catch (ArrayIndexOutOfBoundsException e) {
+            //System.out.println("ERROR: ArrayOutOfBoundsException: " + e.getMessage());
         }
         return pan + "_" + expirationDate;
     }
@@ -681,6 +685,7 @@ public class ExportEmulationDataActivity extends AppCompatActivity implements Nf
     /**
      * remove all trailing 0xF's trailing in the 10 length fiel tag 0x5a = PAN
      * PAN is padded with 'F'
+     *
      * @param input
      * @return
      */
@@ -699,7 +704,7 @@ public class ExportEmulationDataActivity extends AppCompatActivity implements Nf
      * (found with my Visa-, Master- and German Giro-Cards)
      * or a tag 80 Response Message Template Format 1
      * (found with my American Express card)
-     *
+     * <p>
      * First we check if a tag 0x94 Application File Locator (AFL) is available in gpoResponse
      * if there is no tag 0x94 we check for a tag 0x80 Response Message Template Format 1
      * and get the AFL data by a hard-coded sequence
@@ -804,9 +809,13 @@ public class ExportEmulationDataActivity extends AppCompatActivity implements Nf
                     FilesModel filesModel = new FilesModel(addressAfl, sfiSector, iRecord, readRecordResponseOk.length, bytesToHex(readRecordResponseOk), offl);
                     readFiles.add(filesModel);
                     // finally check for CDOL1
-                    BerTlvParser parser = new BerTlvParser();
-                    BerTlvs tlvs = parser.parse(readRecordResponseOk);
-                    findTag0x8c(tlvs);
+                    try {
+                        BerTlvParser parser = new BerTlvParser();
+                        BerTlvs tlvs = parser.parse(readRecordResponseOk);
+                        findTag0x8c(tlvs);
+                    } catch (ArrayIndexOutOfBoundsException e) {
+                        //System.out.println("ERROR: ArrayOutOfBoundsException: " + e.getMessage());
+                    }
                 } else {
                     //writeToUiAppend(etLog, "** readRecordResponse failure");
                 }
