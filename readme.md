@@ -1,16 +1,9 @@
-# Android examples
+# NFC EMV Example G8
 
-This is a collection of my examples for Android (Java) in these categories:
+G8 = Gradle 8 compatible
 
-- internal storage management
-- external storage management
-- image management
-- encryption
-- shared preferences
-- encrypted shared preferences
-- NFC (real device needed)
-- Material edittext
-- Material switch
+Use this app to dump a EMV payment card (e.g. Credit Card or German Girocard) and use this dump file as 
+source for the app **HCE CreditCard Emulator G8**.
 
 Soundfiles: https://mobcup.net/ringtone/ping-euf272ye/download/mp3
 
@@ -315,6 +308,71 @@ Visa Lloyds: SFI 2 REC 6
 Visa DKB: SFI 2 REC 4
 Girocard Voba M : SFI 1 REC 5
 Girocard Voba M : SFI 1 REC 3 Track2 data
+
+comd gk m:
+```plaintext
+
+Read by real card terminal
+
+2023.03.29 12:49:28.563 command received: 00a4040007a000000003201000
+2023.03.29 12:49:28.565 found an AID in the command foundAid: 4
+
+GPO: real
+2023.03.29 12:49:28.732 command received: 
+80a8000023832136a04000000000002600000000000000027600000000000978230329000cf80aff00
+
+GPO by own CardReader
+80a8000023832127000000000000001000000000000000097800000000000978230301003839303100
+               TTQ      Amount       Amout other  TCount   TVR  TrCount Date  Type UN
+80a80000238321 36a04000 000000002600 000000000000 0276 0000000000 0978 230329 00 0cf80aff 00
+80a80000238321 27000000 000000001000 000000000000 0978 0000000000 0978 230301 00 38393031 00
+
+The card is requesting 9 tags in the PDOL
+
+Tag  Tag Name                        Length Value                Value Real              
+-----------------------------------------------------
+9f66 Terminal Transaction Qualifiers     4  27 00 00 00 
+9f02 Amount, Authorised (Numeric)        6  00 00 00 00 10 00 
+9f03 Amount, Other (Numeric)             6  00 00 00 00 00 00 
+9f1a Terminal Country Code               2  09 78 
+95   Terminal Verification Results (TVR) 5  00 00 00 00 00 
+5f2a Transaction Currency Code           2  09 78 
+9a   Transaction Date                    3  23 03 01 
+9c   Transaction Type                    1  00 
+9f37 Unpredictable Number                4  38 39 30 31 
+-----------------------------------------------------
+
+Response own was:
+776a820220009408200102003001040057134822422508205973006d24122210129613440f5f3401019f10200fa6d2a00040000000000000000000000f0a00000000000021230325c00000029f2608b749192a7b593f629f2701809f360200f89f6c023e009f6e04200000009000
+------------------------------------
+77 6A -- Response Message Template Format 2
+      82 02 -- Application Interchange Profile
+            20 00 (BINARY)
+      94 08 -- Application File Locator (AFL)
+            20 01 02 00 30 01 04 00 (BINARY)
+      57 13 -- Track 2 Equivalent Data
+            48 22 42 25 08 20 59 73 00 6D 24 12 22 10 12 96
+            13 44 0F (BINARY)
+      5F 34 01 -- Application Primary Account Number (PAN) Sequence Number
+               B7 49 19 2A 7B 59 3F 62 (BINARY)
+               00 F8 (BINARY)
+      9F 6C 02 -- Mag Stripe Application Version Number (Card)
+               3E 00 (BINARY)
+      9F 6E 04 -- Visa Low-Value Payment (VLP) Issuer Authorisation Code
+               20 00 00 00 (BINARY)
+90 00 -- Command successfully executed (OK)
+------------------------------------
+
+
+
+
+Response on real was:
+
+
+
+```
+
+
 
 
 ```
