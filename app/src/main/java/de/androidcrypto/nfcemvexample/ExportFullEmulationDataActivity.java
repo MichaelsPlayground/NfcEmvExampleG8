@@ -22,6 +22,7 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.RadioButton;
 import android.widget.TextView;
@@ -65,6 +66,17 @@ import de.androidcrypto.nfcemvexample.nfccreditcards.TagValues;
 
 public class ExportFullEmulationDataActivity extends AppCompatActivity implements NfcAdapter.ReaderCallback {
 
+    /**
+     * A note on the workflow logic: whereas ExportEmulationDataActivity is running this way:
+     * 1 read EMV tag - 2 select file - 3 write data to file
+     * this activity is working another way:
+     * 1 select file - 2 read EMV tag - 3 write data to file
+     * This is due to the fact that the tag reading method is collecting a lot of data when there is more than 1 aid
+     * on the tag. When selecting the export file via intent the activity has to store all of the data already collected.
+     * This can cause an error: android.os.TransactionTooLargeException
+     * By changing the logic there is no collected data necessary to store internally
+     */
+
     private final String TAG = ExportFullEmulationDataActivity.class.getSimpleName();
 
     private TextView tv1;
@@ -72,8 +84,10 @@ public class ExportFullEmulationDataActivity extends AppCompatActivity implement
     private RadioButton saveNotAnonymized, saveAnonymized, saveRandomAnonymized;
     private SwitchMaterial prettyPrintResponse;
     private SwitchMaterial swReadFullRecords;
+    private Button selectFileForFullDataExport;
     private View loadingLayout;
 
+    private Uri selectedFileForExportUri = null;
     private NfcAdapter mNfcAdapter;
     private byte[] tagId;
 
@@ -114,15 +128,22 @@ public class ExportFullEmulationDataActivity extends AppCompatActivity implement
         saveRandomAnonymized = findViewById(R.id.rbSaveRandomAnonymized);
         prettyPrintResponse = findViewById(R.id.swPrettyPrint);
         swReadFullRecords = findViewById(R.id.swReadFullRecords);
+        selectFileForFullDataExport = findViewById(R.id.btnSelectFileForFullExport);
         loadingLayout = findViewById(R.id.loading_layout);
 
         mNfcAdapter = NfcAdapter.getDefaultAdapter(this);
-
 
         prettyPrintResponse.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
                 isPrettyPrintResponse = prettyPrintResponse.isChecked();
+            }
+        });
+
+        selectFileForFullDataExport.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                selectFileForExport();
             }
         });
     }
@@ -146,6 +167,7 @@ public class ExportFullEmulationDataActivity extends AppCompatActivity implement
             exportString = "";
             aidSelectedForAnalyze = "";
             aidSelectedForAnalyzeName = "";
+            fullFilesList = new ArrayList<>();
         });
         if (TextUtils.isEmpty(etGivenName.getText().toString())) {
             writeToUiToast("before reading the card you need to provide a name for this card");
@@ -195,6 +217,14 @@ public class ExportFullEmulationDataActivity extends AppCompatActivity implement
 
     private void readIsoDep(Tag tag) {
         Log.i(TAG, "read a tag with IsoDep technology");
+
+        // check that we have selected an exportFile before reading the tag
+        if (selectedFileForExportUri == null) {
+            writeToUiToast("You need to select an export file BEFORE you are scanning a tag.");
+            setLoadingLayoutVisibility(false);
+            return;
+        }
+
         IsoDep nfc = null;
         nfc = IsoDep.get(tag);
         if (nfc != null) {
@@ -597,8 +627,8 @@ public class ExportFullEmulationDataActivity extends AppCompatActivity implement
                         Log.d(TAG, "the exported json file is NOT anonymized");
                     }
 
-                    exportStringFileName = "emv.json";
-                    writeStringToExternalSharedStorage();
+                    //exportStringFileName = "emv.json";
+                    writeTextToUri(selectedFileForExportUri, exportString);
 
                     System.out.println("***********************");
                     System.out.println(aids.dumpAids());
@@ -1687,7 +1717,47 @@ public class ExportFullEmulationDataActivity extends AppCompatActivity implement
      * section OptionsMenu export text file methods
      */
 
-    private void exportTextFile() {
+    private void selectFileForExport() {
+        Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("*/*");
+        // Optionally, specify a URI for the file that should appear in the
+        // system file picker when it loads.
+        //boolean pickerInitialUri = false;
+        //intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI, pickerInitialUri);
+        // get filename from edittext
+        String filename = exportStringFileName;
+        // sanity check
+        if (filename.equals("")) {
+            writeToUiToast("scan a tag before writing the content to a file :-)");
+            return;
+        }
+        intent.putExtra(Intent.EXTRA_TITLE, filename);
+        selectTextFileForExportActivityResultLauncher.launch(intent);
+    }
+
+    ActivityResultLauncher<Intent> selectTextFileForExportActivityResultLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            new ActivityResultCallback<ActivityResult>() {
+                @Override
+                public void onActivityResult(ActivityResult result) {
+                    if (result.getResultCode() == Activity.RESULT_OK) {
+                        // There are no request codes
+                        Intent resultData = result.getData();
+                        // The result data contains a URI for the document or directory that
+                        // the user selected.
+                        Uri uri = null;
+                        if (resultData != null) {
+                            uri = resultData.getData();
+                            // Perform operations on the document using its URI.
+                                // at this point we are going to read the EMV tag and store the data to the external file
+                            selectedFileForExportUri = uri;
+                        }
+                    }
+                }
+            });
+
+        private void exportTextFile() {
         if (exportString.isEmpty()) {
             writeToUiToast("Scan a tag first before writing files :-)");
             return;
@@ -1734,6 +1804,7 @@ public class ExportFullEmulationDataActivity extends AppCompatActivity implement
                                 //System.out.println("## data to write: " + exportString);
                                 writeTextToUri(uri, fileContent);
                                 writeToUiToast("file written to external shared storage: " + uri.toString());
+                                uri = null;
                             } catch (IOException e) {
                                 e.printStackTrace();
                                 writeToUiToast("ERROR: " + e.toString());

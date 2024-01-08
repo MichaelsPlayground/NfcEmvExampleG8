@@ -67,7 +67,8 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:checked="false"
+                    android:checked="true"
+                    android:enabled="false"
                     android:text="not anonymized" />
 
                 <RadioButton
@@ -75,7 +76,8 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:checked="true"
+                    android:checked="false"
+                    android:enabled="false"
                     android:text="anonymized" />
 
                 <RadioButton
@@ -152,6 +154,20 @@
                     android:text="read data - do not move the card" />
 
             </LinearLayout>
+
+            <Button
+                android:id="@+id/btnSelectFileForFullExport"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="select a file for full data export" />
+
+            <com.google.android.material.divider.MaterialDivider
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="8dp"
+                app:dividerInsetEnd="8dp"
+                app:dividerInsetStart="8dp" />
 
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/etDataLayout"
