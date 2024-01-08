@@ -12,5 +12,5 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "NfcEmvExample"
+rootProject.name = "NfcEmvExampleG8"
 include ':app'
