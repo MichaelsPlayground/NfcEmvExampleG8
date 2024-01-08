@@ -54,9 +54,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import de.androidcrypto.nfcemvexample.emulate.Aid;
 import de.androidcrypto.nfcemvexample.emulate.AidFull;
-import de.androidcrypto.nfcemvexample.emulate.Aids;
 import de.androidcrypto.nfcemvexample.emulate.AidsFull;
 import de.androidcrypto.nfcemvexample.emulate.FilesModel;
 import de.androidcrypto.nfcemvexample.nfccreditcards.AidValues;
@@ -259,10 +257,9 @@ public class ExportFullEmulationDataActivity extends AppCompatActivity implement
                     return;
                 }
                 byte[] selectPpseResponseOk = checkResponse(selectPpseResponse);
-                Aids aids = null;
                 AidsFull aidsFull = null;
                 if (selectPpseResponseOk != null) {
-                    aids = null;
+                    aidsFull = null;
                     // pretty print of response
                     if (isPrettyPrintResponse) prettyPrintData(etLog, selectPpseResponseOk);
 
@@ -298,7 +295,6 @@ public class ExportFullEmulationDataActivity extends AppCompatActivity implement
                     String selectPpseCommandString = bytesToHex(selectPpseCommand);
                     String selectPpseResponseString = bytesToHex(selectPpseResponseOk);
                     int numberOfAid = aidList.size();
-                    aids = new Aids(cardType, givenName, selectPpseCommandString, selectPpseResponseString, numberOfAid);
                     aidsFull = new AidsFull(cardType, givenName, selectPpseCommandString, selectPpseResponseString, numberOfAid);
                     // step 03: iterating through aidList by selecting AID
                     for (int aidNumber = 0; aidNumber < tag4fList.size(); aidNumber++) {
@@ -567,20 +563,6 @@ public class ExportFullEmulationDataActivity extends AppCompatActivity implement
                                     if (applicationCrypto[1] != null)
                                         applicationCryptogramResponseString = bytesToHex(applicationCrypto[1]);
 
-                                    // legacy data
-                                    Aid aidForJson = new Aid(aidCard, aidCardName, selectAidCommandString, selectAidResponseString, gpoCommandString, gpoResponseString,
-                                            checkFirstBytesGetProcessingOptions, panFound, expirationDateFound, numberOfFiles, aflString,
-                                            applicationTransactionCounterString, leftPinTryCounterString, lastOnlineATCRegisterString, logFormatString,
-                                            internalAuthenticationCommandString, internalAuthenticationResponseString, applicationCryptogramCommandString,
-                                            applicationCryptogramResponseString);
-
-                                    for (int fileCount = 0; fileCount < filesInAfl.size(); fileCount++) {
-                                        FilesModel fm = filesInAfl.get(fileCount);
-                                        aidForJson.setFile(fileCount, fm);
-                                    }
-                                    aids.setAidEntry(aidForJson, aidNumber);
-                                    // end of exporting
-
                                     // full data
                                     int nbrOfFullFiles = fullFilesList.size();
                                     AidFull aidFullForJson = new AidFull(aidCard, aidCardName, selectAidCommandString, selectAidResponseString, gpoCommandString, gpoResponseString,
@@ -630,8 +612,6 @@ public class ExportFullEmulationDataActivity extends AppCompatActivity implement
                     //exportStringFileName = "emv.json";
                     writeTextToUri(selectedFileForExportUri, exportString);
 
-                    System.out.println("***********************");
-                    System.out.println(aids.dumpAids());
                 }
 
             } catch (IOException e) {
@@ -1805,6 +1785,8 @@ public class ExportFullEmulationDataActivity extends AppCompatActivity implement
                                 writeTextToUri(uri, fileContent);
                                 writeToUiToast("file written to external shared storage: " + uri.toString());
                                 uri = null;
+                                fullFilesList = null;
+
                             } catch (IOException e) {
                                 e.printStackTrace();
                                 writeToUiToast("ERROR: " + e.toString());
