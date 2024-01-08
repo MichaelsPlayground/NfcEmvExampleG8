@@ -68,7 +68,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:checked="true"
-                    android:enabled="false"
+                    android:enabled="true"
                     android:text="not anonymized" />
 
                 <RadioButton
@@ -77,7 +77,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:checked="false"
-                    android:enabled="false"
+                    android:enabled="true"
                     android:text="anonymized" />
 
                 <RadioButton
