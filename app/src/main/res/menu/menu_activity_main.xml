@@ -41,6 +41,11 @@
         app:showAsAction="never"/>
 
     <item
+        android:id="@+id/action_activity_export_full_emulation_data"
+        android:title="Export full emulation data"
+        app:showAsAction="never"/>
+
+    <item
         android:id="@+id/action_activity_extended_read"
         android:title="Extended read activity"
         app:showAsAction="never"/>

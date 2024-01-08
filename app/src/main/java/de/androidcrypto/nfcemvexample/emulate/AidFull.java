@@ -2,8 +2,8 @@ package de.androidcrypto.nfcemvexample.emulate;
 
 import androidx.annotation.NonNull;
 
-public class Aid {
-    // this is compatible for HceCreditCardEmulator
+public class AidFull {
+    // this is NOT compatible for HceCreditCardEmulator
     private String aid;
     private String aidName;
     private String selectAidCommand;
@@ -25,13 +25,17 @@ public class Aid {
     private String getApplicationCryptogramCommand;
     private String getApplicationCryptogramResponse;
     private FilesModel[] files; // files read by analyzing the GPO
+    // new in version 3
+    private int numberOfFullFiles;
+    private FilesModel[] fullFiles; // files read by brute force
 
-    // constructor version 2
-    public Aid(@NonNull String aid, @NonNull String aidName, @NonNull String selectAidCommand, @NonNull String selectAidResponse, @NonNull String getProcessingOptionsCommand,
-               @NonNull String getProcessingOptionsResponse, int checkFirstBytesGetProcessingOptions, @NonNull String panFound,
-               @NonNull String expirationDateFound, int numberOfFiles, @NonNull String afl, @NonNull String applicationTransactionCounter, @NonNull String leftPinTryCounter,
-               @NonNull String lastOnlineATCRegister, @NonNull String logFormat, @NonNull String getInternalAuthenticationCommand,
-               @NonNull String getInternalAuthenticationResponse, @NonNull String getApplicationCryptogramCommand, @NonNull String getApplicationCryptogramResponse) {
+    // constructor version 3 = AidFull
+    public AidFull(@NonNull String aid, @NonNull String aidName, @NonNull String selectAidCommand, @NonNull String selectAidResponse, @NonNull String getProcessingOptionsCommand,
+                   @NonNull String getProcessingOptionsResponse, int checkFirstBytesGetProcessingOptions, @NonNull String panFound,
+                   @NonNull String expirationDateFound, int numberOfFiles, @NonNull String afl, @NonNull String applicationTransactionCounter, @NonNull String leftPinTryCounter,
+                   @NonNull String lastOnlineATCRegister, @NonNull String logFormat, @NonNull String getInternalAuthenticationCommand,
+                   @NonNull String getInternalAuthenticationResponse, @NonNull String getApplicationCryptogramCommand, @NonNull String getApplicationCryptogramResponse,
+                   int numberOfFullFiles) {
         this.aid = aid;
         this.aidName = aidName;
         this.selectAidCommand = selectAidCommand;
@@ -52,26 +56,10 @@ public class Aid {
         this.getApplicationCryptogramCommand = getApplicationCryptogramCommand;
         this.getApplicationCryptogramResponse = getApplicationCryptogramResponse;
         this.files = new FilesModel[numberOfFiles];
+        // new in version 3 = AidDump
+        this.numberOfFullFiles = numberOfFullFiles;
+        this.fullFiles = new FilesModel[numberOfFullFiles];
     }
-
-    // constructor used in version 1
-    /*
-    public Aid(@NonNull String aid, @NonNull String aidName, @NonNull String selectAidCommand, @NonNull String selectAidResponse, @NonNull String getProcessingOptionsCommand, @NonNull String getProcessingOptionsResponse, int checkFirstBytesGetProcessingOptions, @NonNull String panFoundInTrack2Data, @NonNull String panFoundInFiles, int numberOfFiles, @NonNull String afl, FilesModel[] files) {
-        this.aid = aid;
-        this.aidName = aidName;
-        this.selectAidCommand = selectAidCommand;
-        this.selectAidResponse = selectAidResponse;
-        this.getProcessingOptionsCommand = getProcessingOptionsCommand;
-        this.getProcessingOptionsResponse = getProcessingOptionsResponse;
-        this.checkFirstBytesGetProcessingOptions = checkFirstBytesGetProcessingOptions;
-        this.panFoundInTrack2Data = panFoundInTrack2Data;
-        this.panFoundInFiles = panFoundInFiles;
-        this.numberOfFiles = numberOfFiles;
-        this.afl = afl;
-        this.files = files;
-    }
-
-     */
 
     public String getAid() {
         return aid;
@@ -237,6 +225,26 @@ public class Aid {
         this.getApplicationCryptogramResponse = getApplicationCryptogramResponse;
     }
 
+    public int getNumberOfFullFiles() {
+        return numberOfFullFiles;
+    }
+
+    public void setNumberOfFullFiles(int numberOfFullFiles) {
+        this.numberOfFullFiles = numberOfFullFiles;
+    }
+
+    public void setFullFile(@NonNull int entry, @NonNull FilesModel filesModel) {
+        fullFiles[entry] = filesModel;
+    }
+
+    public FilesModel[] getFullFiles() {
+        return fullFiles;
+    }
+
+    public void setFullFiles(FilesModel[] fullFiles) {
+        this.fullFiles = fullFiles;
+    }
+
     public String dumpAid() {
         StringBuilder sb = new StringBuilder();
         sb.append("aid: ").append(this.aid).append("\n");
@@ -264,6 +272,9 @@ public class Aid {
                 sb.append("files: ").append(this.files[i].dumpFilesModel());
             }
         }
+        // new in version 3 = AidDump
+        sb.append("numberOfFullFiles: ").append(this.numberOfFullFiles).append("\n");
+        // here we don't print the complete files
         return sb.toString();
     }
 }

@@ -4,7 +4,7 @@ import androidx.annotation.NonNull;
 
 /**
  * This class contains the results of a complete file reading.
- * No analyzis on the data has been made, so the file may contain
+ * No analysis on the data has been made, so the file may contain
  * sensible data like PAN
  */
 

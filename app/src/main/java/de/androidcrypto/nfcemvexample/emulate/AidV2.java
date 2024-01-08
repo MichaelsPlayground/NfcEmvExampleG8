@@ -2,8 +2,8 @@ package de.androidcrypto.nfcemvexample.emulate;
 
 import androidx.annotation.NonNull;
 
-public class Aid {
-    // this is compatible for HceCreditCardEmulator
+public class AidV2 {
+
     private String aid;
     private String aidName;
     private String selectAidCommand;
@@ -24,14 +24,14 @@ public class Aid {
     private String getInternalAuthenticationResponse;
     private String getApplicationCryptogramCommand;
     private String getApplicationCryptogramResponse;
-    private FilesModel[] files; // files read by analyzing the GPO
+    private FilesModel[] files;
 
     // constructor version 2
-    public Aid(@NonNull String aid, @NonNull String aidName, @NonNull String selectAidCommand, @NonNull String selectAidResponse, @NonNull String getProcessingOptionsCommand,
-               @NonNull String getProcessingOptionsResponse, int checkFirstBytesGetProcessingOptions, @NonNull String panFound,
-               @NonNull String expirationDateFound, int numberOfFiles, @NonNull String afl, @NonNull String applicationTransactionCounter, @NonNull String leftPinTryCounter,
-               @NonNull String lastOnlineATCRegister, @NonNull String logFormat, @NonNull String getInternalAuthenticationCommand,
-               @NonNull String getInternalAuthenticationResponse, @NonNull String getApplicationCryptogramCommand, @NonNull String getApplicationCryptogramResponse) {
+    public AidV2(@NonNull String aid, @NonNull String aidName, @NonNull String selectAidCommand, @NonNull String selectAidResponse, @NonNull String getProcessingOptionsCommand,
+                 @NonNull String getProcessingOptionsResponse, int checkFirstBytesGetProcessingOptions, @NonNull String panFound,
+                 @NonNull String expirationDateFound, int numberOfFiles, @NonNull String afl, @NonNull String applicationTransactionCounter, @NonNull String leftPinTryCounter,
+                 @NonNull String lastOnlineATCRegister, @NonNull String logFormat, @NonNull String getInternalAuthenticationCommand,
+                 @NonNull String getInternalAuthenticationResponse, @NonNull String getApplicationCryptogramCommand, @NonNull String getApplicationCryptogramResponse) {
         this.aid = aid;
         this.aidName = aidName;
         this.selectAidCommand = selectAidCommand;
