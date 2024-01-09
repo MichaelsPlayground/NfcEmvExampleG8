@@ -42,6 +42,9 @@
             android:name=".ExportFullEmulationDataActivity"
             android:exported="false" />
         <activity
+            android:name=".ValidateCreditCardActivity"
+            android:exported="false" />
+        <activity
             android:name=".ViewEmulationDataActivity"
             android:exported="false" />
         <activity

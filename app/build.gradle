@@ -53,6 +53,8 @@ dependencies {
     // https://mvnrepository.com/artifact/be.cyberelf.nanoxml/lite
     implementation group: 'be.cyberelf.nanoxml', name: 'lite', version: '2.2.3'
 
+    // https://mvnrepository.com/artifact/commons-validator/commons-validator
+    implementation 'commons-validator:commons-validator:1.8.0'
 
 
 }

@@ -32,17 +32,22 @@
 
     <item
         android:id="@+id/action_activity_export_emulation_data"
-        android:title="Export emulation data activity"
-        app:showAsAction="never"/>
-
-    <item
-        android:id="@+id/action_activity_view_emulation_data"
-        android:title="View emulation data activity"
+        android:title="Export emulation data"
         app:showAsAction="never"/>
 
     <item
         android:id="@+id/action_activity_export_full_emulation_data"
         android:title="Export full emulation data"
+        app:showAsAction="never"/>
+
+    <item
+        android:id="@+id/action_activity_validate_credit_card"
+        android:title="Validate Credit Card number"
+        app:showAsAction="never"/>
+
+    <item
+        android:id="@+id/action_activity_view_emulation_data"
+        android:title="View emulation data activity"
         app:showAsAction="never"/>
 
     <item
