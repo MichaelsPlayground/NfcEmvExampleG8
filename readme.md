@@ -17,8 +17,10 @@ For TLV-handling (BER-TLV): implementation 'com.payneteasy:ber-tlv:1.0-11'
 
 Source: https://github.com/evsinev/ber-tlv
 
-Screenshot of the running app after startup:
-![server_view_after_starting](docs/server00.png?raw=true)
+Screenshot of the running app after startup and reading an EMV card:
+![server_view_after_starting](docs/server01.png?raw=true)
+
+Note on the displayed PAN: this is a sample Mastercard and the PAN is outdated !
 
 You should always get new newest documentation or specification from the original Website: https://www.emvco.com/specifications/
 
