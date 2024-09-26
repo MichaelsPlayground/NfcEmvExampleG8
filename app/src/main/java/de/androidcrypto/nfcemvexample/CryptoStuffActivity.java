@@ -47,7 +47,7 @@ public class CryptoStuffActivity extends AppCompatActivity {
 
     private final String TAG = "CryptoStuffAct";
 
-    Button btn1, btn2Decrypt, btn3, btn4, btn5, btn6, btn7;
+    Button btn1, btn2Decrypt, btn3, btn4, btn5, btn6, btnVisaDkbDecrypt;
     TextView tv1;
     EditText et1;
 
@@ -65,7 +65,7 @@ public class CryptoStuffActivity extends AppCompatActivity {
         btn4 = findViewById(R.id.btn4);
         btn5 = findViewById(R.id.btn5);
         btn6 = findViewById(R.id.btn6);
-        btn7 = findViewById(R.id.btn7);
+        btnVisaDkbDecrypt = findViewById(R.id.btnVisaDkbDecrypt);
         tv1 = findViewById(R.id.tv1);
         et1 = findViewById(R.id.et1);
 
@@ -504,6 +504,169 @@ decrypted: 48e26a471054d1ae93d86ab9daaa30a8036d47997e0b556101e950462f67cbc8b9203
                 //CVMList cvmList = new CVMList();
             }
         });
+
+        btnVisaDkbDecrypt.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                // This for MF DKB Visa Credit Card, exp. 09/2026
+                System.out.println("VISA DKB Decrypt");
+                writeToUiAppend(tv1, "VISA DKB decryption");
+                writeToUiAppend(tv1, "==============================");
+                // list of CA Public Keys
+                // https://www.eftlab.co.uk/knowledge-base/list-of-ca-public-keys
+                byte[] caPublicKeyVisa09Modulus = hexToBytes("9D912248DE0A4E39C1A7DDE3F6D2588992C1A4095AFBD1824D1BA74847F2BC4926D2EFD904B4B54954CD189A54C5D1179654F8F9B0D2AB5F0357EB642FEDA95D3912C6576945FAB897E7062CAA44A4AA06B8FE6E3DBA18AF6AE3738E30429EE9BE03427C9D64F695FA8CAB4BFE376853EA34AD1D76BFCAD15908C077FFE6DC5521ECEF5D278A96E26F57359FFAEDA19434B937F1AD999DC5C41EB11935B44C18100E857F431A4A5A6BB65114F174C2D7B59FDF237D6BB1DD0916E644D709DED56481477C75D95CDD68254615F7740EC07F330AC5D67BCD75BF23D28A140826C026DBDE971A37CD3EF9B8DF644AC385010501EFC6509D7A41");
+                byte[] caPublicKeyVisa09Exponent = hexToBytes(("03"));
+                byte[] caPublicKeyVisa09Sha1 = hexToBytes("1FF80A40173F52D7D27E0F26A146A1C8CCB29046");
+                byte[] visaRid = hexToBytes("A000000003");
+                byte[] visaChksum = CA.calculateCAPublicKeyCheckSum(visaRid, Util.intToByteArray(9), caPublicKeyVisa09Modulus, new byte[]{0x03});
+                writeToUiAppend(tv1, "Verify Visa Chksum: " + bytesToHexNpe(visaChksum));
+
+                // here we are starting the crypto stuff and try to decrypt some data from the card
+                // we do need the content of some tags:
+                // these tags are available on Visa comd M
+                byte[] tag90_IssuerPublicKeyCertificate;
+                byte[] tag8f_CertificationAuthorityPublicKeyIndex;
+                byte[] tag9f32_IssuerPublicKeyExponent;
+                byte[] tag9f46_IccPublicKeyCertificate;
+                byte[] tag9f47_IccPublicKeyExponent;
+                byte[] tag9f4a_StaticDataAuthenticationTagList;
+                byte[] tag9f69_Udol;
+                byte[] tag9f4b_SignedDynamicApplicationData;
+                byte[] tag9f10_IssuerApplicationData;
+                byte[] tag9f26_ApplicationCryptogram;
+
+                // taken from file in SFI 10 file 03: 70 81 FB -- Record Template (EMV Proprietary)
+                // 90 81 F8 -- Issuer Public Key Certificate
+                tag90_IssuerPublicKeyCertificate = hexToBytes("8893cf85a81325ab8da6a4196eb5787291db7205f61b172b26deb867da427f1d0e438e86400aea81a0f2826b250da618108389bdabe2a75c0168a28bb97645158b57ca8faa1d38d7a56e0a4171ec0d5e048d048dd98106bcadb3b5cac80485ff9c0fc970b4ea95d557fb9dd065bf75eb06f51df5a2c20479058ede6c8a376d9bfbf0c05b9e2b5aac1ec5982e2a9d861573e892da87b68357306e88cb054ab0090e01670a73d23fa239f4ae1283110fca40d46edc6c8021d15b3c147251b3c5e754f0fa9d82b7934ed34a12ef3d0a66c0c2a26a32e9722b10653516b356440aa8eece8d1d023829394adc2f9309ff60fc5baf51c0b24690be");
+
+                // taken from file in SFI 10 file 04: 70 07 -- Record Template (EMV Proprietary)
+                // 8F 01 -- Certification Authority Public Key Index - card 09 (BINARY)
+                tag8f_CertificationAuthorityPublicKeyIndex = hexToBytes("09");
+
+                // taken from file in SFI 10 file 05: 70 07 -- Record Template (EMV Proprietary)
+                // 9F 32 01 -- Issuer Public Key Exponent 03 (BINARY)
+                tag9f32_IssuerPublicKeyExponent = hexToBytes("03");
+
+                // taken from file in SFI 10 file 05: 70 07 -- Record Template (EMV Proprietary)
+                // 9F 46 81 B0 -- ICC Public Key Certificate
+                tag9f46_IccPublicKeyCertificate = hexToBytes("7e3b33a489fb75a23643407d2ebf48a808957165aa538d681213d71495b577086e63a24e847ed29d2ceba4bb3b1784361221287607ace4b8bfce09dd8364d4709293ed52b528623472fb6157094b12367534d7cf5c20b810058c817fb87c130111ee53c3855fd2b2a95449d03795541ea7c6ef942b0b069bfa7caa5d0ec6db0e428f18d03adcf7f92fb7e5516403adc629f3ffbd6900a1f308fbe5d28cba795c6c62d7573333abed15ad00a4da4ba8a9");
+
+                // taken from file in SFI 10 file 05: 70 07 -- Record Template (EMV Proprietary)
+                // 9F 47 01 -- ICC Public Key Exponent 03 (BINARY)
+                tag9f47_IccPublicKeyExponent = hexToBytes("03");
+
+                // taken from file in SFI 10 file 05: 70 07 -- Record Template (EMV Proprietary)
+                // 9F 4A 01 -- Static Data Authentication Tag List 82 (BINARY)
+                tag9f4a_StaticDataAuthenticationTagList = hexToBytes("82");
+
+                // taken from file in SFI 10 file 05: 70 07 -- Record Template (EMV Proprietary)
+                // 9F 69 07 -- UDOL 01 B4 19 C7 27 38 00 (BINARY)
+                tag9f69_Udol = hexToBytes("01B419C7273800");
+
+                //tag9f4b_SignedDynamicApplicationData = hexToBytes("2731459c144bbc637d0cac5db31ca7b7c1a0e270436f0a4c690d544de494e01330040d0df4f7878440e01e626ea3d43c74c06bdf8773f1554afb2c9b5ff758d83d0e1184c6da6e8ddc73ba8b6586d374e8e1d46b5f23f89b2723444f3e2c7ef2aa6e87afc43a0c595b6d707bad93dbebea1f74a8649dbca30b6a55387e70e1f2");
+
+                // taken from Get Processing Options response: 77 81 C6 -- Response Message Template Format 2
+                // 9F 10 07 -- Issuer Application Data 06 01 0A 03 A0 20 00 (BINARY)
+                tag9f10_IssuerApplicationData = hexToBytes("06010A03A02000");
+
+                // taken from Get Processing Options response: 77 81 C6 -- Response Message Template Format 2
+                // 9F 26 08 -- Application Cryptogram DE 1C 42 51 18 6F 7A 5E (BINARY)
+                tag9f26_ApplicationCryptogram = hexToBytes("DE1C4251186F7A5E");
+
+                // Retrieval of Issuer Public Key
+                writeToUiAppend(tv1, "==============================");
+                writeToUiAppend(tv1, "Retrieval of Issuer Public Key");
+                writeToUiAppend(tv1, "IssuerPublicKeyCertificate: " + bytesToHexNpe(tag90_IssuerPublicKeyCertificate));
+                byte[] recoveredIssuerPublicKey = performRSA(tag90_IssuerPublicKeyCertificate, caPublicKeyVisa09Exponent, caPublicKeyVisa09Modulus);
+                writeToUiAppend(tv1, " ");
+                writeToUiAppend(tv1, "decrypted: " + bytesToHexNpe(recoveredIssuerPublicKey));
+                writeToUiAppend(tv1, " ");
+                // https://www.linkedin.com/pulse/emv-application-specification-offline-data-oda-part-farghaly-1f?trk=pulse-article
+                // see package johnzweng
+                EmvKeyReader emvKeyReader = new EmvKeyReader();
+
+                writeToUiAppend(tv1, "==============================");
+                writeToUiAppend(tv1, "Retrieval of Issuer Public Key by johnzweng");
+                // this is the johnzweng method to decrypt
+                IssuerIccPublicKeyNew issuerIccPublicKeyNew;
+                try {
+                    issuerIccPublicKeyNew = emvKeyReader.parseIssuerPublicKeyNew(caPublicKeyVisa09Exponent, caPublicKeyVisa09Modulus, tag90_IssuerPublicKeyCertificate, null, tag9f32_IssuerPublicKeyExponent);
+                    writeToUiAppend(tv1, "decrypted the tag90_IssuerPublicKeyCertificate to the public key");
+                    writeToUiAppend(tv1, "issuerIccPublicKey recovered: " + bytesToHexNpe(issuerIccPublicKeyNew.getRecoveredBytes()));
+                } catch (EmvParsingException e) {
+                    throw new RuntimeException(e);
+                }
+                writeToUiAppend(tv1, " ");
+
+                EmvKeyReader.RecoveredIssuerPublicKey recoveredIssuerPublicKeyParsed;
+                try {
+                    recoveredIssuerPublicKeyParsed = emvKeyReader.parseIssuerPublicKeyCert(recoveredIssuerPublicKey, caPublicKeyVisa09Modulus.length);
+                    writeToUiAppend(tv1, "parsed recovered Issuer Public Key\n" + recoveredIssuerPublicKeyParsed.dump());
+                } catch (EmvParsingException e) {
+                    throw new RuntimeException(e);
+                }
+                writeToUiAppend(tv1, " ");
+
+                writeToUiAppend(tv1, "==============================");
+                writeToUiAppend(tv1, "Validate the Issuer Public Key");
+                try {
+                    boolean issuerPublicKeyIsValid = emvKeyReader.validateIssuerPublicKey(caPublicKeyVisa09Exponent, caPublicKeyVisa09Modulus, tag90_IssuerPublicKeyCertificate, null, tag9f32_IssuerPublicKeyExponent);
+                    writeToUiAppend(tv1, "the decrypted Issuer Public Key is valid: " + issuerPublicKeyIsValid);
+                } catch (EmvParsingException e) {
+                    throw new RuntimeException(e);
+                }
+                writeToUiAppend(tv1, " ");
+
+                // next step: Terminal decrypt ICC public key certificate using the issuer public key
+                writeToUiAppend(tv1, "==============================");
+                writeToUiAppend(tv1, "Terminal will decrypting the IccPublicKeyCertificate");
+                //byte[] fullKeyModulus = concatenateModulus(recoveredIssuerPublicKeyParsed.getLeftMostPubKeyDigits(), recoveredIssuerPublicKeyParsed.getOptionalPadding());
+                byte[] recoveredIccPublicKeyCertificate = performRSA(tag9f46_IccPublicKeyCertificate, tag9f32_IssuerPublicKeyExponent, recoveredIssuerPublicKeyParsed.getLeftMostPubKeyDigits());
+                writeToUiAppend(tv1, "decrypted: " + bytesToHexNpe(recoveredIccPublicKeyCertificate));
+                writeToUiAppend(tv1, " ");
+
+                writeToUiAppend(tv1, "==============================");
+                writeToUiAppend(tv1, "Retrieval of ICC Public Key by johnzweng");
+                ICCPublicKey iccPublicKey;
+                IssuerIccPublicKeyNew issuerIccPublicKey2New;
+                try {
+                    issuerIccPublicKey2New = emvKeyReader.parseIccPublicKeyNew(tag9f32_IssuerPublicKeyExponent, recoveredIssuerPublicKeyParsed.getLeftMostPubKeyDigits(), tag9f46_IccPublicKeyCertificate, null, tag9f47_IccPublicKeyExponent);
+/*
+public IssuerIccPublicKey parseIccPublicKey(byte[] issuerPublicKeyExponent, byte[] issuerPublicKeyModulus, byte[] iccPublicKeyCertificate,
+                                                byte[] iccRemainder, byte[] iccPublicKeyExponent)
+ */
+                    //iccPublicKey = emvKeyReader.parseIccPublicKey(tag9f32_IssuerPublicKeyExponent, recoveredIssuerPublicKeyParsed.getLeftMostPubKeyDigits(), tag9f46_IccPublicKeyCertificate, null, tag9f32_IssuerPublicKeyExponent);
+                    writeToUiAppend(tv1, "decrypted the IccPublicKeyCertificate to the public key");
+                    writeToUiAppend(tv1, "iccPublicKey recovered: " + bytesToHexNpe(issuerIccPublicKey2New.getRecoveredBytes()));
+                } catch (EmvParsingException e) {
+                    throw new RuntimeException(e);
+                }
+                writeToUiAppend(tv1, " ");
+                EmvKeyReader.RecoveredIccPublicKey recoveredIccPublicKey;
+                try {
+                    recoveredIccPublicKey = emvKeyReader.parseIccPublicKeyCert(recoveredIccPublicKeyCertificate, recoveredIssuerPublicKeyParsed.getIssuerPublicKeyLength());
+                    writeToUiAppend(tv1, "parsed recovered ICC Public Key\n" + recoveredIccPublicKey.dump());
+                } catch (EmvParsingException e) {
+                    throw new RuntimeException(e);
+                }
+                writeToUiAppend(tv1, " ");
+
+                writeToUiAppend(tv1, "==============================");
+                writeToUiAppend(tv1, "Validate the ICC Public Key (will fail !!)");
+                try {
+                    boolean iccPublicKeyIsValid = emvKeyReader.validateIccPublicKey(tag9f32_IssuerPublicKeyExponent, recoveredIssuerPublicKeyParsed.getLeftMostPubKeyDigits(), tag9f46_IccPublicKeyCertificate, null, tag9f47_IccPublicKeyExponent);
+                    writeToUiAppend(tv1, "the decrypted ICC Public Key is valid: " + iccPublicKeyIsValid);
+                } catch (EmvParsingException e) {
+                    throw new RuntimeException(e);
+                }
+                writeToUiAppend(tv1, " ");
+
+                writeToUiAppend(tv1, "==============================");
+
+            }
+        });
+
+
     }
 
     /**

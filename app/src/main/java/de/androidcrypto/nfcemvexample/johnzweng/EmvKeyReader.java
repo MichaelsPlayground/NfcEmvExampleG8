@@ -469,8 +469,11 @@ I/System.out: dataTrailer: 188
             sb.append(fillTrimRight("Recovered Data Header: ", 42)).append(recoveredDataHeader).append("\n");
             sb.append(fillTrimRight("Recovered Data Header Byte: ", 42)).append(bytesToHexNpe(recoveredDataHeaderByte)).append("\n");
             sb.append(fillTrimRight("Certificate Format: ", 42)).append(certificateFormat).append("\n");
+            // changed by AndroidCrypto
+            sb.append("--------------------------------").append("\n");
             sb.append(fillTrimRight("Application Pan: ", 42)).append(bytesToHexNpe(applicationPan)).append("\n");
             sb.append(fillTrimRight("Certificate Expiration Date: ", 42)).append(bytesToHexNpe(certExpirationDate)).append("\n");
+            sb.append("--------------------------------").append("\n");
             sb.append(fillTrimRight("Certificate Serial Number: ", 42)).append(bytesToHexNpe(certSerialNumber)).append("\n");
             sb.append(fillTrimRight("Hash Algorithm Indicator", 42)).append(hashAlgoIndicator).append("\n");
             sb.append(fillTrimRight("ICC Public Key Algorithm Indicator: ", 42)).append(iccPubKeyAlgoIndicator).append("\n");
