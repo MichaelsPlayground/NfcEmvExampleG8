@@ -5,6 +5,9 @@ G8 = Gradle 8 compatible
 Use this app to dump a EMV payment card (e.g. Credit Card or German Girocard) and use this dump file as 
 source for the app **HCE CreditCard Emulator G8**.
 
+See "Crypto Stuff Activity" for retrieving some keys from the tag, decrypt them and get the PAN and 
+Expiration Date without reading the other data. Tested on Via + Mastercard.
+
 Soundfiles: https://mobcup.net/ringtone/ping-euf272ye/download/mp3
 
 For prettyPrint: include implementation 'com.github.devnied.emvnfccard:library:3.0.1'

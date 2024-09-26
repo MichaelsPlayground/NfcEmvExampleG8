@@ -182,6 +182,9 @@ SHA-1
 
                 writeToUiAppend(tv1, "==============================");
                 writeToUiAppend(tv1, "Retrieval of ICC Public Key by johnzweng");
+                writeToUiAppend(tv1, "The data includes the PAN + Expiration Date");
+                writeToUiAppend(tv1, " ");
+
                 ICCPublicKey iccPublicKey;
                 IssuerIccPublicKeyNew issuerIccPublicKey2New;
                 try {
@@ -627,7 +630,9 @@ decrypted: 48e26a471054d1ae93d86ab9daaa30a8036d47997e0b556101e950462f67cbc8b9203
 
                 writeToUiAppend(tv1, "==============================");
                 writeToUiAppend(tv1, "Retrieval of ICC Public Key by johnzweng");
-                ICCPublicKey iccPublicKey;
+                writeToUiAppend(tv1, "The data includes the PAN + Expiration Date");
+                writeToUiAppend(tv1, " ");
+                //ICCPublicKey iccPublicKey;
                 IssuerIccPublicKeyNew issuerIccPublicKey2New;
                 try {
                     issuerIccPublicKey2New = emvKeyReader.parseIccPublicKeyNew(tag9f32_IssuerPublicKeyExponent, recoveredIssuerPublicKeyParsed.getLeftMostPubKeyDigits(), tag9f46_IccPublicKeyCertificate, null, tag9f47_IccPublicKeyExponent);
